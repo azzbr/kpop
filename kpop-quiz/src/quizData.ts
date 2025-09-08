@@ -58,11 +58,47 @@ export const easyQuestions: Question[] = [
     ],
   },
   {
-    questionText: "What is the name of HUNTR/X's manager?",
+    questionText: "Who is the former demon hunter that acts as the group's guardian?",
     answers: [
-      { answerText: "Bobby", isCorrect: true },
+      { answerText: "Celine", isCorrect: true },
+      { answerText: "Bobby", isCorrect: false },
       { answerText: "Healer Han", isCorrect: false },
       { answerText: "Jinu", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "What is the title of HUNTR/X's most popular song in the movie?",
+    answers: [
+      { answerText: "\"Golden\"", isCorrect: true },
+      { answerText: "\"Takedown\"", isCorrect: false },
+      { answerText: "\"Soda Pop\"", isCorrect: false },
+      { answerText: "\"Free\"", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "What does Jinu, the leader of the Saja Boys, always have with him?",
+    answers: [
+      { answerText: "A blue pet tiger", isCorrect: true },
+      { answerText: "A magic necklace", isCorrect: false },
+      { answerText: "A special microphone", isCorrect: false },
+      { answerText: "A black cat", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "What big event are the bands competing in?",
+    answers: [
+      { answerText: "The Idol Awards", isCorrect: true },
+      { answerText: "The Music Gala", isCorrect: false },
+      { answerText: "The K-Pop Championship", isCorrect: false },
+      { answerText: "The Dance Off", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "Who is the quirky manager of HUNTR/X?",
+    answers: [
+      { answerText: "Bobby", isCorrect: true },
+      { answerText: "Jinu", isCorrect: false },
+      { answerText: "Celine", isCorrect: false },
       { answerText: "Gwi-Ma", isCorrect: false },
     ],
   },
@@ -85,15 +121,6 @@ export const normalQuestions: Question[] = [
       { answerText: "A sword", isCorrect: false },
       { answerText: "Throwing knives", isCorrect: false },
       { answerText: "A bow and arrow", isCorrect: false },
-    ],
-  },
-  {
-    questionText: "What is the name of HUNTR/X's manager?",
-    answers: [
-      { answerText: "Bobby", isCorrect: true },
-      { answerText: "Healer Han", isCorrect: false },
-      { answerText: "Jinu", isCorrect: false },
-      { answerText: "Gwi-Ma", isCorrect: false },
     ],
   },
   {
@@ -133,30 +160,39 @@ export const normalQuestions: Question[] = [
     ],
   },
   {
-    questionText: "What special item does Rumi use in combat?",
+    questionText: "What physical change appears on Rumi when her demon powers are revealed?",
     answers: [
-      { answerText: "A saingeom sword", isCorrect: true },
-      { answerText: "A gokdo polearm", isCorrect: false },
-      { answerText: "Shinkal throwing knives", isCorrect: false },
-      { answerText: "A magical pendant", isCorrect: false },
+      { answerText: "Demon marks", isCorrect: true },
+      { answerText: "Her eyes glow red", isCorrect: false },
+      { answerText: "She grows wings", isCorrect: false },
+      { answerText: "Her hair turns white", isCorrect: false },
     ],
   },
   {
-    questionText: "The Saja Boys are secretly what?",
+    questionText: "What is Mira's family background?",
     answers: [
-      { answerText: "Demons", isCorrect: true },
-      { answerText: "Angels", isCorrect: false },
-      { answerText: "Robots", isCorrect: false },
-      { answerText: "Aliens", isCorrect: false },
+      { answerText: "She comes from a wealthy family", isCorrect: true },
+      { answerText: "She grew up in an orphanage", isCorrect: false },
+      { answerText: "Her parents are farmers", isCorrect: false },
+      { answerText: "She was a street performer", isCorrect: false },
     ],
   },
   {
-    questionText: "How do impostor demons trick Rumi at the Idol Awards?",
+    questionText: "What effect do the Saja Boys' songs have on their audience?",
     answers: [
-      { answerText: "They pretend to be Mira and Zoey", isCorrect: true },
-      { answerText: "They pretend to be her fans", isCorrect: false },
-      { answerText: "They offer her a magic cure", isCorrect: false },
-      { answerText: "They disguise as judges", isCorrect: false },
+      { answerText: "It puts them in a trance", isCorrect: true },
+      { answerText: "It makes them happy", isCorrect: false },
+      { answerText: "It makes them sleepy", isCorrect: false },
+      { answerText: "It gives them superpowers", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "Who is the eccentric doctor that Rumi visits for her voice?",
+    answers: [
+      { answerText: "Healer Han", isCorrect: true },
+      { answerText: "Dr. Kim", isCorrect: false },
+      { answerText: "Dr. Park", isCorrect: false },
+      { answerText: "Dr. Lee", isCorrect: false },
     ],
   },
 ];
@@ -250,6 +286,51 @@ export const hardQuestions: Question[] = [
       { answerText: "They pretend to be her fans", isCorrect: false },
       { answerText: "They offer her a magic cure", isCorrect: false },
       { answerText: "They disguise as judges", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "Who provides the singing voice for Rumi in the movie's soundtrack?",
+    answers: [
+      { answerText: "Ejae", isCorrect: true },
+      { answerText: "Arden Cho", isCorrect: false },
+      { answerText: "Lea Salonga", isCorrect: false },
+      { answerText: "Audrey Nuna", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "Mira was considered the 'black sheep' of her family because of her what?",
+    answers: [
+      { answerText: "Rebellious nature", isCorrect: true },
+      { answerText: "Desire to be an idol", isCorrect: false },
+      { answerText: "Secret life as a hunter", isCorrect: false },
+      { answerText: "Lack of musical talent", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "After her secret is revealed, what desperate request does Rumi make to Celine?",
+    answers: [
+      { answerText: "To end her life", isCorrect: true },
+      { answerText: "To run away with her", isCorrect: false },
+      { answerText: "To erase her memory", isCorrect: false },
+      { answerText: "To fight Jinu for her", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "What is the Korean mythological term for the demons that the girls hunt?",
+    answers: [
+      { answerText: "Jeoseung Saja", isCorrect: true },
+      { answerText: "Gumiho", isCorrect: false },
+      { answerText: "Dokkaebi", isCorrect: false },
+      { answerText: "Gwisin", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "Which animation studio produced K-Pop: Demon Hunters for Netflix?",
+    answers: [
+      { answerText: "Sony Pictures Animation", isCorrect: true },
+      { answerText: "Pixar", isCorrect: false },
+      { answerText: "DreamWorks Animation", isCorrect: false },
+      { answerText: "Studio Ghibli", isCorrect: false },
     ],
   },
 ];
