@@ -830,6 +830,420 @@ export const hardQuestions: Question[] = [
   },
 ];
 
+export const knowYourLyricsQuestions: Question[] = [
+  // Golden
+  {
+    questionText: "'I was a ghost, I was alone, hah...'",
+    answers: [
+      { answerText: "Eoduwojin apgilsoge (Ah)", isCorrect: true },
+      { answerText: "You know together we're glowin'", isCorrect: false },
+      { answerText: "But I couldn't find my own place", isCorrect: false },
+      { answerText: "I was the queen that I'm meant to be", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'Called a problem child 'cause I got too wild...'",
+    answers: [
+      { answerText: "But now that's how I'm getting paid, kkeuteopsi on stage", isCorrect: true },
+      { answerText: "And finally live like the girl they all see", isCorrect: false },
+      { answerText: "I'm done hiding, now I'm shining like I'm born to be", isCorrect: false },
+      { answerText: "I lived two lives, tried to play both sides", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'We're goin' up, up, up, it's our moment...'",
+    answers: [
+      { answerText: "You know together we're glowin'", isCorrect: true },
+      { answerText: "Yeongwonhi kkaejil su eomneun", isCorrect: false },
+      { answerText: "That's who we're born to be", isCorrect: false },
+      { answerText: "We came so far, now I believe", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'Waited so long to break these walls down...'",
+    answers: [
+      { answerText: "To wake up and feel like me", isCorrect: true },
+      { answerText: "To finally live like the girl they all see", isCorrect: false },
+      { answerText: "Our time, no fears, no lies", isCorrect: false },
+      { answerText: "'Cause we are hunters, voices strong", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'Cause we are hunters, voices strong, and I know I believe...'",
+    answers: [
+      { answerText: "We're goin' up, up, up, it's our moment", isCorrect: true },
+      { answerText: "We're gonna be, gonna be golden", isCorrect: false },
+      { answerText: "We're dreaming hard, we came so far", isCorrect: false },
+      { answerText: "You know that it's our time, no fears, no lies", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'Oh, up, up, up with our voices...'",
+    answers: [
+      { answerText: "Yeongwonhi kkaejil su eomneun", isCorrect: true },
+      { answerText: "You know together we're glowin'", isCorrect: false },
+      { answerText: "Balge binnaneun uri", isCorrect: false },
+      { answerText: "Gonna be, gonna be golden", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'Born to be, born to be glowin'...'",
+    answers: [
+      { answerText: "Balge binnaneun uri", isCorrect: true },
+      { answerText: "That's who we're born to be", isCorrect: false },
+      { answerText: "We're gonna be, gonna be", isCorrect: false },
+      { answerText: "Oh, our time, no fears, no lies", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'Oh, I'm done hidin' now I'm shinin' like I'm born to be...'",
+    answers: [
+      { answerText: "Oh, our time, no fears, no lies", isCorrect: true },
+      { answerText: "Gonna be, gonna be golden", isCorrect: false },
+      { answerText: "We're dreaming hard, we came so far", isCorrect: false },
+      { answerText: "We're gonna be, gonna be", isCorrect: false },
+    ],
+  },
+  // How It's Done
+  {
+    questionText: "'Better come right, better luck tryin', gettin' to our level...'",
+    answers: [
+      { answerText: "'Cause you might die, never the time, tryna start a battle", isCorrect: true },
+      { answerText: "Bleeding isn't in my blood, 뼛속부터 달라서", isCorrect: false },
+      { answerText: "Beating you is what I do, do, do, yeah", isCorrect: false },
+      { answerText: "Okay, I'll show you wild", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'Locked and loaded, I was born for this...'",
+    answers: [
+      { answerText: "There ain't no point in avoiding it", isCorrect: true },
+      { answerText: "A little late to the party (na-na-na-na)", isCorrect: false },
+      { answerText: "Annoyed? A bit", isCorrect: false },
+      { answerText: "Knocking you out like a lullaby", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'Knocking you out like a lullaby...'",
+    answers: [
+      { answerText: "Hear that sound ringing in your mind", isCorrect: true },
+      { answerText: "Better sit down for the show", isCorrect: false },
+      { answerText: "Run, run, we run the town", isCorrect: false },
+      { answerText: "Whole world playin' our sound", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'Run, run, we run the town...'",
+    answers: [
+      { answerText: "Whole world playin' our sound", isCorrect: true },
+      { answerText: "Turnin' up, it's goin' down", isCorrect: false },
+      { answerText: "We hunt you down, down, down, down", isCorrect: false },
+      { answerText: "HUNTR/X don't quit", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'Heels, nails, blade, mascara...'",
+    answers: [
+      { answerText: "Fit check for my napalm era", isCorrect: true },
+      { answerText: "Need to beat my face, make it cute and savage", isCorrect: false },
+      { answerText: "We killin', we bring it, you want it? Okay", isCorrect: false },
+      { answerText: "I don't talk, but I bite, full of venom", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'Mirror, mirror on my phone, who's the baddest?...'",
+    answers: [
+      { answerText: "(Us, hello?)", isCorrect: true },
+      { answerText: "(I'm gonna show you)", isCorrect: false },
+      { answerText: "(Hey)", isCorrect: false },
+      { answerText: "(uh)", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'Okay, like, I know I ramble...'",
+    answers: [
+      { answerText: "But when shootin' my words, I go Rambo", isCorrect: true },
+      { answerText: "Spittin' facts, you know that's", isCorrect: false },
+      { answerText: "Took blood, sweat, and tears to look natural", isCorrect: false },
+      { answerText: "I don't talk, but I bite, full of venom", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'Hear our voice unwavering...'",
+    answers: [
+      { answerText: "'Til our song defeats the night", isCorrect: true },
+      { answerText: "Makin' fear afraid to breathe", isCorrect: false },
+      { answerText: "'Til the dark meets the light", isCorrect: false },
+      { answerText: "We got you now, now, now, now", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'We hunt you down, down, down, down...'",
+    answers: [
+      { answerText: "We got you now, now, now, now", isCorrect: true },
+      { answerText: "We show you how, how, how", isCorrect: false },
+      { answerText: "Turnin' up, it's goin' down", isCorrect: false },
+      { answerText: "Run, run, we run the town", isCorrect: false },
+    ],
+  },
+  // Takedown
+  {
+    questionText: "'So sweet, so easy on the eyes, but...'",
+    answers: [
+      { answerText: "hideous on the inside", isCorrect: true },
+      { answerText: "you can't hide, baby, nice try", isCorrect: false },
+      { answerText: "it's time to kick you straight back into the night", isCorrect: false },
+      { answerText: "you're rotten within", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'Cause I see your real face, and it's ugly as sin...'",
+    answers: [
+      { answerText: "Time to put you in your place 'cause you're rotten within", isCorrect: true },
+      { answerText: "It makes the hatred wanna grow outta my veins", isCorrect: false },
+      { answerText: "Break you into pieces in a world of pain", isCorrect: false },
+      { answerText: "A demon with no feelings don't deserve to live", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'When your patterns start to show...'",
+    answers: [
+      { answerText: "It makes the hatred wanna grow outta my veins", isCorrect: true },
+      { answerText: "It makes me want to scream your name", isCorrect: false },
+      { answerText: "I don't think you're ready for the takedown", isCorrect: false },
+      { answerText: "It's so obvious", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'A demon with no feelings don't deserve to live...'",
+    answers: [
+      { answerText: "it's so obvious", isCorrect: true },
+      { answerText: "it's a takedown", isCorrect: false },
+      { answerText: "you're all the same", isCorrect: false },
+      { answerText: "I'ma gear up and take you down", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'It's a takedown, I'ma take you out, and it...'",
+    answers: [
+      { answerText: "ain't gonna stop", isCorrect: true },
+      { answerText: "ain't gonna hurt", isCorrect: false },
+      { answerText: "is what you want", isCorrect: false },
+      { answerText: "will be your last shot", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'Oh, you're the master of illusion...'",
+    answers: [
+      { answerText: "나를 속이려 하지 마", isCorrect: true },
+      { answerText: "정신을 놓고, 널 짓밟고", isCorrect: false },
+      { answerText: "당당하게 어둠 앞에 다가서", isCorrect: false },
+      { answerText: "영혼 없는 네 목숨을 끊으러", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'How can you sleep or live with yourself?...'",
+    answers: [
+      { answerText: "A broken soul trapped in the nastiest shell", isCorrect: true },
+      { answerText: "Look at all the masses that you're foolin'", isCorrect: false },
+      { answerText: "You can try, but you can't hide", isCorrect: false },
+      { answerText: "You'll be beggin' and cryin', all of you dyin'", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'I'ma cut you open, lose control, then...'",
+    answers: [
+      { answerText: "rip out your heart", isCorrect: true },
+      { answerText: "take back what's mine", isCorrect: false },
+      { answerText: "watch you fall apart", isCorrect: false },
+      { answerText: "never miss my shot", isCorrect: false },
+    ],
+  },
+  // Additional Golden lyrics
+  {
+    questionText: "'Given the throne, I didn't know how to believe...'",
+    answers: [
+      { answerText: "I was the queen that I'm meant to be", isCorrect: true },
+      { answerText: "I was a ghost, I was alone, hah", isCorrect: false },
+      { answerText: "But I couldn't find my own place", isCorrect: false },
+      { answerText: "I lived two lives, tried to play both sides", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'We're dreaming hard, we came so far...'",
+    answers: [
+      { answerText: "now I believe", isCorrect: true },
+      { answerText: "now I am free", isCorrect: false },
+      { answerText: "we're meant to be", isCorrect: false },
+      { answerText: "now they all see", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'Put these patterns all in the past now...'",
+    answers: [
+      { answerText: "And finally live like the girl they all see", isCorrect: true },
+      { answerText: "To wake up and feel like me", isCorrect: false },
+      { answerText: "That's who we're born to be", isCorrect: false },
+      { answerText: "You know together we're glowin'", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'You know that it's our time, no fears, no lies...'",
+    answers: [
+      { answerText: "That's who we're born to be", isCorrect: true },
+      { answerText: "You know together we're glowin'", isCorrect: false },
+      { answerText: "Gonna be, gonna be golden", isCorrect: false },
+      { answerText: "Balge binnaneun uri", isCorrect: false },
+    ],
+  },
+  // Additional How It's Done lyrics
+  {
+    questionText: "'Ugh, you came at a bad time...'",
+    answers: [
+      { answerText: "But you just crossed the line", isCorrect: true },
+      { answerText: "Okay, I'll show you wild", isCorrect: false },
+      { answerText: "You wanna get wild?", isCorrect: false },
+      { answerText: "Tryna start a battle", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'Bleeding isn't in my blood, 뼛속부터 달라서...'",
+    answers: [
+      { answerText: "Beating you is what I do, do, do, yeah", isCorrect: true },
+      { answerText: "Body on body, I'm naughty, not even sorry", isCorrect: false },
+      { answerText: "Better come right, better luck tryin'", isCorrect: false },
+      { answerText: "'Cause you might die, never the time", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'Body on body, I'm naughty, not even sorry...'",
+    answers: [
+      { answerText: "And when you pull up, I'll pull up", isCorrect: true },
+      { answerText: "A little late to the party", isCorrect: false },
+      { answerText: "Locked and loaded, I was born for this", isCorrect: false },
+      { answerText: "There ain't no point in avoiding it", isCorrect: false },
+    ],
+  },
+    {
+    questionText: "'Yeah, something about when you come for the crown...'",
+    answers: [
+      { answerText: "That's so humbling, huh?", isCorrect: true },
+      { answerText: "이제야 포기해 what?", isCorrect: false },
+      { answerText: "You're done up, we come up", isCorrect: false },
+      { answerText: "We killin', we bring it, you want it? Okay", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'From sunup to sundown, so come out to play...'",
+    answers: [
+      { answerText: "Won either way, we're one in a million", isCorrect: true },
+      { answerText: "Fit check for my napalm era", isCorrect: false },
+      { answerText: "Hear that sound ringing in your mind", isCorrect: false },
+      { answerText: "Turnin' up, it's goin' down", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'I don't talk, but I bite, full of venom (uh)...'",
+    answers: [
+      { answerText: "Spittin' facts, you know that's", isCorrect: true },
+      { answerText: "I know I ramble", isCorrect: false },
+      { answerText: "When shootin' my words, I go Rambo", isCorrect: false },
+      { answerText: "Took blood, sweat, and tears to look natural", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'Makin' fear afraid to breathe...'",
+    answers: [
+      { answerText: "'Til the dark meets the light", isCorrect: true },
+      { answerText: "'Til our song defeats the night", isCorrect: false },
+      { answerText: "Hear our voice unwavering", isCorrect: false },
+      { answerText: "We got you now, now, now, now", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'We show you how, how, how...'",
+    answers: [
+      { answerText: "HUNTR/X don't miss, how it's done, done, done", isCorrect: true },
+      { answerText: "We hunt you down, down, down, down", isCorrect: false },
+      { answerText: "We got you now, now, now, now", isCorrect: false },
+      { answerText: "HUNTR/X don't quit", isCorrect: false },
+    ],
+  },
+  // Additional Takedown lyrics
+  {
+    questionText: "'Takedown, takedown, Takedown, down, down, down...'",
+    answers: [
+      { answerText: "(it's a takedown)", isCorrect: false },
+      { answerText: "(HUNTR/X girls to the world)", isCorrect: true },
+      { answerText: "(whoa-oh, da-da-da, down)", isCorrect: false },
+      { answerText: "(watch me do it, yeah)", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'Whole life spreadin' lies, but you can't hide, baby...'",
+    answers: [
+      { answerText: "nice try", isCorrect: true },
+      { answerText: "don't cry", isCorrect: false },
+      { answerText: "say bye", isCorrect: false },
+      { answerText: "don't lie", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'I'm 'bout to switch up these vibes...'",
+    answers: [
+      { answerText: "I finally opened my eyes", isCorrect: true },
+      { answerText: "It's time for your demise", isCorrect: false },
+      { answerText: "I'm cutting all your ties", isCorrect: false },
+      { answerText: "No more of your goodbyes", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'Break you into pieces in a world of pain 'cause...'",
+    answers: [
+      { answerText: "you're all the same", isCorrect: true },
+      { answerText: "it's just a game", isCorrect: false },
+      { answerText: "I'll scream your name", isCorrect: false },
+      { answerText: "you're who to blame", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'정신을 놓고, 널 짓밟고...'",
+    answers: [
+      { answerText: "칼을 새겨놔", isCorrect: true },
+      { answerText: "나를 속이려 하지 마", isCorrect: false },
+      { answerText: "다 무너뜨려", isCorrect: false },
+      { answerText: "영혼 없는 네 목숨을", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'Look at all the masses that you're foolin'...'",
+    answers: [
+      { answerText: "But they'll turn on you soon, so how?", isCorrect: true },
+      { answerText: "A broken soul trapped in the nastiest shell", isCorrect: false },
+      { answerText: "You can try, but you can't hide", isCorrect: false },
+      { answerText: "and watch you die-ie-ie", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'영혼 없는 네 목숨을 끊으러...'",
+    answers: [
+      { answerText: "and watch you die-ie-ie", isCorrect: true },
+      { answerText: "and watch you cry-y-y", isCorrect: false },
+      { answerText: "and watch you lie-ie-ie", isCorrect: false },
+      { answerText: "and say goodbye-ye-ye", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "'You can try, but you can't hide...'",
+    answers: [
+      { answerText: "It's a takedown, I'ma take you out", isCorrect: true },
+      { answerText: "I'ma cut you open, lose control", isCorrect: false },
+      { answerText: "You'll be beggin' and cryin'", isCorrect: false },
+      { answerText: "A demon with no feelings", isCorrect: false },
+    ],
+  },
+];
+
 export const hunterProfiles: HunterProfile[] = [
   {
     name: "Rumi",
@@ -871,7 +1285,7 @@ const getRandomQuestions = (questions: Question[], count: number): Question[] =>
   return selectedQuestions.map(shuffleAnswers);
 };
 
-export const getQuestionsByDifficulty = (difficulty: 'easy' | 'normal' | 'hard'): Question[] => {
+export const getQuestionsByDifficulty = (difficulty: 'easy' | 'normal' | 'hard' | 'lyrics'): Question[] => {
   switch (difficulty) {
     case 'easy':
       return getRandomQuestions(easyQuestions, 5);
@@ -879,6 +1293,8 @@ export const getQuestionsByDifficulty = (difficulty: 'easy' | 'normal' | 'hard')
       return getRandomQuestions(normalQuestions, 7);
     case 'hard':
       return hardQuestions.map(shuffleAnswers); // Shuffle answers for all hard questions
+    case 'lyrics':
+      return getRandomQuestions(knowYourLyricsQuestions, 15);
     default:
       return getRandomQuestions(easyQuestions, 5);
   }

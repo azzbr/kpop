@@ -39,6 +39,15 @@ const DifficultyScreen: React.FC = () => {
       color: 'from-purple-400 to-pink-500',
       hoverColor: 'hover:from-purple-300 hover:to-pink-400',
     },
+    {
+      level: 'lyrics' as Difficulty,
+      title: 'Know Your Lyrics',
+      description: 'Test your song knowledge! 🎤',
+      questions: 15,
+      emoji: '🎵',
+      color: 'from-blue-400 to-cyan-500',
+      hoverColor: 'hover:from-blue-300 hover:to-cyan-400',
+    },
   ];
 
   return (
@@ -81,7 +90,7 @@ const DifficultyScreen: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6, duration: 0.5 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto"
         >
           {difficulties.map((difficulty, index) => (
             <motion.button

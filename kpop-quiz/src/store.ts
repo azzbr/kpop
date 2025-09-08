@@ -3,7 +3,7 @@ import type { Question, HunterProfile } from './quizData';
 import { getQuestionsByDifficulty, getProfileByScore } from './quizData';
 
 export type GameState = 'welcome' | 'difficulty' | 'quiz' | 'result';
-export type Difficulty = 'easy' | 'normal' | 'hard';
+export type Difficulty = 'easy' | 'normal' | 'hard' | 'lyrics';
 
 interface GameStore {
   // Game state
