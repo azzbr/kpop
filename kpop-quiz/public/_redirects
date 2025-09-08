@@ -1,0 +1,5 @@
+# Redirect all requests to index.html for SPA routing
+/*    /index.html   200
+
+# API function redirects (handled by netlify.toml, but good to have as backup)
+/.netlify/functions/*  /.netlify/functions/:splat  200

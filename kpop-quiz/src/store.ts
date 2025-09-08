@@ -17,6 +17,11 @@ interface GameStore {
   score: number;
   hunterProfile: HunterProfile | null;
 
+  // Global counter
+  totalTests: number;
+  isLoadingCounter: boolean;
+  counterError: string | null;
+
   // Actions
   setGameState: (state: GameState) => void;
   setUserName: (name: string) => void;
@@ -26,6 +31,10 @@ interface GameStore {
   nextQuestion: () => void;
   calculateResult: () => void;
   resetGame: () => void;
+
+  // Counter actions
+  fetchTotalTests: () => Promise<void>;
+  incrementTotalTests: () => Promise<void>;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -39,6 +48,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
   isAnswerCorrect: null,
   score: 0,
   hunterProfile: null,
+
+  // Counter initial state
+  totalTests: 0,
+  isLoadingCounter: false,
+  counterError: null,
 
   // Actions
   setGameState: (state) => set({ gameState: state }),
@@ -90,14 +104,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
-  calculateResult: () => {
-    const { score, questions } = get();
+  calculateResult: async () => {
+    const { score, questions, incrementTotalTests } = get();
     const hunterProfile = getProfileByScore(score, questions.length);
 
     set({
       gameState: 'result',
       hunterProfile,
     });
+
+    // Increment global counter when quiz is completed
+    await incrementTotalTests();
   },
 
   resetGame: () => {
@@ -112,5 +129,43 @@ export const useGameStore = create<GameStore>((set, get) => ({
       score: 0,
       hunterProfile: null,
     });
+  },
+
+  // Counter actions
+  fetchTotalTests: async () => {
+    set({ isLoadingCounter: true, counterError: null });
+    try {
+      const response = await fetch('/.netlify/functions/counter');
+      if (!response.ok) {
+        throw new Error('Failed to fetch counter');
+      }
+      const data = await response.json();
+      set({ totalTests: data.totalTests, isLoadingCounter: false });
+    } catch (error) {
+      console.error('Error fetching counter:', error);
+      set({
+        counterError: 'Failed to load counter',
+        isLoadingCounter: false
+      });
+    }
+  },
+
+  incrementTotalTests: async () => {
+    try {
+      const response = await fetch('/.netlify/functions/increment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) {
+        throw new Error('Failed to increment counter');
+      }
+      const data = await response.json();
+      set({ totalTests: data.totalTests });
+    } catch (error) {
+      console.error('Error incrementing counter:', error);
+      set({ counterError: 'Failed to update counter' });
+    }
   },
 }));

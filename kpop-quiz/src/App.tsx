@@ -1,4 +1,3 @@
-import React from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from './store';
 import WelcomeScreen from './components/WelcomeScreen';
