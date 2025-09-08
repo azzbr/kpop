@@ -4,11 +4,7 @@ import { useGameStore } from '../store';
 
 const WelcomeScreen: React.FC = () => {
   const [inputName, setInputName] = useState('');
-  const { setUserName, setGameState, totalTests, isLoadingCounter, counterError, fetchTotalTests } = useGameStore();
-
-  useEffect(() => {
-    fetchTotalTests();
-  }, [fetchTotalTests]);
+  const { setUserName, setGameState } = useGameStore();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,37 +60,7 @@ const WelcomeScreen: React.FC = () => {
           Answer questions about your favorite artists and earn cool rewards! 🎉
         </motion.p>
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.9, duration: 0.5 }}
-          className="mb-8"
-        >
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-2 border-purple-200">
-            <h3 className="text-xl font-fredoka font-bold text-purple-600 mb-2">
-              🌟 Global Quiz Counter 🌟
-            </h3>
-            {isLoadingCounter ? (
-              <div className="flex items-center justify-center py-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-                <span className="ml-3 text-purple-600 font-nunito">Loading...</span>
-              </div>
-            ) : counterError ? (
-              <p className="text-red-500 font-nunito text-center py-2">
-                {counterError}
-              </p>
-            ) : (
-              <div className="text-center">
-                <div className="text-3xl md:text-4xl font-fredoka font-bold text-pink-500 mb-1">
-                  {totalTests.toLocaleString()}
-                </div>
-                <p className="text-gray-600 font-nunito text-sm">
-                  Total quizzes completed worldwide! 🎉
-                </p>
-              </div>
-            )}
-          </div>
-        </motion.div>
+
 
         <motion.form
           initial={{ opacity: 0, y: 20 }}
