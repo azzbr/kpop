@@ -17,7 +17,11 @@ interface GameStore {
   score: number;
   hunterProfile: HunterProfile | null;
 
-
+  // Music state
+  currentTrack: number;
+  isPlaying: boolean;
+  volume: number;
+  playlist: string[];
 
   // Actions
   setGameState: (state: GameState) => void;
@@ -29,7 +33,12 @@ interface GameStore {
   calculateResult: () => void;
   resetGame: () => void;
 
-
+  // Music actions
+  setCurrentTrack: (track: number) => void;
+  setIsPlaying: (playing: boolean) => void;
+  setVolume: (volume: number) => void;
+  nextTrack: () => void;
+  prevTrack: () => void;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -43,6 +52,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
   isAnswerCorrect: null,
   score: 0,
   hunterProfile: null,
+
+  // Music initial state
+  currentTrack: 0,
+  isPlaying: false,
+  volume: 0.5,
+  playlist: [
+    '01. TAKEDOWN (JEONGYEON, JIHYO, CHAEYOUNG).flac',
+    '02. How It\'s Done.flac',
+    '03. Soda Pop.flac',
+    '04. Golden.flac',
+    '05. Strategy.flac',
+    '06. Takedown.flac',
+    '07. Your Idol.flac',
+    '08. Free.flac',
+    '09. What It Sounds Like.flac',
+    '10. 사랑인가 봐 Love, Maybe.flac',
+    '11. 오솔길 Path.flac',
+    '12. Score Suite.flac'
+  ],
 
 
 
@@ -120,5 +148,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
   },
 
+  // Music actions
+  setCurrentTrack: (track) => set({ currentTrack: track }),
+  setIsPlaying: (playing) => set({ isPlaying: playing }),
+  setVolume: (volume) => set({ volume }),
+  nextTrack: () => {
+    const { currentTrack, playlist } = get();
+    const next = (currentTrack + 1) % playlist.length;
+    set({ currentTrack: next });
+  },
+  prevTrack: () => {
+    const { currentTrack, playlist } = get();
+    const prev = currentTrack === 0 ? playlist.length - 1 : currentTrack - 1;
+    set({ currentTrack: prev });
+  },
 
 }));

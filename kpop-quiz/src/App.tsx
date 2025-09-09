@@ -4,6 +4,7 @@ import WelcomeScreen from './components/WelcomeScreen';
 import DifficultyScreen from './components/DifficultyScreen';
 import QuizView from './components/QuizView';
 import ResultScreen from './components/ResultScreen';
+import MusicPlayer from './components/MusicPlayer';
 
 function App() {
   const { gameState } = useGameStore();
@@ -28,6 +29,7 @@ function App() {
       <AnimatePresence mode="wait">
         {renderCurrentScreen()}
       </AnimatePresence>
+      <MusicPlayer />
     </div>
   );
 }
