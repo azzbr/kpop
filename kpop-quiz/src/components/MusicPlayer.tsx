@@ -11,7 +11,8 @@ const MusicPlayer: React.FC = () => {
     setIsPlaying,
     nextTrack,
     prevTrack,
-    setVolume
+    setVolume,
+    incrementSongsListened
   } = useGameStore();
 
   const currentTrackName = playlist[currentTrack];
@@ -40,10 +41,12 @@ const MusicPlayer: React.FC = () => {
 
   const handleNext = () => {
     nextTrack();
+    incrementSongsListened();
   };
 
   const handlePrev = () => {
     prevTrack();
+    incrementSongsListened();
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {

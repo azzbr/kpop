@@ -1,15 +1,65 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../store';
+import BadgeGallery from './BadgeGallery';
 
 const ResultScreen: React.FC = () => {
-  const { userName, score, questions, hunterProfile, resetGame } = useGameStore();
+  const { userName, score, questions, hunterProfile, resetGame, earnedBadges, badges } = useGameStore();
+  const [showBadges, setShowBadges] = useState(false);
+  const [newBadges, setNewBadges] = useState<string[]>([]);
   const isSuccess = score === questions.length;
   const percentage = Math.round((score / questions.length) * 100);
+
+  useEffect(() => {
+    // Check for newly earned badges
+    const previousBadges = JSON.parse(localStorage.getItem('previousBadges') || '[]');
+    const currentBadges = earnedBadges;
+    const newlyEarned = currentBadges.filter(badge => !previousBadges.includes(badge));
+    
+    if (newlyEarned.length > 0) {
+      setNewBadges(newlyEarned);
+      // Show badge notification after a delay
+      setTimeout(() => {
+        // Badge unlock notification would go here
+      }, 1500);
+    }
+    
+    // Update localStorage with current badges
+    localStorage.setItem('previousBadges', JSON.stringify(currentBadges));
+  }, [earnedBadges]);
 
   const handleRetry = () => {
     resetGame();
   };
+
+  const handleViewBadges = () => {
+    setShowBadges(true);
+  };
+
+  const handleCloseBadges = () => {
+    setShowBadges(false);
+  };
+
+  if (showBadges) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="min-h-screen bg-kid-pattern"
+      >
+        <div className="flex justify-between items-center p-4">
+          <h1 className="text-2xl font-bold text-purple-600">Your Achievements</h1>
+          <button
+            onClick={handleCloseBadges}
+            className="text-purple-600 hover:text-purple-800 text-xl font-bold"
+          >
+            ✕ Back
+          </button>
+        </div>
+        <BadgeGallery />
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
@@ -112,17 +162,30 @@ const ResultScreen: React.FC = () => {
               </motion.div>
             )}
 
-            <motion.button
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.0, duration: 0.5 }}
-              whileHover={{ scale: 1.1, rotate: [0, -2, 2, 0] }}
-              whileTap={{ scale: 0.9 }}
-              onClick={handleRetry}
-              className="btn-kid font-fredoka"
-            >
-              Play Again! 🎮
-            </motion.button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.0, duration: 0.5 }}
+                whileHover={{ scale: 1.1, rotate: [0, -2, 2, 0] }}
+                whileTap={{ scale: 0.9 }}
+                onClick={handleViewBadges}
+                className="btn-kid font-fredoka bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600"
+              >
+                View Badges! 🏆
+              </motion.button>
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.2, duration: 0.5 }}
+                whileHover={{ scale: 1.1, rotate: [0, -2, 2, 0] }}
+                whileTap={{ scale: 0.9 }}
+                onClick={handleRetry}
+                className="btn-kid font-fredoka"
+              >
+                Play Again! 🎮
+              </motion.button>
+            </div>
           </motion.div>
         ) : (
           // Keep Trying Screen

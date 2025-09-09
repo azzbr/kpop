@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../store';
+import DailyChallenge from './DailyChallenge';
 
 const WelcomeScreen: React.FC = () => {
   const [inputName, setInputName] = useState('');
@@ -60,7 +61,14 @@ const WelcomeScreen: React.FC = () => {
           Answer questions about your favorite artists and earn cool rewards! 🎉
         </motion.p>
 
-
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8, duration: 0.5 }}
+          className="mb-8 max-w-lg mx-auto"
+        >
+          <DailyChallenge />
+        </motion.div>
 
         <motion.form
           initial={{ opacity: 0, y: 20 }}
