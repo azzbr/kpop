@@ -307,10 +307,19 @@ export const friendsQuestionTemplates: FriendsQuestionTemplate[] = [
   }
 ];
 
-export const generateQuestionsForFriends = (friends: string[]): any[] => {
+interface GeneratedQuestion {
+  id: string;
+  question: string;
+  answers: string[];
+  correctAnswer: number;
+  aboutFriend: string;
+  category: string;
+}
+
+export const generateQuestionsForFriends = (friends: string[]): GeneratedQuestion[] => {
   if (friends.length === 0) return [];
 
-  const questions: any[] = [];
+  const questions: GeneratedQuestion[] = [];
 
   // Generate 6-8 questions per friend for longer, more engaging games
   friends.forEach(friend => {

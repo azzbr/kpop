@@ -69,6 +69,42 @@ const GameModeSelection: React.FC = () => {
       color: 'from-pink-400 to-rose-500',
       bgColor: 'bg-pink-100',
       borderColor: 'border-pink-300'
+    },
+    {
+      id: 'math' as GameMode,
+      title: 'Math Challenge',
+      description: 'Master math skills with fun challenges!',
+      icon: '🧮',
+      color: 'from-blue-400 to-indigo-500',
+      bgColor: 'bg-blue-100',
+      borderColor: 'border-blue-300'
+    },
+    {
+      id: 'spelling' as GameMode,
+      title: 'Spelling Bee',
+      description: 'Master spelling with interactive letter fun!',
+      icon: '🐝',
+      color: 'from-yellow-400 to-orange-500',
+      bgColor: 'bg-yellow-100',
+      borderColor: 'border-yellow-300'
+    },
+    {
+      id: 'reading' as GameMode,
+      title: 'Reading Comprehension',
+      description: 'Read stories and answer comprehension questions!',
+      icon: '📖',
+      color: 'from-indigo-400 to-purple-500',
+      bgColor: 'bg-indigo-100',
+      borderColor: 'border-indigo-300'
+    },
+    {
+      id: 'science' as GameMode,
+      title: 'Science Quiz',
+      description: 'Learn amazing facts about animals, planets, and weather!',
+      icon: '🔬',
+      color: 'from-teal-400 to-green-500',
+      bgColor: 'bg-teal-100',
+      borderColor: 'border-teal-300'
     }
   ];
 
@@ -88,6 +124,14 @@ const GameModeSelection: React.FC = () => {
       setGameState('team_maker');
     } else if (mode === 'friends') {
       setGameState('friends_trivia');
+    } else if (mode === 'math') {
+      setGameState('math_challenge');
+    } else if (mode === 'spelling') {
+      setGameState('spelling_bee');
+    } else if (mode === 'reading') {
+      setGameState('reading_comprehension');
+    } else if (mode === 'science') {
+      setGameState('science_quiz');
     }
   };
 
