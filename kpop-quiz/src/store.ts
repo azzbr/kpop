@@ -65,11 +65,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     '05. Strategy.flac',
     '06. Takedown.flac',
     '07. Your Idol.flac',
-    '08. Free.flac',
-    '09. What It Sounds Like.flac',
-    '10. 사랑인가 봐 Love, Maybe.flac',
-    '11. 오솔길 Path.flac',
-    '12. Score Suite.flac'
+    '08. Free.flac'
   ],
 
 
