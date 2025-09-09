@@ -42,6 +42,33 @@ const GameModeSelection: React.FC = () => {
       color: 'from-orange-400 to-red-500',
       bgColor: 'bg-orange-100',
       borderColor: 'border-orange-300'
+    },
+    {
+      id: 'instruments' as GameMode,
+      title: 'Learn Instruments',
+      description: 'Learn to play K-Pop songs on piano and recorder!',
+      icon: '🎼',
+      color: 'from-yellow-400 to-orange-500',
+      bgColor: 'bg-yellow-100',
+      borderColor: 'border-yellow-300'
+    },
+    {
+      id: 'teams' as GameMode,
+      title: 'Team Maker',
+      description: 'Create random teams for sports and games!',
+      icon: '👥',
+      color: 'from-indigo-400 to-purple-500',
+      bgColor: 'bg-indigo-100',
+      borderColor: 'border-indigo-300'
+    },
+    {
+      id: 'friends' as GameMode,
+      title: 'Friends Trivia',
+      description: 'Test your knowledge about your friends!',
+      icon: '👫',
+      color: 'from-pink-400 to-rose-500',
+      bgColor: 'bg-pink-100',
+      borderColor: 'border-pink-300'
     }
   ];
 
@@ -55,6 +82,12 @@ const GameModeSelection: React.FC = () => {
       setGameState('rhythm_game');
     } else if (mode === 'trivia') {
       setGameState('trivia_cards');
+    } else if (mode === 'instruments') {
+      setGameState('instruments_tutorial');
+    } else if (mode === 'teams') {
+      setGameState('team_maker');
+    } else if (mode === 'friends') {
+      setGameState('friends_trivia');
     }
   };
 

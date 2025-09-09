@@ -2,9 +2,9 @@ import { create } from 'zustand';
 import type { Question, HunterProfile } from './quizData';
 import { getQuestionsByDifficulty, getProfileByScore } from './quizData';
 
-export type GameState = 'welcome' | 'game_mode' | 'difficulty' | 'quiz' | 'result' | 'memory_game' | 'rhythm_game' | 'trivia_cards';
+export type GameState = 'welcome' | 'game_mode' | 'difficulty' | 'quiz' | 'result' | 'memory_game' | 'rhythm_game' | 'trivia_cards' | 'instruments_tutorial' | 'team_maker' | 'friends_trivia';
 export type Difficulty = 'easy' | 'normal' | 'hard' | 'lyrics';
-export type GameMode = 'quiz' | 'memory' | 'rhythm' | 'trivia';
+export type GameMode = 'quiz' | 'memory' | 'rhythm' | 'trivia' | 'instruments' | 'teams' | 'friends';
 
 // Mini-games types
 export interface MemoryCard {
@@ -65,6 +65,15 @@ export interface Badge {
 }
 
 export type DailyChallengeType = 'regular' | 'speed' | 'music' | 'streak';
+
+export interface FriendsQuestion {
+  id: string;
+  question: string;
+  answers: string[];
+  correctAnswer: number;
+  aboutFriend: string;
+  category: string;
+}
 
 interface GameStore {
   // Game state
@@ -127,11 +136,43 @@ interface GameStore {
   cardCollection: TriviaCard[];
   cardMarket: CardPack[];
 
+  // Team maker state
+  teamMembers: string[];
+  numberOfTeams: number;
+  generatedTeams: string[][];
+  numberOfTaggers: number;
+  selectedTaggers: string[];
+
+  // Friends trivia state
+  friendsList: string[];
+  friendsQuestions: FriendsQuestion[];
+  currentFriendsQuestionIndex: number;
+  friendsScore: number;
+  friendsGameActive: boolean;
+
   // Trivia cards actions
   setUserCards: (cards: TriviaCard[]) => void;
   setUserCurrency: (currency: number) => void;
   setCardCollection: (cards: TriviaCard[]) => void;
   setCardMarket: (packs: CardPack[]) => void;
+
+  // Team maker actions
+  addTeamMember: (name: string) => void;
+  removeTeamMember: (index: number) => void;
+  setNumberOfTeams: (num: number) => void;
+  generateTeams: () => void;
+  clearTeams: () => void;
+  setNumberOfTaggers: (num: number) => void;
+  generateTaggers: () => void;
+
+  // Friends trivia actions
+  addFriend: (name: string) => void;
+  removeFriend: (index: number) => void;
+  generateFriendsQuestions: () => void;
+  startFriendsTrivia: () => void;
+  answerFriendsQuestion: (answerIndex: number) => void;
+  nextFriendsQuestion: () => void;
+  resetFriendsTrivia: () => void;
 
   // Actions
   setGameState: (state: GameState) => void;
@@ -313,6 +354,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
   cardCollection: [],
   cardMarket: [],
 
+  // Team maker initial state
+  teamMembers: [],
+  numberOfTeams: 2,
+  generatedTeams: [],
+  numberOfTaggers: 0,
+  selectedTaggers: [],
+
+  // Friends trivia initial state
+  friendsList: [],
+  friendsQuestions: [],
+  currentFriendsQuestionIndex: 0,
+  friendsScore: 0,
+  friendsGameActive: false,
+
 
 
   // Actions
@@ -345,6 +400,64 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setUserCurrency: (currency) => set({ userCurrency: currency }),
   setCardCollection: (cards) => set({ cardCollection: cards }),
   setCardMarket: (packs) => set({ cardMarket: packs }),
+
+  // Team maker actions
+  addTeamMember: (name) => {
+    const state = get();
+    if (name.trim() && !state.teamMembers.includes(name.trim())) {
+      set({ teamMembers: [...state.teamMembers, name.trim()] });
+    }
+  },
+  removeTeamMember: (index) => {
+    const state = get();
+    const newMembers = [...state.teamMembers];
+    newMembers.splice(index, 1);
+    set({ teamMembers: newMembers });
+  },
+  setNumberOfTeams: (num) => set({ numberOfTeams: num }),
+  generateTeams: () => {
+    const state = get();
+    const { teamMembers, numberOfTeams } = state;
+
+    if (teamMembers.length === 0 || numberOfTeams < 2) return;
+
+    // Shuffle the array using Fisher-Yates algorithm
+    const shuffled = [...teamMembers];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    // Distribute members into teams as evenly as possible
+    const teams: string[][] = Array.from({ length: numberOfTeams }, () => []);
+    shuffled.forEach((member, index) => {
+      const teamIndex = index % numberOfTeams;
+      teams[teamIndex].push(member);
+    });
+
+    set({ generatedTeams: teams });
+  },
+  clearTeams: () => set({ generatedTeams: [], teamMembers: [], selectedTaggers: [] }),
+  setNumberOfTaggers: (num) => set({ numberOfTaggers: num }),
+  generateTaggers: () => {
+    const state = get();
+    const { teamMembers, numberOfTaggers } = state;
+
+    if (teamMembers.length === 0 || numberOfTaggers === 0) {
+      set({ selectedTaggers: [] });
+      return;
+    }
+
+    // Shuffle the array and select taggers
+    const shuffled = [...teamMembers];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    const taggers = shuffled.slice(0, Math.min(numberOfTaggers, teamMembers.length));
+    set({ selectedTaggers: taggers });
+  },
 
   initializeQuiz: () => {
     const { difficulty } = get();
@@ -576,6 +689,70 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
 
     get().checkAndAwardBadges();
+  },
+
+  // Friends trivia actions
+  addFriend: (name) => {
+    const state = get();
+    if (name.trim() && !state.friendsList.includes(name.trim())) {
+      set({ friendsList: [...state.friendsList, name.trim()] });
+    }
+  },
+  removeFriend: (index) => {
+    const state = get();
+    const newFriends = [...state.friendsList];
+    newFriends.splice(index, 1);
+    set({ friendsList: newFriends });
+  },
+  generateFriendsQuestions: () => {
+    const state = get();
+    if (state.friendsList.length === 0) return;
+
+    // Import the function dynamically to avoid circular dependency
+    import('./friendsQuestionsData').then(({ generateQuestionsForFriends }) => {
+      const questions = generateQuestionsForFriends(state.friendsList);
+      set({ friendsQuestions: questions });
+    });
+  },
+  startFriendsTrivia: () => {
+    const state = get();
+    if (state.friendsQuestions.length > 0) {
+      set({
+        friendsGameActive: true,
+        currentFriendsQuestionIndex: 0,
+        friendsScore: 0,
+        gameState: 'friends_trivia'
+      });
+    }
+  },
+  answerFriendsQuestion: (answerIndex) => {
+    const state = get();
+    const currentQuestion = state.friendsQuestions[state.currentFriendsQuestionIndex];
+    const isCorrect = answerIndex === currentQuestion.correctAnswer;
+
+    set({
+      friendsScore: isCorrect ? state.friendsScore + 10 : state.friendsScore
+    });
+  },
+  nextFriendsQuestion: () => {
+    const state = get();
+    const nextIndex = state.currentFriendsQuestionIndex + 1;
+
+    if (nextIndex >= state.friendsQuestions.length) {
+      // Game completed
+      set({ friendsGameActive: false });
+    } else {
+      set({ currentFriendsQuestionIndex: nextIndex });
+    }
+  },
+  resetFriendsTrivia: () => {
+    set({
+      friendsList: [],
+      friendsQuestions: [],
+      currentFriendsQuestionIndex: 0,
+      friendsScore: 0,
+      friendsGameActive: false
+    });
   },
 
 }));

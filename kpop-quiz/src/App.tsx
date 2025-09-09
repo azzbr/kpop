@@ -8,6 +8,9 @@ import ResultScreen from './components/ResultScreen';
 import MemoryGame from './components/MemoryGame';
 import RhythmGame from './components/RhythmGame';
 import TriviaCards from './components/TriviaCards';
+import InstrumentsTutorial from './components/InstrumentsTutorial';
+import TeamMaker from './components/TeamMaker';
+import FriendsTrivia from './components/FriendsTrivia';
 import MusicPlayer from './components/MusicPlayer';
 
 function App() {
@@ -31,6 +34,12 @@ function App() {
         return <RhythmGame key="rhythm_game" />;
       case 'trivia_cards':
         return <TriviaCards key="trivia_cards" />;
+      case 'instruments_tutorial':
+        return <InstrumentsTutorial key="instruments_tutorial" />;
+      case 'team_maker':
+        return <TeamMaker key="team_maker" />;
+      case 'friends_trivia':
+        return <FriendsTrivia key="friends_trivia" />;
       default:
         return <WelcomeScreen key="welcome" />;
     }
