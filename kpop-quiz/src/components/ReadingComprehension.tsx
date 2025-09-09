@@ -255,17 +255,6 @@ const ReadingComprehension: React.FC = () => {
     }
   };
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'Friendship': return 'from-pink-400 to-purple-500';
-      case 'Fantasy': return 'from-blue-400 to-indigo-500';
-      case 'Adventure': return 'from-green-400 to-teal-500';
-      case 'Wisdom': return 'from-yellow-400 to-orange-500';
-      case 'Mystery': return 'from-gray-400 to-gray-500';
-      default: return 'from-gray-400 to-gray-500';
-    }
-  };
-
   const getStoriesForLevel = (level: 'easy' | 'medium' | 'hard'): Story[] => {
     return stories.filter(story => story.level === level);
   };
