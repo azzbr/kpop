@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useGameStore } from '../store';
 
 interface ScienceQuestion {
@@ -407,7 +407,6 @@ const ScienceQuiz: React.FC = () => {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [score, setScore] = useState(0);
-  const [scienceLevel, setScienceLevel] = useState<'easy' | 'medium' | 'hard'>('easy');
   const [streak, setStreak] = useState(0);
   const [timeLeft, setTimeLeft] = useState(30);
   const [showExplanation, setShowExplanation] = useState(false);
@@ -443,7 +442,6 @@ const ScienceQuiz: React.FC = () => {
   };
 
   const startQuiz = (level: 'easy' | 'medium' | 'hard') => {
-    setScienceLevel(level);
     const availableQuestions = getQuestionsForLevel(level);
     // Shuffle and take 10 questions
     const shuffled = [...availableQuestions].sort(() => Math.random() - 0.5);

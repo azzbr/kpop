@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useGameStore } from '../store';
 
 interface Story {
@@ -230,7 +230,6 @@ const ReadingComprehension: React.FC = () => {
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [score, setScore] = useState(0);
   const [showStory, setShowStory] = useState(true);
-  const [readingLevel, setReadingLevel] = useState<'easy' | 'medium' | 'hard'>('easy');
   const [streak, setStreak] = useState(0);
   const [timeLeft, setTimeLeft] = useState(45);
 
@@ -267,10 +266,6 @@ const ReadingComprehension: React.FC = () => {
     }
   };
 
-  const getCategoryClass = (category: string) => {
-    return `bg-gradient-to-r ${getCategoryColor(category)} text-white px-4 py-2 rounded-full font-fredoka font-bold text-sm flex items-center space-x-2`;
-  };
-
   const getStoriesForLevel = (level: 'easy' | 'medium' | 'hard'): Story[] => {
     return stories.filter(story => story.level === level);
   };
@@ -292,7 +287,6 @@ const ReadingComprehension: React.FC = () => {
   };
 
   const startReading = (level: 'easy' | 'medium' | 'hard') => {
-    setReadingLevel(level);
     const availableStories = getStoriesForLevel(level);
     const randomStory = availableStories[Math.floor(Math.random() * availableStories.length)];
 
