@@ -120,8 +120,8 @@ const RhythmGame: React.FC = () => {
       }
     });
 
-    if (foundNote) {
-      const timeDiff = Math.abs(currentTime - foundNote.timestamp);
+    if (foundNote !== null && foundNote !== undefined) {
+      const timeDiff = Math.abs(currentTime - (foundNote as { id: number; position: number; timestamp: number; hit: boolean }).timestamp);
 
       if (timeDiff < 100) {
         // Perfect hit
@@ -141,7 +141,7 @@ const RhythmGame: React.FC = () => {
       // Mark note as hit
       setNotes(prevNotes =>
         prevNotes.map(note =>
-          note.id === (foundNote as { id: number; position: number; timestamp: number; hit: boolean }).id ? { ...note, hit: true } : note
+          note.id === foundNote!.id ? { ...note, hit: true } : note
         )
       );
     }
