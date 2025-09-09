@@ -9,7 +9,6 @@ const MusicPlayer: React.FC = () => {
     volume,
     playlist,
     setIsPlaying,
-    setCurrentTrack,
     nextTrack,
     prevTrack,
     setVolume
