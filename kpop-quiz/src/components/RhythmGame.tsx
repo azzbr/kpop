@@ -16,9 +16,7 @@ const RhythmGame: React.FC = () => {
     setRhythmAccuracy,
     setRhythmCurrentSong,
     setRhythmGameActive,
-    currentTrack,
     playlist,
-    isPlaying,
     setIsPlaying
   } = useGameStore();
 
@@ -34,7 +32,7 @@ const RhythmGame: React.FC = () => {
   const noteIdRef = useRef(0);
 
   // Generate rhythm notes for the selected song
-  const generateNotes = (songIndex: number) => {
+  const generateNotes = () => {
     const songNotes = [];
     const noteCount = 20; // Number of notes per song
 
@@ -62,7 +60,7 @@ const RhythmGame: React.FC = () => {
     setGoodHits(0);
     setMissedHits(0);
 
-    const gameNotes = generateNotes(songIndex);
+    const gameNotes = generateNotes();
     setNotes(gameNotes);
     setShowSongSelection(false);
 
@@ -109,7 +107,7 @@ const RhythmGame: React.FC = () => {
     const tapX = ((event.clientX - rect.left) / rect.width) * 100;
 
     // Find the closest note to the tap
-    let closestNote = null;
+    let foundNote: { id: number; position: number; timestamp: number; hit: boolean } | null = null;
     let minDistance = Infinity;
 
     notes.forEach(note => {
@@ -117,13 +115,13 @@ const RhythmGame: React.FC = () => {
         const distance = Math.abs(note.position - tapX);
         if (distance < minDistance && distance < 15) { // 15% tolerance
           minDistance = distance;
-          closestNote = note;
+          foundNote = note;
         }
       }
     });
 
-    if (closestNote) {
-      const timeDiff = Math.abs(currentTime - closestNote.timestamp);
+    if (foundNote) {
+      const timeDiff = Math.abs(currentTime - foundNote.timestamp);
 
       if (timeDiff < 100) {
         // Perfect hit
@@ -143,7 +141,7 @@ const RhythmGame: React.FC = () => {
       // Mark note as hit
       setNotes(prevNotes =>
         prevNotes.map(note =>
-          note.id === closestNote.id ? { ...note, hit: true } : note
+          note.id === (foundNote as { id: number; position: number; timestamp: number; hit: boolean }).id ? { ...note, hit: true } : note
         )
       );
     }
@@ -195,22 +193,25 @@ const RhythmGame: React.FC = () => {
           </motion.p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-lg mx-auto">
-            {rhythmUnlockedSongs.map((songName, index) => (
-              <motion.button
-                key={songName}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => startGame(playlist.indexOf(songName))}
-                className="btn-kid bg-gradient-to-r from-blue-400 to-cyan-500 hover:from-blue-500 hover:to-cyan-600 p-4"
-              >
-                <div className="text-center">
-                  <div className="text-lg mb-2">🎵</div>
-                  <div className="font-bold text-sm">
-                    {songName.replace('.flac', '').replace(/^\d+\.\s*/, '')}
+            {rhythmUnlockedSongs.map((songName) => {
+              const songIndex = playlist.indexOf(songName);
+              return (
+                <motion.button
+                  key={songName}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => startGame(songIndex)}
+                  className="btn-kid bg-gradient-to-r from-blue-400 to-cyan-500 hover:from-blue-500 hover:to-cyan-600 p-4"
+                >
+                  <div className="text-center">
+                    <div className="text-lg mb-2">🎵</div>
+                    <div className="font-bold text-sm">
+                      {songName.replace('.flac', '').replace(/^\d+\.\s*/, '')}
+                    </div>
                   </div>
-                </div>
-              </motion.button>
-            ))}
+                </motion.button>
+              );
+            })}
           </div>
 
           <motion.button

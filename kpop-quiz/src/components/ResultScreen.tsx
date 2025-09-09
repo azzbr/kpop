@@ -4,28 +4,14 @@ import { useGameStore } from '../store';
 import BadgeGallery from './BadgeGallery';
 
 const ResultScreen: React.FC = () => {
-  const { userName, score, questions, hunterProfile, resetGame, earnedBadges, badges } = useGameStore();
+  const { userName, score, questions, hunterProfile, resetGame, earnedBadges } = useGameStore();
   const [showBadges, setShowBadges] = useState(false);
-  const [newBadges, setNewBadges] = useState<string[]>([]);
   const isSuccess = score === questions.length;
   const percentage = Math.round((score / questions.length) * 100);
 
   useEffect(() => {
-    // Check for newly earned badges
-    const previousBadges = JSON.parse(localStorage.getItem('previousBadges') || '[]');
-    const currentBadges = earnedBadges;
-    const newlyEarned = currentBadges.filter(badge => !previousBadges.includes(badge));
-    
-    if (newlyEarned.length > 0) {
-      setNewBadges(newlyEarned);
-      // Show badge notification after a delay
-      setTimeout(() => {
-        // Badge unlock notification would go here
-      }, 1500);
-    }
-    
     // Update localStorage with current badges
-    localStorage.setItem('previousBadges', JSON.stringify(currentBadges));
+    localStorage.setItem('previousBadges', JSON.stringify(earnedBadges));
   }, [earnedBadges]);
 
   const handleRetry = () => {
