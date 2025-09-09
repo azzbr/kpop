@@ -11,7 +11,7 @@ const WelcomeScreen: React.FC = () => {
     e.preventDefault();
     if (inputName.trim()) {
       setUserName(inputName.trim());
-      setGameState('difficulty');
+      setGameState('game_mode');
     }
   };
 

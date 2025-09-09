@@ -2,8 +2,55 @@ import { create } from 'zustand';
 import type { Question, HunterProfile } from './quizData';
 import { getQuestionsByDifficulty, getProfileByScore } from './quizData';
 
-export type GameState = 'welcome' | 'difficulty' | 'quiz' | 'result';
+export type GameState = 'welcome' | 'game_mode' | 'difficulty' | 'quiz' | 'result' | 'memory_game' | 'rhythm_game' | 'trivia_cards';
 export type Difficulty = 'easy' | 'normal' | 'hard' | 'lyrics';
+export type GameMode = 'quiz' | 'memory' | 'rhythm' | 'trivia';
+
+// Mini-games types
+export interface MemoryCard {
+  id: number;
+  type: 'idol' | 'song' | 'album';
+  name: string;
+  imageUrl: string;
+  isFlipped: boolean;
+  isMatched: boolean;
+}
+
+export interface MemoryScore {
+  playerName: string;
+  score: number;
+  time: number;
+  difficulty: 'easy' | 'hard';
+  date: string;
+}
+
+export interface RhythmNote {
+  id: number;
+  position: number;
+  timestamp: number;
+  hit: boolean;
+  type: 'perfect' | 'good' | 'miss';
+}
+
+export interface TriviaCard {
+  id: string;
+  name: string;
+  group: string;
+  imageUrl: string;
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  facts: string[];
+  value: number;
+  owned: boolean;
+}
+
+export interface CardPack {
+  id: string;
+  name: string;
+  description: string;
+  cost: number;
+  cards: string[]; // Card IDs
+  imageUrl: string;
+}
 
 export interface Badge {
   id: string;
@@ -53,10 +100,60 @@ interface GameStore {
   dailyStreak: number;
   lastPlayedDate: string;
 
+  // Mini-games state
+  selectedGameMode: GameMode | null;
+
+  // Memory game state
+  memoryCards: MemoryCard[];
+  memoryFlippedCards: number[];
+  memoryMatchedPairs: number[];
+  memoryGameStartTime: number | null;
+  memoryScore: number;
+  memoryDifficulty: 'easy' | 'hard';
+  memoryLeaderboard: MemoryScore[];
+
+  // Rhythm game state
+  rhythmNotes: RhythmNote[];
+  rhythmScore: number;
+  rhythmCombo: number;
+  rhythmAccuracy: number;
+  rhythmCurrentSong: string;
+  rhythmUnlockedSongs: string[];
+  rhythmGameActive: boolean;
+
+  // Trivia cards state
+  userCards: TriviaCard[];
+  userCurrency: number;
+  cardCollection: TriviaCard[];
+  cardMarket: CardPack[];
+
+  // Trivia cards actions
+  setUserCards: (cards: TriviaCard[]) => void;
+  setUserCurrency: (currency: number) => void;
+  setCardCollection: (cards: TriviaCard[]) => void;
+  setCardMarket: (packs: CardPack[]) => void;
+
   // Actions
   setGameState: (state: GameState) => void;
   setUserName: (name: string) => void;
   setDifficulty: (difficulty: Difficulty) => void;
+  setSelectedGameMode: (mode: GameMode | null) => void;
+
+  // Memory game actions
+  setMemoryCards: (cards: MemoryCard[]) => void;
+  setMemoryFlippedCards: (cards: number[]) => void;
+  setMemoryMatchedPairs: (pairs: number[]) => void;
+  setMemoryGameStartTime: (time: number | null) => void;
+  setMemoryScore: (score: number) => void;
+  setMemoryDifficulty: (difficulty: 'easy' | 'hard') => void;
+  setMemoryLeaderboard: (leaderboard: MemoryScore[]) => void;
+
+  // Rhythm game actions
+  setRhythmScore: (score: number) => void;
+  setRhythmCombo: (combo: number) => void;
+  setRhythmAccuracy: (accuracy: number) => void;
+  setRhythmCurrentSong: (song: string) => void;
+  setRhythmGameActive: (active: boolean) => void;
   initializeQuiz: () => void;
   selectAnswer: (answerIndex: number) => void;
   nextQuestion: () => void;
@@ -189,6 +286,33 @@ export const useGameStore = create<GameStore>((set, get) => ({
   dailyStreak: 0,
   lastPlayedDate: '',
 
+  // Mini-games initial state
+  selectedGameMode: null,
+
+  // Memory game initial state
+  memoryCards: [],
+  memoryFlippedCards: [],
+  memoryMatchedPairs: [],
+  memoryGameStartTime: null,
+  memoryScore: 0,
+  memoryDifficulty: 'easy',
+  memoryLeaderboard: [],
+
+  // Rhythm game initial state
+  rhythmNotes: [],
+  rhythmScore: 0,
+  rhythmCombo: 0,
+  rhythmAccuracy: 0,
+  rhythmCurrentSong: '',
+  rhythmUnlockedSongs: ['01. TAKEDOWN (JEONGYEON, JIHYO, CHAEYOUNG).flac'],
+  rhythmGameActive: false,
+
+  // Trivia cards initial state
+  userCards: [],
+  userCurrency: 100, // Starting currency
+  cardCollection: [],
+  cardMarket: [],
+
 
 
   // Actions
@@ -197,6 +321,30 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setUserName: (name) => set({ userName: name }),
 
   setDifficulty: (difficulty) => set({ difficulty }),
+
+  setSelectedGameMode: (mode) => set({ selectedGameMode: mode }),
+
+  // Memory game actions
+  setMemoryCards: (cards) => set({ memoryCards: cards }),
+  setMemoryFlippedCards: (cards) => set({ memoryFlippedCards: cards }),
+  setMemoryMatchedPairs: (pairs) => set({ memoryMatchedPairs: pairs }),
+  setMemoryGameStartTime: (time) => set({ memoryGameStartTime: time }),
+  setMemoryScore: (score) => set({ memoryScore: score }),
+  setMemoryDifficulty: (difficulty) => set({ memoryDifficulty: difficulty }),
+  setMemoryLeaderboard: (leaderboard) => set({ memoryLeaderboard: leaderboard }),
+
+  // Rhythm game actions
+  setRhythmScore: (score) => set({ rhythmScore: score }),
+  setRhythmCombo: (combo) => set({ rhythmCombo: combo }),
+  setRhythmAccuracy: (accuracy) => set({ rhythmAccuracy: accuracy }),
+  setRhythmCurrentSong: (song) => set({ rhythmCurrentSong: song }),
+  setRhythmGameActive: (active) => set({ rhythmGameActive: active }),
+
+  // Trivia cards actions
+  setUserCards: (cards) => set({ userCards: cards }),
+  setUserCurrency: (currency) => set({ userCurrency: currency }),
+  setCardCollection: (cards) => set({ cardCollection: cards }),
+  setCardMarket: (packs) => set({ cardMarket: packs }),
 
   initializeQuiz: () => {
     const { difficulty } = get();
