@@ -48,6 +48,15 @@ const DifficultyScreen: React.FC = () => {
       color: 'from-blue-400 to-cyan-500',
       hoverColor: 'hover:from-blue-300 hover:to-cyan-400',
     },
+    {
+      level: 'demon' as Difficulty,
+      title: 'Demon Hunters',
+      description: 'Test your knowledge of the movie! 🎥',
+      questions: 13,
+      emoji: '👹',
+      color: 'from-red-400 to-purple-600',
+      hoverColor: 'hover:from-red-300 hover:to-purple-500',
+    },
   ];
 
   return (

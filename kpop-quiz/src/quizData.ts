@@ -830,6 +830,126 @@ export const hardQuestions: Question[] = [
   },
 ];
 
+export const demonHunterQuestions: Question[] = [
+  {
+    questionText: "First, what was the name of the singing (and demon-hunting) group that Celine was part of?",
+    answers: [
+      { answerText: "Moonlight Maidens", isCorrect: false },
+      { answerText: "Sunlight Sisters", isCorrect: true },
+      { answerText: "Starlight Songbirds", isCorrect: false },
+      { answerText: "Twilight Trio", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "What did Mira wear to the Met Gala?",
+    answers: [
+      { answerText: "Bird cage", isCorrect: false },
+      { answerText: "Garbage bag", isCorrect: false },
+      { answerText: "Sleeping bag", isCorrect: true },
+      { answerText: "Christmas lights", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "When Jinu tells Gwi-Ma about wanting to form a boyband to take down Huntr/x, what does Jinu want in return?",
+    answers: [
+      { answerText: "To become mortal", isCorrect: false },
+      { answerText: "His memories erased", isCorrect: true },
+      { answerText: "To reunite with his mom and sister", isCorrect: false },
+      { answerText: "The ability to see the future", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "When she first drools over the Saja Boys, which of these things do Zoey's eyes NOT turn into?",
+    answers: [
+      { answerText: "Waterfall", isCorrect: true },
+      { answerText: "Corn", isCorrect: false },
+      { answerText: "Abs", isCorrect: false },
+      { answerText: "Hearts", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "Finish these lyrics: \"You're all I can think of / Every _____________.\"",
+    answers: [
+      { answerText: "\"day I wake up.\"", isCorrect: false },
+      { answerText: "\"beat of my heart.\"", isCorrect: false },
+      { answerText: "\"drop I drink up.\"", isCorrect: true },
+      { answerText: "\"moment I see you.\"", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "Which member of the Saja Boys wins the Spicy Challenge while appearing on Play Games with Us?",
+    answers: [
+      { answerText: "Abby", isCorrect: false },
+      { answerText: "Baby", isCorrect: true },
+      { answerText: "Romance", isCorrect: false },
+      { answerText: "Mystery", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "When they first meet, what does Derpy Tiger give Rumi?",
+    answers: [
+      { answerText: "A bracelet from Jinu", isCorrect: false },
+      { answerText: "A plant", isCorrect: false },
+      { answerText: "A stuffed animal", isCorrect: false },
+      { answerText: "A note from Jinu", isCorrect: true },
+    ],
+  },
+  {
+    questionText: "What's depicted on Rumi's pajama pants that Jinu makes fun of?",
+    answers: [
+      { answerText: "Smiley faces and penguins", isCorrect: false },
+      { answerText: "Hearts and otters", isCorrect: false },
+      { answerText: "Elephants and cookies", isCorrect: false },
+      { answerText: "Teddy bears and trains", isCorrect: true },
+    ],
+  },
+  {
+    questionText: "At the signing event, what does a young fan give Jinu?",
+    answers: [
+      { answerText: "A drawing", isCorrect: true },
+      { answerText: "Homemade cookies", isCorrect: false },
+      { answerText: "A bouquet of roses", isCorrect: false },
+      { answerText: "A Jinu doll", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "Bobby reveals which member of Huntr/x is Mystery shipped with on the internet?",
+    answers: [
+      { answerText: "Rumi", isCorrect: false },
+      { answerText: "Mira", isCorrect: false },
+      { answerText: "Zoey", isCorrect: true },
+      { answerText: "Mira and Zoey", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "Where did Jinu's bird get its hat?",
+    answers: [
+      { answerText: "Found it in a forest", isCorrect: false },
+      { answerText: "Traded their soul for it", isCorrect: false },
+      { answerText: "Took it off of one of Zoey's toys", isCorrect: false },
+      { answerText: "Stole it from the tiger", isCorrect: true },
+    ],
+  },
+  {
+    questionText: "Finish these lyrics: \"We dreamin' hard, we came so far _____________.\"",
+    answers: [
+      { answerText: "\"We can't go back now.\"", isCorrect: false },
+      { answerText: "\"Now I believe.\"", isCorrect: true },
+      { answerText: "\"We're reaching for the stars.\"", isCorrect: false },
+      { answerText: "\"Now I can achieve.\"", isCorrect: false },
+    ],
+  },
+  {
+    questionText: "And finally, what's the last thing Jinu tells Rumi?",
+    answers: [
+      { answerText: "\"You gave me my soul back.\"", isCorrect: false },
+      { answerText: "\"You were right.\"", isCorrect: false },
+      { answerText: "\"And now, I give it to you.\"", isCorrect: true },
+      { answerText: "\"You were more important.\"", isCorrect: false },
+    ],
+  },
+];
+
 export const knowYourLyricsQuestions: Question[] = [
   // Golden
   {
@@ -1285,7 +1405,7 @@ const getRandomQuestions = (questions: Question[], count: number): Question[] =>
   return selectedQuestions.map(shuffleAnswers);
 };
 
-export const getQuestionsByDifficulty = (difficulty: 'easy' | 'normal' | 'hard' | 'lyrics'): Question[] => {
+export const getQuestionsByDifficulty = (difficulty: 'easy' | 'normal' | 'hard' | 'lyrics' | 'demon'): Question[] => {
   switch (difficulty) {
     case 'easy':
       return getRandomQuestions(easyQuestions, 5);
@@ -1295,6 +1415,8 @@ export const getQuestionsByDifficulty = (difficulty: 'easy' | 'normal' | 'hard' 
       return hardQuestions.map(shuffleAnswers); // Shuffle answers for all hard questions
     case 'lyrics':
       return getRandomQuestions(knowYourLyricsQuestions, 15);
+    case 'demon':
+      return demonHunterQuestions.map(shuffleAnswers); // Use all 13 questions
     default:
       return getRandomQuestions(easyQuestions, 5);
   }
