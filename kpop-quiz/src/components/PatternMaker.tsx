@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../store';
 
@@ -101,22 +101,7 @@ const PatternMaker: React.FC = () => {
     alert('Pattern saved successfully! 🎨');
   }, [patternName, grid, selectedColor, clearPattern, incrementPatternsCreated]);
 
-  // Generate SVG pattern preview
-  const generatePatternPreview = useCallback(() => {
-    const size = GRID_SIZE * 4;
-    let svg = `<svg width="${size}" height="${size}" viewBox="0 0 ${GRID_SIZE} ${GRID_SIZE}">`;
 
-    grid.forEach((row, y) => {
-      row.forEach((cell, x) => {
-        if (cell) {
-          svg += `<rect x="${x}" y="${y}" width="1" height="1" fill="${selectedColor}"/>`;
-        }
-      });
-    });
-
-    svg += '</svg>';
-    return svg;
-  }, [grid, selectedColor]);
 
   return (
     <div className="space-y-6">
