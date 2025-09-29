@@ -274,6 +274,12 @@ const SoundBoard: React.FC = () => {
             🔊 Click any sound button to enable audio!
           </p>
         )}
+
+        {audioContext && (
+          <p className="text-xs text-orange-500 mt-2">
+            🎵 Ready for sound! Current sounds are demo placeholders.
+          </p>
+        )}
       </motion.div>
 
       {/* Footer Note */}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useGameStore } from '../store';
 
 interface Bubble {
   id: number;
@@ -20,6 +21,9 @@ interface PopParticle {
 }
 
 const BubblePopperGame: React.FC = () => {
+  // Import the stats increment function
+  const { incrementBubblesPopped } = useGameStore();
+
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
@@ -28,6 +32,9 @@ const BubblePopperGame: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [gameState, setGameState] = useState<'ready' | 'playing' | 'paused' | 'ended'>('ready');
   const [popParticles, setPopParticles] = useState<PopParticle[]>([]);
+
+  // Track popped bubble count for more reliable level progression
+  const [poppedCount, setPoppedCount] = useState(0);
 
   // Timer ref to prevent multiple timers
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -44,6 +51,9 @@ const BubblePopperGame: React.FC = () => {
   // Generate bubbles for current level
   const generateBubbles = useCallback((count: number) => {
     const newBubbles: Bubble[] = [];
+    // Account for parent container's p-8 padding (32px)
+    const PADDING_OFFSET = 32;
+
     for (let i = 0; i < count; i++) {
       const types: Bubble['type'][] = ['regular', 'regular', 'regular'];
       if (level > 2) types.push('rainbow');
@@ -55,8 +65,8 @@ const BubblePopperGame: React.FC = () => {
 
       newBubbles.push({
         id: Date.now() + i,
-        x: Math.random() * 280, // Keep within container
-        y: Math.random() * 300,
+        x: PADDING_OFFSET + (Math.random() * (280 - 2 * PADDING_OFFSET)), // Account for padding left/right
+        y: PADDING_OFFSET + (Math.random() * (240 - 2 * PADDING_OFFSET)), // Account for padding top/bottom
         size: Math.random() * 20 + 30, // 30-50px
         type,
         isPopped: false,
@@ -65,6 +75,7 @@ const BubblePopperGame: React.FC = () => {
       });
     }
     setBubbles(newBubbles);
+    setPoppedCount(0); // Reset popped count when new bubbles are generated
   }, [level]);
 
   // Start game
@@ -98,6 +109,9 @@ const BubblePopperGame: React.FC = () => {
       return newBubbles;
     });
 
+    // Increment popped bubble count
+    setPoppedCount(prev => prev + 1);
+
     // Calculate score using the popped bubble data
     if (poppedBubble) {
       let points = 10;
@@ -106,6 +120,9 @@ const BubblePopperGame: React.FC = () => {
         points = Math.random() > 0.5 ? 100 : 25;
       }
       setScore(prev => prev + points);
+
+      // Track bubble popping statistics
+      incrementBubblesPopped();
     }
 
     // Create pop particles
@@ -128,15 +145,26 @@ const BubblePopperGame: React.FC = () => {
     }
   }, [gameState]);
 
-  // Level completion detection - moved to useEffect to avoid stale closures
+  // Level completion detection - with correct dependencies to prevent stale closures
   useEffect(() => {
-    if (bubbles.length > 0 && bubbles.every(b => b.isPopped)) {
-      // All bubbles popped - level complete
-      setLevel(prev => prev + 1);
-      setTimeLeft(prev => prev + 10); // More bonus time
-      setTimeout(() => generateBubbles(Math.min(5 + level + 1, 15)), 1000);
+    if (poppedCount > 0 && poppedCount === bubbles.length) {
+      // All bubbles popped - level complete - capture current values to avoid stale closures
+      const currentLevel = level; // Capture current value
+      const nextLevel = currentLevel + 1;
+      const nextBubbleCount = Math.min(5 + nextLevel, 15);
+
+      // Immediate state updates
+      setLevel(nextLevel);
+      setTimeLeft(prev => prev + 10); // Bonus time for completion
+
+      // Clear old bubbles and add new ones immediately for better UX
+      setBubbles([]); // Clear immediately to prevent confusion
+      setTimeout(() => {
+        generateBubbles(nextBubbleCount);
+        // setPoppedCount(0) is handled in generateBubbles function
+      }, 100); // Much shorter delay for responsiveness
     }
-  }, [bubbles, level, generateBubbles]);
+  }, [poppedCount, bubbles.length, level, generateBubbles]); // ✅ Complete dependencies for fresh closures
 
   // Game timer - properly managed with useRef to prevent multiple timers
   useEffect(() => {
@@ -161,7 +189,8 @@ const BubblePopperGame: React.FC = () => {
                 // Continue with next life
                 setTimeout(() => {
                   setTimeLeft(20); // Reset with less time
-                  generateBubbles(Math.max(3, bubbles.length - 2)); // Fewer bubbles
+                  // Use a reasonable progression instead of relying on cleared array
+                  generateBubbles(Math.min(5 + level, 12)); // Progressive but reasonable count
                 }, 100);
               } else {
                 // Game over
