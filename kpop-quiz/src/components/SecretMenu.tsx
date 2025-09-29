@@ -5,6 +5,8 @@ import DrawingCanvas from './DrawingCanvas';
 import StickerGallery from './StickerGallery';
 import BubblePopperGame from './BubblePopperGame';
 import FaceGenerator from './FaceGenerator';
+import SoundBoard from './SoundBoard';
+import PatternMaker from './PatternMaker';
 import AppStatsDashboard from './AppStatsDashboard';
 
 const SecretMenu: React.FC = () => {
@@ -242,11 +244,21 @@ const SecretMenu: React.FC = () => {
                   )}
                 </motion.div>
 
-                {/* Sticker Gallery */}
+                {/* Pattern Maker */}
                 <motion.div
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.4 }}
+                  className="border-t-4 border-pink-200 pt-6"
+                >
+                  <PatternMaker />
+                </motion.div>
+
+                {/* Sticker Gallery */}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.6 }}
                   className="border-t-4 border-pink-200 pt-6"
                 >
                   <div className="text-center mb-4">
@@ -317,45 +329,13 @@ const SecretMenu: React.FC = () => {
             )}
 
             {activeTab === 'fun' && (
-              <div className="text-center">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ duration: 0.5, type: "spring" }}
-                  className="text-6xl mb-4"
-                >
-                  🎤
-                </motion.div>
-                <h3 className="text-2xl font-fredoka font-bold text-blue-600 mb-4">
-                  Dance Party Zone Starting Soon!
-                </h3>
-                <p className="text-lg font-nunito text-gray-600">
-                  Make characters dance and create musical magic!
-                </p>
-                <div className="mt-6 flex flex-wrap justify-center gap-4">
-                  <motion.div
-                    animate={{ rotate: [0, -10, 10, 0] }}
-                    transition={{ duration: 1, repeat: Infinity }}
-                    className="text-4xl"
-                  >
-                    💃
-                  </motion.div>
-                  <motion.div
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ duration: 0.8, repeat: Infinity }}
-                    className="text-4xl"
-                  >
-                    🎵
-                  </motion.div>
-                  <motion.div
-                    animate={{ rotate: [0, 10, -10, 0] }}
-                    transition={{ duration: 1.2, repeat: Infinity }}
-                    className="text-4xl"
-                  >
-                    🕺
-                  </motion.div>
-                </div>
-              </div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="w-full"
+              >
+                <SoundBoard />
+              </motion.div>
             )}
 
             {activeTab === 'behind' && (

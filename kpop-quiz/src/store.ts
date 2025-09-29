@@ -161,6 +161,7 @@ interface GameStore {
     confettiExploded: number;
     treasureFound: number;
     drawingsCreated: number;
+    soundEffectsPlayed: number;
   };
 
   // Trivia cards actions
@@ -238,6 +239,7 @@ interface GameStore {
   incrementFacesGenerated: () => void;
   incrementTreasureFound: () => void;
   incrementConfettiExploded: () => void;
+  incrementSoundEffectsPlayed: () => void;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -400,6 +402,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     confettiExploded: 0,
     treasureFound: 0,
     drawingsCreated: 0,
+    soundEffectsPlayed: 0,
   },
 
   // Actions
@@ -839,6 +842,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
       secretStats: {
         ...state.secretStats,
         confettiExploded: state.secretStats.confettiExploded + 1
+      }
+    });
+  },
+
+  incrementSoundEffectsPlayed: () => {
+    const state = get();
+    set({
+      secretStats: {
+        ...state.secretStats,
+        soundEffectsPlayed: state.secretStats.soundEffectsPlayed + 1
       }
     });
   },

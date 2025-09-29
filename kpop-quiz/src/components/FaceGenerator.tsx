@@ -108,30 +108,36 @@ const FaceGenerator: React.FC = () => {
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
+  <div className="grid lg:grid-cols-2 gap-8">
         {/* Character Display */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center"
+          className="flex flex-col items-center space-y-6"
         >
-          <div className="relative mb-4">
+          {/* Character Character Container */}
+          <div className="relative bg-gradient-to-br from-yellow-100 to-pink-100 p-8 rounded-3xl border-4 border-yellow-300 shadow-xl">
             <motion.div
               animate={isAnimating ? { scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] } : {}}
               transition={{ duration: 0.3 }}
-              className="text-8xl md:text-9xl relative"
-              style={{ lineHeight: 1, textAlign: 'center' }}
+              className="relative text-6xl md:text-7xl"
+              style={{ lineHeight: 1.2, textAlign: 'center' }}
             >
-              <div className="relative inline-block">
-                {/* Head background */}
-                <div className="absolute inset-0 text-9xl opacity-20 transform scale-110">
-                  {face.head}
-                </div>
-                {/* Face parts */}
-                <div className="relative flex flex-col items-center space-y-1">
-                  <div className="text-6xl transform scale-150">{face.eyes}</div>
-                  <div className="text-4xl transform scale-125">{face.nose}</div>
-                  <div className="text-5xl transform scale-140">{face.mouth}</div>
+              {/* Face Assembly */}
+              <div className="flex flex-col items-center justify-center space-y-2">
+                {/* Head */}
+                <div className="text-8xl md:text-9xl">{face.head}</div>
+
+                {/* Face Parts Container */}
+                <div className="relative bg-yellow-200 bg-opacity-30 px-6 py-2 rounded-xl border-2 border-yellow-300">
+                  <div className="flex flex-col items-center space-y-1">
+                    {/* Eyes */}
+                    <div className="text-5xl md:text-6xl">{face.eyes}</div>
+                    {/* Nose */}
+                    <div className="text-4xl md:text-5xl transform -mt-1">{face.nose}</div>
+                    {/* Mouth */}
+                    <div className="text-4xl md:text-5xl transform -mt-1">{face.mouth}</div>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -140,9 +146,9 @@ const FaceGenerator: React.FC = () => {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 bg-purple-500 text-white px-3 py-1 rounded-full text-sm font-fredoka shadow-lg"
+              className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 bg-purple-500 text-white px-4 py-2 rounded-full text-sm font-fredoka font-bold shadow-lg border-2 border-white"
             >
-              {getCharacterName()}
+              ✨ {getCharacterName()} ✨
             </motion.div>
 
             {/* Sparkle Effects */}
@@ -157,19 +163,24 @@ const FaceGenerator: React.FC = () => {
                 repeat: Infinity,
                 delay: 1
               }}
-              className="absolute -top-2 -right-2 text-2xl"
+              className="absolute -top-2 -right-2 text-3xl"
             >
               ✨
             </motion.div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-3">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="flex flex-wrap justify-center gap-3"
+          >
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={randomizeFace}
-              className="px-4 py-2 bg-gradient-to-r from-purple-400 to-pink-500 text-white rounded-lg font-fredoka font-semibold shadow-lg"
+              className="px-6 py-3 bg-gradient-to-r from-purple-400 to-pink-500 text-white rounded-xl font-fredoka font-semibold shadow-lg border-2 border-purple-300"
             >
               🎲 Random
             </motion.button>
@@ -177,7 +188,7 @@ const FaceGenerator: React.FC = () => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={resetFace}
-              className="px-4 py-2 bg-gray-400 text-white rounded-lg font-fredoka font-semibold shadow-lg"
+              className="px-6 py-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white rounded-xl font-fredoka font-semibold shadow-lg border-2 border-gray-300"
             >
               🔄 Reset
             </motion.button>
@@ -185,11 +196,11 @@ const FaceGenerator: React.FC = () => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={incrementFacesGenerated}
-              className="px-4 py-2 bg-green-400 text-white rounded-lg font-fredoka font-semibold shadow-lg"
+              className="px-6 py-3 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-xl font-fredoka font-semibold shadow-lg border-2 border-green-300"
             >
               💾 Save
             </motion.button>
-          </div>
+          </motion.div>
         </motion.div>
 
         {/* Face Part Controls */}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Bubble {
@@ -9,6 +9,7 @@ interface Bubble {
   type: 'regular' | 'rainbow' | 'mystery';
   isPopped: boolean;
   floatSpeed: number;
+  emoji: string; // Store assigned emoji to prevent random re-rendering
 }
 
 interface PopParticle {
@@ -28,6 +29,9 @@ const BubblePopperGame: React.FC = () => {
   const [gameState, setGameState] = useState<'ready' | 'playing' | 'paused' | 'ended'>('ready');
   const [popParticles, setPopParticles] = useState<PopParticle[]>([]);
 
+  // Timer ref to prevent multiple timers
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
   // Bubble emojis for different types - using universally supported emojis
   const bubbleEmojis = {
     regular: ['💭', '💬', '💭', '💙', '💚', '💜', '🎈', '✨'],
@@ -46,6 +50,8 @@ const BubblePopperGame: React.FC = () => {
       if (level > 5) types.push('mystery');
 
       const type = types[Math.floor(Math.random() * types.length)];
+      const emojiArray = bubbleEmojis[type];
+      const emoji = emojiArray[Math.floor(Math.random() * emojiArray.length)];
 
       newBubbles.push({
         id: Date.now() + i,
@@ -55,6 +61,7 @@ const BubblePopperGame: React.FC = () => {
         type,
         isPopped: false,
         floatSpeed: Math.random() * 2 + 1, // 1-3 seconds
+        emoji, // Assign emoji at creation time
       });
     }
     setBubbles(newBubbles);
@@ -74,82 +81,110 @@ const BubblePopperGame: React.FC = () => {
     }, 1000);
   }, [generateBubbles]);
 
-  // Handle bubble popping
+  // Handle bubble popping - use functional update to avoid stale closures
   const handleBubblePop = useCallback((bubbleId: number) => {
-    if (!isPlaying || gameState !== 'playing') return;
+    if (gameState !== 'playing') return;
 
-    setBubbles(prevBubbles =>
-      prevBubbles.map(bubble =>
-        bubble.id === bubbleId ? { ...bubble, isPopped: true } : bubble
-      )
-    );
+    let poppedBubble: Bubble | undefined;
 
-    const bubble = bubbles.find(b => b.id === bubbleId);
-    if (!bubble) return;
+    setBubbles(prevBubbles => {
+      const newBubbles = prevBubbles.map(bubble => {
+        if (bubble.id === bubbleId) {
+          poppedBubble = { ...bubble, isPopped: true };
+          return poppedBubble;
+        }
+        return bubble;
+      });
+      return newBubbles;
+    });
 
-    // Score calculation
-    let points = 10;
-    if (bubble.type === 'rainbow') points = 50;
-    if (bubble.type === 'mystery') {
-      points = Math.random() > 0.5 ? 100 : 25;
+    // Calculate score using the popped bubble data
+    if (poppedBubble) {
+      let points = 10;
+      if (poppedBubble.type === 'rainbow') points = 50;
+      if (poppedBubble.type === 'mystery') {
+        points = Math.random() > 0.5 ? 100 : 25;
+      }
+      setScore(prev => prev + points);
     }
-
-    setScore(prev => prev + points);
 
     // Create pop particles
-    const particles: PopParticle[] = [];
-    for (let i = 0; i < 8; i++) {
-      particles.push({
-        id: Date.now() + i,
-        x: bubble.x + bubble.size / 2,
-        y: bubble.y + bubble.size / 2,
-        emoji: particleEmojis[Math.floor(Math.random() * particleEmojis.length)],
-      });
-    }
-    setPopParticles(prev => [...prev, ...particles]);
-
-    // Remove particles after animation
-    setTimeout(() => {
-      setPopParticles(prev => prev.filter(p => !particles.find(particle => particle.id === p.id)));
-    }, 800);
-
-    // Check if level complete
-    setTimeout(() => {
-      const remainingBubbles = bubbles.filter(b => !b.isPopped && b.id !== bubbleId).length;
-      if (remainingBubbles === 0) {
-        // Level complete
-        setLevel(prev => prev + 1);
-        setTimeLeft(prev => prev + 5); // Bonus time
-        setTimeout(() => {
-          generateBubbles(Math.min(5 + level, 15)); // More bubbles each level
-        }, 1000);
+    if (poppedBubble) {
+      const particles: PopParticle[] = [];
+      for (let i = 0; i < 8; i++) {
+        particles.push({
+          id: Date.now() + i,
+          x: poppedBubble.x + poppedBubble.size / 2,
+          y: poppedBubble.y + poppedBubble.size / 2,
+          emoji: particleEmojis[Math.floor(Math.random() * particleEmojis.length)],
+        });
       }
-    }, 300);
+      setPopParticles(prev => [...prev, ...particles]);
 
-  }, [bubbles, isPlaying, gameState, generateBubbles, level]);
+      // Remove particles after animation
+      setTimeout(() => {
+        setPopParticles(prev => prev.filter(p => !particles.find(particle => particle.id === p.id)));
+      }, 800);
+    }
+  }, [gameState]);
 
-  // Get bubble emoji based on type
-  const getBubbleEmoji = useCallback((bubble: Bubble) => {
-    const emojiArray = bubbleEmojis[bubble.type];
-    return emojiArray[Math.floor(Math.random() * emojiArray.length)];
-  }, []);
-
-  // Game timer
+  // Level completion detection - moved to useEffect to avoid stale closures
   useEffect(() => {
-    if (isPlaying && timeLeft > 0) {
-      const timer = setTimeout(() => setTimeLeft(prev => prev - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && isPlaying) {
-      setLives(prev => prev - 1);
-      if (lives > 1) {
-        setTimeLeft(20); // Restart with less time
-        generateBubbles(Math.max(3, bubbles.length - 2)); // Fewer bubbles
-      } else {
-        setGameState('ended');
-        setIsPlaying(false);
-      }
+    if (bubbles.length > 0 && bubbles.every(b => b.isPopped)) {
+      // All bubbles popped - level complete
+      setLevel(prev => prev + 1);
+      setTimeLeft(prev => prev + 10); // More bonus time
+      setTimeout(() => generateBubbles(Math.min(5 + level + 1, 15)), 1000);
     }
-  }, [isPlaying, timeLeft, lives, generateBubbles, bubbles.length]);
+  }, [bubbles, level, generateBubbles]);
+
+  // Game timer - properly managed with useRef to prevent multiple timers
+  useEffect(() => {
+    // Clear any existing timer first
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+
+    // Only start a timer if game is playing and time remains
+    if (gameState === 'playing' && timeLeft > 0) {
+      timerRef.current = setTimeout(() => {
+        setTimeLeft(prevTime => {
+          const newTime = prevTime - 1;
+          if (newTime <= 0) {
+            // Time's up - handle lives
+            setLives(prevLives => {
+              const newLives = prevLives - 1;
+              if (newLives > 0) {
+                // Clear old bubbles immediately to prevent race condition
+                setBubbles([]); // ← Fix: Prevent clicking old bubbles
+                // Continue with next life
+                setTimeout(() => {
+                  setTimeLeft(20); // Reset with less time
+                  generateBubbles(Math.max(3, bubbles.length - 2)); // Fewer bubbles
+                }, 100);
+              } else {
+                // Game over
+                setGameState('ended');
+                setIsPlaying(false);
+              }
+              return newLives;
+            });
+            return 0;
+          }
+          return newTime;
+        });
+      }, 1000);
+    }
+
+    // Cleanup function
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [gameState, timeLeft, generateBubbles, bubbles.length]);
 
   return (
     <div className="space-y-4">
@@ -202,7 +237,7 @@ const BubblePopperGame: React.FC = () => {
                 animate={{ rotate: 360 }}
                 transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
               >
-                {getBubbleEmoji(bubble)}
+                {bubble.emoji}
               </motion.div>
             )}
           </motion.div>
