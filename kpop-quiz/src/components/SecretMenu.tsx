@@ -4,10 +4,13 @@ import { useGameStore } from '../store';
 import DrawingCanvas from './DrawingCanvas';
 import StickerGallery from './StickerGallery';
 import BubblePopperGame from './BubblePopperGame';
+import FaceGenerator from './FaceGenerator';
+import AppStatsDashboard from './AppStatsDashboard';
 
 const SecretMenu: React.FC = () => {
   const { setGameState } = useGameStore();
   const [activeTab, setActiveTab] = useState<'creative' | 'games' | 'fun' | 'behind'>('creative');
+  const [activeGame, setActiveGame] = useState<'popper' | 'face'>('popper');
   const [placedStickers, setPlacedStickers] = useState<Array<{
     id: string;
     sticker: any;
@@ -263,9 +266,53 @@ const SecretMenu: React.FC = () => {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="w-full"
+                className="w-full space-y-4"
               >
-                <BubblePopperGame />
+                {/* Game Sub-Navigation */}
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex justify-center gap-2"
+                >
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setActiveGame('popper')}
+                    className={`px-4 py-2 rounded-lg font-fredoka font-semibold transition-all duration-300 ${
+                      activeGame === 'popper'
+                        ? 'bg-gradient-to-r from-purple-400 to-pink-500 text-white shadow-lg'
+                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                    }`}
+                  >
+                    🫧 Bubble Popper
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setActiveGame('face')}
+                    className={`px-4 py-2 rounded-lg font-fredoka font-semibold transition-all duration-300 ${
+                      activeGame === 'face'
+                        ? 'bg-gradient-to-r from-green-400 to-blue-500 text-white shadow-lg'
+                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                    }`}
+                  >
+                    🎭 Face Factory
+                  </motion.button>
+                </motion.div>
+
+                {/* Game Content */}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeGame}
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {activeGame === 'popper' && <BubblePopperGame />}
+                    {activeGame === 'face' && <FaceGenerator />}
+                  </motion.div>
+                </AnimatePresence>
               </motion.div>
             )}
 
@@ -312,32 +359,13 @@ const SecretMenu: React.FC = () => {
             )}
 
             {activeTab === 'behind' && (
-              <div className="text-center">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ duration: 0.5, type: "spring" }}
-                  className="text-6xl mb-4"
-                >
-                  🧙‍♂️
-                </motion.div>
-                <h3 className="text-2xl font-fredoka font-bold text-green-600 mb-4">
-                  App Magic & Mystery Tours!
-                </h3>
-                <p className="text-lg font-nunito text-gray-600">
-                  Discover the secrets behind how this app was created!
-                </p>
-                <div className="mt-6 grid grid-cols-2 gap-6">
-                  <div className="bg-green-50 p-4 rounded-lg border-2 border-green-200">
-                    <div className="text-2xl mb-2">🎯</div>
-                    <p className="font-fredoka text-green-700">Developer Cameos</p>
-                  </div>
-                  <div className="bg-green-50 p-4 rounded-lg border-2 border-green-200">
-                    <div className="text-2xl mb-2">📊</div>
-                    <p className="font-fredoka text-green-700">Your Stats</p>
-                  </div>
-                </div>
-              </div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="w-full"
+              >
+                <AppStatsDashboard />
+              </motion.div>
             )}
           </motion.div>
         </AnimatePresence>
