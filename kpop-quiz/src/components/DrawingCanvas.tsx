@@ -15,7 +15,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ onDrawingChange }) => {
   const [isEraser, setIsEraser] = useState(false);
   const [history, setHistory] = useState<ImageData[]>([]);
   const [historyStep, setHistoryStep] = useState(-1);
-  const [lastDrawStart, setLastDrawStart] = useState<{ x: number; y: number } | null>(null);
   const [customColors, setCustomColors] = useState<string[]>([]);
 
   const colors = [

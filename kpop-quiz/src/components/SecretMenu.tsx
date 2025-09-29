@@ -185,7 +185,7 @@ const SecretMenu: React.FC = () => {
                           drag
                           dragMomentum={false}
                           dragConstraints={{ left: 0, right: 400, top: 0, bottom: 300 }}
-                          onDragEnd={(event, info) => {
+                          onDragEnd={(_event, info) => {
                             updatePlacedSticker(placedSticker.id, {
                               x: placedSticker.x + info.offset.x,
                               y: placedSticker.y + info.offset.y,
