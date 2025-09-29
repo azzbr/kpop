@@ -15,6 +15,7 @@ import MathChallenge from './components/MathChallenge';
 import SpellingBee from './components/SpellingBee';
 import ReadingComprehension from './components/ReadingComprehension';
 import ScienceQuiz from './components/ScienceQuiz';
+import SecretMenu from './components/SecretMenu';
 import MusicPlayer from './components/MusicPlayer';
 
 function App() {
@@ -52,6 +53,8 @@ function App() {
         return <ReadingComprehension key="reading_comprehension" />;
       case 'science_quiz':
         return <ScienceQuiz key="science_quiz" />;
+      case 'secret_menu':
+        return <SecretMenu key="secret_menu" />;
       default:
         return <WelcomeScreen key="welcome" />;
     }

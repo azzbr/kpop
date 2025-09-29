@@ -5,6 +5,7 @@ import DailyChallenge from './DailyChallenge';
 
 const WelcomeScreen: React.FC = () => {
   const [inputName, setInputName] = useState('');
+  const [pAnimationState, setPAnimationState] = useState<'idle' | 'discovering' | 'unlocked'>('idle');
   const { setUserName, setGameState } = useGameStore();
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -12,6 +13,17 @@ const WelcomeScreen: React.FC = () => {
     if (inputName.trim()) {
       setUserName(inputName.trim());
       setGameState('game_mode');
+    }
+  };
+
+  const handlePClick = () => {
+    if (pAnimationState === 'idle') {
+      setPAnimationState('discovering');
+      // Trigger sparkle effect, screen shake, etc.
+      setTimeout(() => {
+        setGameState('secret_menu');
+        setPAnimationState('unlocked');
+      }, 2000);
     }
   };
 
@@ -39,7 +51,23 @@ const WelcomeScreen: React.FC = () => {
           transition={{ delay: 0.3, duration: 0.5 }}
           className="text-4xl md:text-6xl font-fredoka font-bold text-purple-600 mb-4 text-kid-glow"
         >
-          K-Pop Fun Quest
+          <span>K-</span>
+          <motion.span
+            animate={pAnimationState === 'discovering' ? {
+              scale: [1, 1.2, 1],
+              rotate: [0, -5, 5, 0],
+              color: ['#9333ea', '#ff00ff', '#00ffff', '#9333ea']
+            } : {}}
+            transition={{ duration: 0.3, repeat: 3 }}
+            onClick={handlePClick}
+            className={`cursor-pointer hover:scale-110 inline-block transition-transform duration-200 ${
+              pAnimationState === 'discovering' ? 'animate-pulse' : ''
+            }`}
+            title="Click me for a surprise! ✨"
+          >
+            P
+          </motion.span>
+          <span>op Fun Quest</span>
         </motion.h1>
 
         <motion.h2

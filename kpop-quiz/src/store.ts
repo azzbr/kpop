@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { Question, HunterProfile } from './quizData';
 import { getQuestionsByDifficulty, getProfileByScore } from './quizData';
 
-export type GameState = 'welcome' | 'game_mode' | 'difficulty' | 'quiz' | 'result' | 'memory_game' | 'rhythm_game' | 'trivia_cards' | 'instruments_tutorial' | 'team_maker' | 'friends_trivia' | 'math_challenge' | 'spelling_bee' | 'reading_comprehension' | 'science_quiz';
+export type GameState = 'welcome' | 'game_mode' | 'difficulty' | 'quiz' | 'result' | 'memory_game' | 'rhythm_game' | 'trivia_cards' | 'instruments_tutorial' | 'team_maker' | 'friends_trivia' | 'math_challenge' | 'spelling_bee' | 'reading_comprehension' | 'science_quiz' | 'secret_menu';
 export type Difficulty = 'easy' | 'normal' | 'hard' | 'lyrics' | 'demon';
 export type GameMode = 'quiz' | 'memory' | 'rhythm' | 'trivia' | 'instruments' | 'teams' | 'friends';
 
@@ -150,6 +150,19 @@ interface GameStore {
   friendsScore: number;
   friendsGameActive: boolean;
 
+  // Secret menu state
+  secretMenuUnlocked: boolean;
+  secretStickerCollection: string[];
+  unlockedSecretBadges: string[];
+  secretStats: {
+    bubblesPopped: number;
+    patternsCreated: number;
+    facesGenerated: number;
+    confettiExploded: number;
+    treasureFound: number;
+    drawingsCreated: number;
+  };
+
   // Trivia cards actions
   setUserCards: (cards: TriviaCard[]) => void;
   setUserCurrency: (currency: number) => void;
@@ -217,6 +230,14 @@ interface GameStore {
   initializeDailyChallenge: () => void;
   completeDailyChallenge: () => void;
   updateDailyStreak: () => void;
+
+  // Secret menu actions
+  incrementDrawingsCreated: () => void;
+  incrementBubblesPopped: () => void;
+  incrementPatternsCreated: () => void;
+  incrementFacesGenerated: () => void;
+  incrementTreasureFound: () => void;
+  incrementConfettiExploded: () => void;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -368,7 +389,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
   friendsScore: 0,
   friendsGameActive: false,
 
-
+  // Secret menu initial state
+  secretMenuUnlocked: false,
+  secretStickerCollection: [],
+  unlockedSecretBadges: [],
+  secretStats: {
+    bubblesPopped: 0,
+    patternsCreated: 0,
+    facesGenerated: 0,
+    confettiExploded: 0,
+    treasureFound: 0,
+    drawingsCreated: 0,
+  },
 
   // Actions
   setGameState: (state) => set({ gameState: state }),
@@ -752,6 +784,62 @@ export const useGameStore = create<GameStore>((set, get) => ({
       currentFriendsQuestionIndex: 0,
       friendsScore: 0,
       friendsGameActive: false
+    });
+  },
+
+  // Secret menu actions
+  incrementDrawingsCreated: () => {
+    const state = get();
+    set({
+      secretStats: {
+        ...state.secretStats,
+        drawingsCreated: state.secretStats.drawingsCreated + 1
+      }
+    });
+  },
+  incrementBubblesPopped: () => {
+    const state = get();
+    set({
+      secretStats: {
+        ...state.secretStats,
+        bubblesPopped: state.secretStats.bubblesPopped + 1
+      }
+    });
+  },
+  incrementPatternsCreated: () => {
+    const state = get();
+    set({
+      secretStats: {
+        ...state.secretStats,
+        patternsCreated: state.secretStats.patternsCreated + 1
+      }
+    });
+  },
+  incrementFacesGenerated: () => {
+    const state = get();
+    set({
+      secretStats: {
+        ...state.secretStats,
+        facesGenerated: state.secretStats.facesGenerated + 1
+      }
+    });
+  },
+  incrementTreasureFound: () => {
+    const state = get();
+    set({
+      secretStats: {
+        ...state.secretStats,
+        treasureFound: state.secretStats.treasureFound + 1
+      }
+    });
+  },
+  incrementConfettiExploded: () => {
+    const state = get();
+    set({
+      secretStats: {
+        ...state.secretStats,
+        confettiExploded: state.secretStats.confettiExploded + 1
+      }
     });
   },
 
