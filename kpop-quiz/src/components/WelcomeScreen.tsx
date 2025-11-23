@@ -6,7 +6,40 @@ import DailyChallenge from './DailyChallenge';
 const WelcomeScreen: React.FC = () => {
   const [inputName, setInputName] = useState('');
   const [pAnimationState, setPAnimationState] = useState<'idle' | 'discovering' | 'unlocked'>('idle');
+  const [fAnimationState, setFAnimationState] = useState<'idle' | 'discovering' | 'unlocked'>('idle');
   const { setUserName, setGameState } = useGameStore();
+  const audioContextRef = React.useRef<AudioContext | null>(null);
+
+  // Initialize AudioContext lazily to comply with browser autoplay policies
+  const getAudioContext = () => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    if (audioContextRef.current.state === 'suspended') {
+      audioContextRef.current.resume();
+    }
+    return audioContextRef.current;
+  };
+
+  const playTransitionSound = () => {
+    try {
+      const ctx = getAudioContext();
+      // Generic "Sparkle" / "Twinkle" oscillator sequence
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(500, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1000, ctx.currentTime + 0.5);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.5);
+    } catch (e) {
+      console.error("Audio error", e);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,12 +60,28 @@ const WelcomeScreen: React.FC = () => {
     }
   };
 
+  const handleFClick = () => {
+    if (fAnimationState === 'idle') {
+      setFAnimationState('discovering');
+      playTransitionSound();
+      // Trigger living mural launch
+      setTimeout(() => {
+        setGameState('living_mural');
+        setFAnimationState('unlocked');
+      }, 1500); // Slightly faster for better feel
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={
+        fAnimationState === 'discovering' 
+        ? { scale: [1, 1.5, 20], opacity: [1, 0.8, 0] } // Zoom and Fade effect
+        : { opacity: 1, y: 0, scale: 1 }
+      }
       exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: fAnimationState === 'discovering' ? 1.5 : 0.5 }}
       className="flex flex-col items-center justify-center min-h-screen px-4 text-center bg-kid-pattern"
     >
       <div className="max-w-2xl mx-auto">
@@ -67,7 +116,23 @@ const WelcomeScreen: React.FC = () => {
           >
             P
           </motion.span>
-          <span>op Fun Quest</span>
+          <span>op </span>
+          <motion.span
+            animate={fAnimationState === 'discovering' ? {
+              scale: [1, 1.2, 1],
+              rotate: [0, 5, -5, 0],
+              color: ['#9333ea', '#ff00ff', '#00ffff', '#9333ea']
+            } : {}}
+            transition={{ duration: 0.3, repeat: 3 }}
+            onClick={handleFClick}
+            className={`cursor-pointer hover:scale-110 inline-block transition-transform duration-200 ${
+              fAnimationState === 'discovering' ? 'animate-pulse' : ''
+            }`}
+            title="Click me for a creative surprise! 🎨"
+          >
+            F
+          </motion.span>
+          <span>un Quest</span>
         </motion.h1>
 
         <motion.h2
@@ -136,6 +201,23 @@ const WelcomeScreen: React.FC = () => {
             Start the Fun! 🚀
           </motion.button>
         </motion.form>
+
+        {/* Secret Agent HQ Navigation */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 1.5, duration: 0.5 }}
+          className="mt-8"
+        >
+          <button
+            onClick={() => setGameState('agent_hq')}
+            className="flex items-center space-x-2 text-gray-400 hover:text-purple-600 transition-colors font-fredoka text-sm"
+            title="Enter Agent Headquarters"
+          >
+            <span className="text-lg">🕵️‍♀️</span>
+            <span>Secret HQ</span>
+          </button>
+        </motion.div>
       </div>
     </motion.div>
   );

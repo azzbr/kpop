@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { Question, HunterProfile } from './quizData';
 import { getQuestionsByDifficulty, getProfileByScore } from './quizData';
 
-export type GameState = 'welcome' | 'game_mode' | 'difficulty' | 'quiz' | 'result' | 'memory_game' | 'rhythm_game' | 'trivia_cards' | 'instruments_tutorial' | 'team_maker' | 'friends_trivia' | 'math_challenge' | 'spelling_bee' | 'reading_comprehension' | 'science_quiz' | 'secret_menu';
+export type GameState = 'welcome' | 'game_mode' | 'difficulty' | 'quiz' | 'result' | 'memory_game' | 'rhythm_game' | 'trivia_cards' | 'instruments_tutorial' | 'team_maker' | 'friends_trivia' | 'math_challenge' | 'spelling_bee' | 'reading_comprehension' | 'science_quiz' | 'secret_menu' | 'living_mural' | 'agent_hq' | 'shop' | 'kpop_rush';
 export type Difficulty = 'easy' | 'normal' | 'hard' | 'lyrics' | 'demon';
 export type GameMode = 'quiz' | 'memory' | 'rhythm' | 'trivia' | 'instruments' | 'teams' | 'friends';
 
@@ -154,6 +154,7 @@ interface GameStore {
   secretMenuUnlocked: boolean;
   secretStickerCollection: string[];
   unlockedSecretBadges: string[];
+  inventory: string[]; // New Inventory System
   secretStats: {
     bubblesPopped: number;
     patternsCreated: number;
@@ -240,6 +241,7 @@ interface GameStore {
   incrementTreasureFound: () => void;
   incrementConfettiExploded: () => void;
   incrementSoundEffectsPlayed: () => void;
+  addToInventory: (itemId: string) => void;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -395,6 +397,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   secretMenuUnlocked: false,
   secretStickerCollection: [],
   unlockedSecretBadges: [],
+  inventory: [], // Start empty
   secretStats: {
     bubblesPopped: 0,
     patternsCreated: 0,
@@ -854,6 +857,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
         soundEffectsPlayed: state.secretStats.soundEffectsPlayed + 1
       }
     });
+  },
+
+  addToInventory: (itemId) => {
+    const state = get();
+    if (!state.inventory.includes(itemId)) {
+      set({ inventory: [...state.inventory, itemId] });
+    }
   },
 
 }));

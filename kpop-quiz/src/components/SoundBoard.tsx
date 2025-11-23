@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../store';
 
@@ -6,7 +6,6 @@ interface SoundEffect {
   id: string;
   name: string;
   emoji: string;
-  soundUrl: string;
   key?: string;
 }
 
@@ -15,98 +14,325 @@ const SoundBoard: React.FC = () => {
   const [activeSound, setActiveSound] = useState<string | null>(null);
   const [volume, setVolume] = useState(0.7);
   const [activeCategory, setActiveCategory] = useState<'funny' | 'animals' | 'instruments' | 'effects'>('funny');
-  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
-  // Initialize AudioContext on user interaction - now returns context immediately
-  const initAudio = useCallback(() => {
-    let ctx = audioContext;
-    if (!ctx) {
-      ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      setAudioContext(ctx);
+  // Initialize AudioContext lazily
+  const getAudioContext = useCallback(() => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
-    return ctx;
-  }, [audioContext]);
+    if (audioContextRef.current.state === 'suspended') {
+      audioContextRef.current.resume();
+    }
+    return audioContextRef.current;
+  }, []);
 
-  // Sound categories and their sound effects
+  // Sound categories
   const soundCategories = {
     funny: [
-      { id: 'burp', name: 'Burp', emoji: '💨', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: 'Q' },
-      { id: 'fart', name: 'Fart', emoji: '💨', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: 'W' },
-      { id: 'sneeze', name: 'Sneeze', emoji: '🤧', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: 'E' },
-      { id: 'giggle', name: 'Giggle', emoji: '🤭', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: 'R' },
-      { id: 'pop', name: 'Pop!', emoji: '💥', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: 'T' },
-      { id: 'boing', name: 'Boing!', emoji: '🏀', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: 'Y' },
+      { id: 'burp', name: 'Burp', emoji: '💨', key: 'Q' },
+      { id: 'fart', name: 'Fart', emoji: '💨', key: 'W' },
+      { id: 'sneeze', name: 'Sneeze', emoji: '🤧', key: 'E' },
+      { id: 'giggle', name: 'Giggle', emoji: '🤭', key: 'R' },
+      { id: 'pop', name: 'Pop!', emoji: '💥', key: 'T' },
+      { id: 'boing', name: 'Boing!', emoji: '🏀', key: 'Y' },
     ],
     animals: [
-      { id: 'cat', name: 'Cat Meow', emoji: '🐱', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: 'A' },
-      { id: 'dog', name: 'Dog Bark', emoji: '🐶', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: 'S' },
-      { id: 'bird', name: 'Bird Chirp', emoji: '🐦', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: 'D' },
-      { id: 'cow', name: 'Cow Moo', emoji: '🐄', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: 'F' },
-      { id: 'lion', name: 'Lion Roar', emoji: '🦁', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: 'G' },
-      { id: 'elephant', name: 'Elephant', emoji: '🐘', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: 'H' },
+      { id: 'cat', name: 'Cat Meow', emoji: '🐱', key: 'A' },
+      { id: 'dog', name: 'Dog Bark', emoji: '🐶', key: 'S' },
+      { id: 'bird', name: 'Bird Chirp', emoji: '🐦', key: 'D' },
+      { id: 'cow', name: 'Cow Moo', emoji: '🐄', key: 'F' },
+      { id: 'lion', name: 'Lion Roar', emoji: '🦁', key: 'G' },
+      { id: 'elephant', name: 'Elephant', emoji: '🐘', key: 'H' },
     ],
     instruments: [
-      { id: 'drum', name: 'Drum', emoji: '🥁', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: 'Z' },
-      { id: 'piano', name: 'Piano', emoji: '🎹', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: 'X' },
-      { id: 'trumpet', name: 'Trumpet', emoji: '🎺', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: 'C' },
-      { id: 'violin', name: 'Violin', emoji: '🎻', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: 'V' },
-      { id: 'guitar', name: 'Guitar', emoji: '🎸', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: 'B' },
-      { id: 'xylophone', name: 'Xylophone', emoji: '🎵', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: 'N' },
+      { id: 'drum', name: 'Drum', emoji: '🥁', key: 'Z' },
+      { id: 'piano', name: 'Piano', emoji: '🎹', key: 'X' },
+      { id: 'trumpet', name: 'Trumpet', emoji: '🎺', key: 'C' },
+      { id: 'violin', name: 'Violin', emoji: '🎻', key: 'V' },
+      { id: 'guitar', name: 'Guitar', emoji: '🎸', key: 'B' },
+      { id: 'xylophone', name: 'Xylophone', emoji: '🎵', key: 'N' },
     ],
     effects: [
-      { id: 'laser', name: 'Laser', emoji: '⚡', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: '1' },
-      { id: 'explosion', name: 'Explosion', emoji: '💥', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: '2' },
-      { id: 'whoosh', name: 'Whoosh', emoji: '💨', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: '3' },
-      { id: 'alarm', name: 'Alarm', emoji: '🚨', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: '4' },
-      { id: 'twinkle', name: 'Twinkle', emoji: '✨', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: '5' },
-      { id: 'coin', name: 'Coin Drop', emoji: '🪙', soundUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA', key: '6' },
+      { id: 'laser', name: 'Laser', emoji: '⚡', key: '1' },
+      { id: 'explosion', name: 'Explosion', emoji: '💥', key: '2' },
+      { id: 'whoosh', name: 'Whoosh', emoji: '💨', key: '3' },
+      { id: 'alarm', name: 'Alarm', emoji: '🚨', key: '4' },
+      { id: 'twinkle', name: 'Twinkle', emoji: '✨', key: '5' },
+      { id: 'coin', name: 'Coin Drop', emoji: '🪙', key: '6' },
     ],
   };
 
-  // Play sound function - now manually decodes base64 data URIs
-  const playSound = useCallback(async (soundEffect: SoundEffect) => {
-    try {
-      const localAudioContext = initAudio(); // Get context instance immediately
-      if (!localAudioContext) return;
+  const playSynthSound = (id: string) => {
+    const ctx = getAudioContext();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    // Master volume
+    gain.gain.value = volume;
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
 
-      // Manual base64 decoding for data URIs
-      // 1. Get the base64 part of the data URI
-      const base64 = soundEffect.soundUrl.split(',')[1];
-      // 2. Decode from base64 to a binary string
-      const binary = atob(base64);
-      // 3. Create a byte array
-      const len = binary.length;
-      const bytes = new Uint8Array(len);
-      for (let i = 0; i < len; i++) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-      // 4. Get the ArrayBuffer
-      const arrayBuffer = bytes.buffer;
+    // Helper for Noise
+    const playNoise = (duration: number, type: 'white' | 'pink' = 'white') => {
+        const bufferSize = ctx.sampleRate * duration;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+        const noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+        const noiseGain = ctx.createGain();
+        noiseGain.gain.value = volume;
+        noise.connect(noiseGain);
+        noiseGain.connect(ctx.destination);
+        noise.start();
+        return { noise, noiseGain };
+    };
 
-      const audioBuffer = await localAudioContext.decodeAudioData(arrayBuffer);
+    switch (id) {
+      // --- FUNNY ---
+      case 'burp':
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(80, t);
+        osc.frequency.linearRampToValueAtTime(60, t + 0.4);
+        gain.gain.setValueAtTime(volume, t);
+        gain.gain.linearRampToValueAtTime(0, t + 0.4);
+        osc.start();
+        osc.stop(t + 0.4);
+        break;
+      case 'fart':
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(70, t);
+        osc.frequency.linearRampToValueAtTime(50, t + 0.3);
+        gain.gain.setValueAtTime(volume, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+        osc.start();
+        osc.stop(t + 0.3);
+        break;
+      case 'sneeze':
+        // Short oscillation then noise
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(200, t);
+        osc.frequency.linearRampToValueAtTime(500, t + 0.1);
+        gain.gain.setValueAtTime(volume, t);
+        gain.gain.linearRampToValueAtTime(0, t + 0.1);
+        osc.start(); 
+        osc.stop(t + 0.1);
+        setTimeout(() => {
+            const { noiseGain } = playNoise(0.2);
+            noiseGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+        }, 100);
+        break;
+      case 'giggle':
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, t);
+        osc.frequency.linearRampToValueAtTime(600, t + 0.1);
+        osc.frequency.linearRampToValueAtTime(400, t + 0.2);
+        osc.frequency.linearRampToValueAtTime(600, t + 0.3);
+        gain.gain.setValueAtTime(volume, t);
+        gain.gain.linearRampToValueAtTime(0, t + 0.4);
+        osc.start();
+        osc.stop(t + 0.4);
+        break;
+      case 'pop':
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, t);
+        osc.frequency.exponentialRampToValueAtTime(100, t + 0.1);
+        gain.gain.setValueAtTime(volume, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+        osc.start();
+        osc.stop(t + 0.1);
+        break;
+      case 'boing':
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(200, t);
+        osc.frequency.linearRampToValueAtTime(300, t + 0.2);
+        osc.frequency.linearRampToValueAtTime(200, t + 0.4);
+        gain.gain.setValueAtTime(volume, t);
+        gain.gain.linearRampToValueAtTime(0, t + 0.5);
+        osc.start();
+        osc.stop(t + 0.5);
+        break;
 
-      const source = localAudioContext.createBufferSource();
-      const gainNode = localAudioContext.createGain();
+      // --- ANIMALS ---
+      case 'cat':
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(600, t);
+        osc.frequency.linearRampToValueAtTime(800, t + 0.3);
+        osc.frequency.linearRampToValueAtTime(500, t + 0.6);
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(volume, t + 0.2);
+        gain.gain.linearRampToValueAtTime(0, t + 0.6);
+        osc.start();
+        osc.stop(t + 0.6);
+        break;
+      case 'dog':
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, t);
+        osc.frequency.linearRampToValueAtTime(100, t + 0.1);
+        gain.gain.setValueAtTime(volume, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+        osc.start();
+        osc.stop(t + 0.15);
+        break;
+      case 'bird':
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, t);
+        osc.frequency.linearRampToValueAtTime(1200, t + 0.1);
+        osc.frequency.linearRampToValueAtTime(800, t + 0.2);
+        gain.gain.linearRampToValueAtTime(0, t + 0.3);
+        osc.start();
+        osc.stop(t + 0.3);
+        break;
+      case 'cow':
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(100, t);
+        osc.frequency.linearRampToValueAtTime(80, t + 1);
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(volume, t + 0.2);
+        gain.gain.linearRampToValueAtTime(0, t + 1);
+        osc.start();
+        osc.stop(t + 1);
+        break;
+      case 'lion':
+        playNoise(1.0).noiseGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.0);
+        break;
+      case 'elephant':
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(400, t);
+        osc.frequency.linearRampToValueAtTime(600, t + 0.3);
+        osc.frequency.linearRampToValueAtTime(300, t + 0.8);
+        gain.gain.linearRampToValueAtTime(0, t + 0.8);
+        osc.start();
+        osc.stop(t + 0.8);
+        break;
 
-      source.buffer = audioBuffer;
-      gainNode.gain.value = volume;
-      source.connect(gainNode);
-      gainNode.connect(localAudioContext.destination);
+      // --- INSTRUMENTS ---
+      case 'piano':
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(440, t); // A4
+        gain.gain.setValueAtTime(volume, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 1.0);
+        osc.start();
+        osc.stop(t + 1.0);
+        break;
+      case 'drum':
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(100, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+        osc.start();
+        osc.stop(t + 0.1);
+        break;
+      case 'trumpet':
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(523.25, t); // C5
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(volume, t + 0.05);
+        gain.gain.linearRampToValueAtTime(volume * 0.8, t + 0.1);
+        gain.gain.linearRampToValueAtTime(0, t + 0.5);
+        osc.start();
+        osc.stop(t + 0.5);
+        break;
+      case 'violin':
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(659.25, t); // E5
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(volume, t + 0.2);
+        gain.gain.linearRampToValueAtTime(0, t + 1.0);
+        // Add vibrato? complex, stick to simple
+        osc.start();
+        osc.stop(t + 1.0);
+        break;
+      case 'guitar':
+        osc.type = 'triangle'; // Pluck approx
+        osc.frequency.setValueAtTime(329.63, t); // E4
+        gain.gain.setValueAtTime(volume, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 1.5);
+        osc.start();
+        osc.stop(t + 1.5);
+        break;
+      case 'xylophone':
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, t); // A5
+        gain.gain.setValueAtTime(volume, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+        osc.start();
+        osc.stop(t + 0.3);
+        break;
 
-      source.start(0);
-
-      // Visual feedback
-      setActiveSound(soundEffect.id);
-      setTimeout(() => setActiveSound(null), 300);
-
-      incrementSoundEffectsPlayed();
-    } catch (error) {
-      console.error('Error playing sound:', soundEffect.name, error);
-      // Fall back to visual feedback only
-      setActiveSound(soundEffect.id);
-      setTimeout(() => setActiveSound(null), 300);
+      // --- EFFECTS ---
+      case 'laser':
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(800, t);
+        osc.frequency.exponentialRampToValueAtTime(100, t + 0.2);
+        gain.gain.linearRampToValueAtTime(0, t + 0.2);
+        osc.start();
+        osc.stop(t + 0.2);
+        break;
+      case 'explosion':
+        const { noiseGain } = playNoise(0.5);
+        noiseGain.gain.setValueAtTime(volume, t);
+        noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+        break;
+      case 'whoosh':
+        const w = playNoise(0.5, 'white');
+        w.noiseGain.gain.setValueAtTime(0, t);
+        w.noiseGain.gain.linearRampToValueAtTime(volume, t + 0.25);
+        w.noiseGain.gain.linearRampToValueAtTime(0, t + 0.5);
+        break;
+      case 'alarm':
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(800, t);
+        osc.frequency.setValueAtTime(1000, t + 0.2);
+        osc.frequency.setValueAtTime(800, t + 0.4);
+        osc.frequency.setValueAtTime(1000, t + 0.6);
+        gain.gain.linearRampToValueAtTime(0, t + 0.8);
+        osc.start();
+        osc.stop(t + 0.8);
+        break;
+      case 'twinkle':
+        // Arpeggio
+        const now = ctx.currentTime;
+        [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.type = 'sine';
+            o.frequency.value = freq;
+            o.connect(g);
+            g.connect(ctx.destination);
+            g.gain.setValueAtTime(volume * 0.2, now + i * 0.1);
+            g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.1 + 0.3);
+            o.start(now + i * 0.1);
+            o.stop(now + i * 0.1 + 0.3);
+        });
+        break;
+      case 'coin':
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1000, t);
+        osc.frequency.setValueAtTime(1500, t + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+        osc.start();
+        osc.stop(t + 0.3);
+        break;
+        
+      default:
+        // Default beep
+        osc.frequency.setValueAtTime(440, t);
+        osc.start();
+        osc.stop(t + 0.1);
     }
-  }, [volume, initAudio, incrementSoundEffectsPlayed]);
+  };
+
+  const playSound = useCallback((soundEffect: SoundEffect) => {
+    playSynthSound(soundEffect.id);
+    setActiveSound(soundEffect.id);
+    setTimeout(() => setActiveSound(null), 300);
+    incrementSoundEffectsPlayed();
+  }, [incrementSoundEffectsPlayed, volume]); // Volume used via ref in synthesis potentially or state, using getAudioContext
 
   // Keyboard event listener
   useEffect(() => {
@@ -267,30 +493,6 @@ const SoundBoard: React.FC = () => {
         <p className="text-sm font-nunito text-blue-600">
           💡 **Tip:** Try the keyboard shortcuts! Each button shows its [key] above.
           Adjust volume with the slider and have fun making music! 🎶
-        </p>
-
-        {!audioContext && (
-          <p className="text-xs text-blue-500 mt-2">
-            🔊 Click any sound button to enable audio!
-          </p>
-        )}
-
-        {audioContext && (
-          <p className="text-xs text-orange-500 mt-2">
-            🎵 Ready for sound! Current sounds are demo placeholders.
-          </p>
-        )}
-      </motion.div>
-
-      {/* Footer Note */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.8 }}
-        className="text-center"
-      >
-        <p className="text-xs font-nunito text-gray-500">
-          Sound effects are simulated for demo. In production, we'd add real audio files! 🎵
         </p>
       </motion.div>
     </div>

@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
 import DrawingCanvas from './DrawingCanvas';
 import StickerGallery from './StickerGallery';
-import BubblePopperGame from './BubblePopperGame';
 import FaceGenerator from './FaceGenerator';
 import SoundBoard from './SoundBoard';
 import PatternMaker from './PatternMaker';
@@ -12,7 +11,7 @@ import AppStatsDashboard from './AppStatsDashboard';
 const SecretMenu: React.FC = () => {
   const { setGameState } = useGameStore();
   const [activeTab, setActiveTab] = useState<'creative' | 'games' | 'fun' | 'behind'>('creative');
-  const [activeGame, setActiveGame] = useState<'popper' | 'face'>('popper');
+  const [activeGame, setActiveGame] = useState<'rush' | 'face'>('rush');
   const [placedStickers, setPlacedStickers] = useState<Array<{
     id: string;
     sticker: any;
@@ -289,14 +288,10 @@ const SecretMenu: React.FC = () => {
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => setActiveGame('popper')}
-                    className={`px-4 py-2 rounded-lg font-fredoka font-semibold transition-all duration-300 ${
-                      activeGame === 'popper'
-                        ? 'bg-gradient-to-r from-purple-400 to-pink-500 text-white shadow-lg'
-                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                    }`}
+                    onClick={() => setGameState('kpop_rush')}
+                    className="px-4 py-2 rounded-lg font-fredoka font-semibold bg-gradient-to-r from-purple-400 to-pink-500 text-white shadow-lg hover:from-purple-500 hover:to-pink-600"
                   >
-                    🫧 Bubble Popper
+                    🏃‍♀️ K-Pop Rush
                   </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
@@ -321,7 +316,12 @@ const SecretMenu: React.FC = () => {
                     exit={{ opacity: 0, scale: 0.98 }}
                     transition={{ duration: 0.3 }}
                   >
-                    {activeGame === 'popper' && <BubblePopperGame />}
+                    {activeGame === 'rush' && (
+                        <div className="text-center p-8 bg-purple-50 rounded-xl">
+                            <h3 className="text-2xl font-bold text-purple-600 mb-4">Select a Game Above! 👆</h3>
+                            <p>Get ready to run and jump with your K-Pop Idol!</p>
+                        </div>
+                    )}
                     {activeGame === 'face' && <FaceGenerator />}
                   </motion.div>
                 </AnimatePresence>

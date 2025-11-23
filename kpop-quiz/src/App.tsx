@@ -17,6 +17,10 @@ import ReadingComprehension from './components/ReadingComprehension';
 import ScienceQuiz from './components/ScienceQuiz';
 import SecretMenu from './components/SecretMenu';
 import MusicPlayer from './components/MusicPlayer';
+import LivingMural from './components/LivingMural';
+import AgentHQ from './components/AgentHQ';
+import Shop from './components/Shop';
+import KPopRushGame from './components/KPopRushGame';
 
 function App() {
   const { gameState } = useGameStore();
@@ -55,6 +59,14 @@ function App() {
         return <ScienceQuiz key="science_quiz" />;
       case 'secret_menu':
         return <SecretMenu key="secret_menu" />;
+      case 'living_mural':
+        return <LivingMural key="living_mural" />;
+      case 'agent_hq':
+        return <AgentHQ key="agent_hq" />;
+      case 'shop':
+        return <Shop key="shop" />;
+      case 'kpop_rush':
+        return <KPopRushGame key="kpop_rush" />;
       default:
         return <WelcomeScreen key="welcome" />;
     }
@@ -65,7 +77,7 @@ function App() {
       <AnimatePresence mode="wait">
         {renderCurrentScreen()}
       </AnimatePresence>
-      <MusicPlayer />
+      {gameState !== 'living_mural' && <MusicPlayer />}
     </div>
   );
 }
