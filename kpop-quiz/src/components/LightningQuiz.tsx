@@ -47,7 +47,7 @@ export default function LightningQuiz() {
   function handleAnswer(idx: number) {
     if (picked !== null) return;
     setPicked(idx);
-    const isRight = idx === q.correct;
+    const isRight = q.answers[idx]?.isCorrect ?? false;
     if (isRight) {
       playCorrect();
       const speedBonus = timeLeft >= 6 ? 50 : timeLeft >= 3 ? 25 : 0;
@@ -188,14 +188,15 @@ export default function LightningQuiz() {
               ⚡ {timeLeft}s
             </div>
             <p className="text-xl md:text-2xl font-fredoka font-bold text-gray-800 leading-snug">
-              {q.question}
+              {q.questionText}
             </p>
           </div>
 
           {/* Answers */}
           <div className="grid grid-cols-1 gap-3">
-            {q.options.map((opt, idx) => {
-              const isCorrect = idx === q.correct;
+            {q.answers.map((ans, idx) => {
+              const opt = ans.answerText;
+              const isCorrect = ans.isCorrect;
               const isSelected = picked === idx;
               const revealed = picked !== null;
 
@@ -222,16 +223,10 @@ export default function LightningQuiz() {
             })}
           </div>
 
-          {picked !== null && picked !== -1 && (
-            <motion.p initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-              className="text-center mt-3 text-sm text-gray-600 font-nunito italic">
-              {q.explanation}
-            </motion.p>
-          )}
           {picked === -1 && (
             <motion.p initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
               className="text-center mt-3 text-sm text-red-500 font-fredoka">
-              ⏰ Too slow! The answer was: {q.options[q.correct]}
+              ⏰ Too slow! The answer was: {q.answers.find(a => a.isCorrect)?.answerText}
             </motion.p>
           )}
         </motion.div>

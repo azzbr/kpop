@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Tldraw, TldrawEditor, useEditor } from 'tldraw';
+import React, { useState } from 'react';
+import { Tldraw, useEditor } from 'tldraw';
 import 'tldraw/tldraw.css';
 import { useGameStore } from '../store';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -362,7 +362,7 @@ const MuralLogic = ({ onExit, isSpyMode, toggleSpyMode }: { onExit: () => void, 
 
 const LivingMural: React.FC = () => {
   const { setGameState } = useGameStore();
-  const [showGhosts, setShowGhosts] = useState(true);
+  const [showGhosts] = useState(true);
   const [isSpyMode, setIsSpyMode] = useState(false);
 
   // Persistence Key

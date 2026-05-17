@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useGameStore } from '../store';
 
 // Official Chrome Dino Run adaptation
@@ -8,7 +8,7 @@ const KPopRushGame: React.FC = () => {
   const { setGameState } = useGameStore();
 
   /*--------- Dino Game Code from Chromium (simplified adaptation) ---------*/
-  let canvas: HTMLCanvasElement | null, ctx: CanvasRenderingContext2D | null, ground, player: any, obstacles: any[] = [], collectibles: any[] = [];
+  let canvas: HTMLCanvasElement | null, ctx: CanvasRenderingContext2D | null, player: any, obstacles: any[] = [], collectibles: any[] = [];
   let score = 0, highScore = 0, speed = 6, gravity = 0.6, jumpPower = -15;
   let jumping = false, groundY = 400, running = false;
   let frameCount = 0, speedIncrement = 0.0001; // Very gradual
@@ -125,16 +125,16 @@ const KPopRushGame: React.FC = () => {
 
     // Obstacles (cactus)
     obstacles.forEach(obs => {
+      if (!ctx) return;
       ctx.font = '40px Arial';
       ctx.fillText('🌵', obs.x, obs.y + 35);
     });
 
     // Collectibles
     collectibles.forEach(col => {
-      if (!col.collected) {
-        ctx.font = '30px Arial';
-        ctx.fillText('🍗', col.x, col.y + 30);
-      }
+      if (!ctx || col.collected) return;
+      ctx.font = '30px Arial';
+      ctx.fillText('🍗', col.x, col.y + 30);
     });
 
     // UI

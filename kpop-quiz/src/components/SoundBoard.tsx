@@ -76,7 +76,7 @@ const SoundBoard: React.FC = () => {
     gain.connect(ctx.destination);
 
     // Helper for Noise
-    const playNoise = (duration: number, type: 'white' | 'pink' = 'white') => {
+    const playNoise = (duration: number, _type: 'white' | 'pink' = 'white') => {
         const bufferSize = ctx.sampleRate * duration;
         const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
         const data = buffer.getChannelData(0);

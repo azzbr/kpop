@@ -9,7 +9,7 @@ const AgentHQ: React.FC = () => {
   // Memoize the random ID so it doesn't change on re-renders
   const agentID = React.useMemo(() => Math.random().toString().substr(2, 8), []);
 
-  const [missions, setMissions] = useState([
+  const [missions] = useState([
     { id: '1', lockMessage: 'Find the hidden treasure in the cold box', isComplete: false },
     { id: '2', lockMessage: 'Hunt for the secret diary under the soft throne', isComplete: true },
   ]);
