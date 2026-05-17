@@ -124,6 +124,15 @@ const GameModeSelection: React.FC = () => {
       bgColor: 'bg-yellow-100',
       borderColor: 'border-yellow-400'
     },
+    {
+      id: 'animal_sound_quiz' as GameMode,
+      title: 'Animal Sounds Quiz',
+      description: 'Hear a funny animal sound and guess which animal made it!',
+      icon: '🐾',
+      color: 'from-green-500 to-teal-500',
+      bgColor: 'bg-green-100',
+      borderColor: 'border-green-300'
+    },
   ];
 
   const handleGameModeSelect = (mode: GameMode) => {
@@ -154,6 +163,8 @@ const GameModeSelection: React.FC = () => {
       setGameState('word_scramble');
     } else if (mode === 'lightning_quiz') {
       setGameState('lightning_quiz');
+    } else if (mode === 'animal_sound_quiz') {
+      setGameState('animal_sound_quiz');
     }
   };
 

@@ -7,6 +7,7 @@ import FaceGenerator from './FaceGenerator';
 import SoundBoard from './SoundBoard';
 import PatternMaker from './PatternMaker';
 import AppStatsDashboard from './AppStatsDashboard';
+import JokeMachine from './JokeMachine';
 
 const SecretMenu: React.FC = () => {
   const { setGameState } = useGameStore();
@@ -305,6 +306,14 @@ const SecretMenu: React.FC = () => {
                   >
                     🎭 Face Factory
                   </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setGameState('animal_sound_quiz')}
+                    className="px-4 py-2 rounded-lg font-fredoka font-semibold bg-gradient-to-r from-green-500 to-teal-500 text-white shadow-lg hover:from-green-600 hover:to-teal-600"
+                  >
+                    🐾 Animal Sound Quiz
+                  </motion.button>
                 </motion.div>
 
                 {/* Game Content */}
@@ -332,9 +341,12 @@ const SecretMenu: React.FC = () => {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="w-full"
+                className="w-full space-y-8"
               >
                 <SoundBoard />
+                <div className="border-t-4 border-yellow-200 pt-6">
+                  <JokeMachine />
+                </div>
               </motion.div>
             )}
 

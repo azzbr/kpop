@@ -23,6 +23,7 @@ import Shop from './components/Shop';
 import KPopRushGame from './components/KPopRushGame';
 import WordScramble from './components/WordScramble';
 import LightningQuiz from './components/LightningQuiz';
+import AnimalSoundQuiz from './components/AnimalSoundQuiz';
 
 function App() {
   const { gameState } = useGameStore();
@@ -73,6 +74,8 @@ function App() {
         return <WordScramble key="word_scramble" />;
       case 'lightning_quiz':
         return <LightningQuiz key="lightning_quiz" />;
+      case 'animal_sound_quiz':
+        return <AnimalSoundQuiz key="animal_sound_quiz" />;
       default:
         return <WelcomeScreen key="welcome" />;
     }

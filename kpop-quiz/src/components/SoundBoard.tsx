@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
 
 interface SoundEffect {
@@ -7,496 +7,600 @@ interface SoundEffect {
   name: string;
   emoji: string;
   key?: string;
+  color: string;
 }
 
-const SoundBoard: React.FC = () => {
+type Category = 'funny' | 'animals' | 'instruments' | 'effects' | 'reactions';
+
+const soundCategories: Record<Category, SoundEffect[]> = {
+  funny: [
+    { id: 'burp',        name: 'Big Burp',      emoji: '🤢',  key: 'Q', color: 'from-green-400 to-emerald-500' },
+    { id: 'fart',        name: 'Mega Fart',      emoji: '💨',  key: 'W', color: 'from-yellow-400 to-green-400'  },
+    { id: 'sneeze',      name: 'Sneeze',         emoji: '🤧',  key: 'E', color: 'from-blue-400 to-cyan-400'     },
+    { id: 'hiccup',      name: 'Hiccup',         emoji: '😮',  key: 'R', color: 'from-pink-400 to-rose-500'    },
+    { id: 'yawn',        name: 'Yawn',           emoji: '🥱',  key: 'T', color: 'from-purple-400 to-violet-500' },
+    { id: 'giggle',      name: 'Giggle',         emoji: '😂',  key: 'Y', color: 'from-orange-400 to-yellow-400' },
+    { id: 'sadtrombone', name: 'Sad Trombone',   emoji: '😢',  key: 'U', color: 'from-blue-500 to-indigo-500'  },
+    { id: 'airhorn',     name: 'Air Horn!',      emoji: '📯',  key: 'I', color: 'from-red-500 to-orange-500'   },
+  ],
+  animals: [
+    { id: 'cat',      name: 'Cat Meow',      emoji: '🐱', key: 'A', color: 'from-orange-300 to-yellow-400' },
+    { id: 'dog',      name: 'Dog Bark',      emoji: '🐶', key: 'S', color: 'from-amber-400 to-orange-400'  },
+    { id: 'duck',     name: 'Duck Quack',    emoji: '🦆', key: 'D', color: 'from-yellow-400 to-green-400'  },
+    { id: 'pig',      name: 'Pig Oink',      emoji: '🐷', key: 'F', color: 'from-pink-400 to-rose-400'    },
+    { id: 'cow',      name: 'Cow Moo',       emoji: '🐄', key: 'G', color: 'from-slate-400 to-gray-500'   },
+    { id: 'frog',     name: 'Frog Ribbit',   emoji: '🐸', key: 'H', color: 'from-green-500 to-emerald-500' },
+    { id: 'horse',    name: 'Horse Neigh',   emoji: '🐴', key: 'J', color: 'from-brown-400 to-amber-600'  },
+    { id: 'elephant', name: 'Elephant!',     emoji: '🐘', key: 'K', color: 'from-gray-400 to-slate-500'   },
+    { id: 'lion',     name: 'Lion Roar',     emoji: '🦁', key: 'L', color: 'from-yellow-500 to-orange-600' },
+    { id: 'monkey',   name: 'Monkey',        emoji: '🐒', key: ';', color: 'from-amber-500 to-orange-500'  },
+    { id: 'sheep',    name: 'Sheep Baa',     emoji: '🐑', key: "'", color: 'from-white to-gray-200'       },
+    { id: 'bird',     name: 'Bird Tweet',    emoji: '🐦', key: 'Z', color: 'from-sky-400 to-blue-400'     },
+  ],
+  instruments: [
+    { id: 'drum',       name: 'Kick Drum',   emoji: '🥁', key: 'X', color: 'from-red-400 to-orange-400'   },
+    { id: 'piano',      name: 'Piano',       emoji: '🎹', key: 'C', color: 'from-gray-700 to-gray-900'    },
+    { id: 'trumpet',    name: 'Trumpet',     emoji: '🎺', key: 'V', color: 'from-yellow-500 to-amber-500' },
+    { id: 'violin',     name: 'Violin',      emoji: '🎻', key: 'B', color: 'from-amber-600 to-orange-600' },
+    { id: 'guitar',     name: 'Guitar',      emoji: '🎸', key: 'N', color: 'from-orange-500 to-red-500'   },
+    { id: 'xylophone',  name: 'Xylophone',   emoji: '🎵', key: 'M', color: 'from-teal-400 to-cyan-500'   },
+    { id: 'kazoo',      name: 'Kazoo',       emoji: '🎶', key: ',', color: 'from-pink-400 to-purple-500'  },
+    { id: 'airguitar',  name: 'Air Guitar',  emoji: '🤟', key: '.', color: 'from-purple-500 to-pink-500'  },
+  ],
+  effects: [
+    { id: 'laser',     name: 'Laser',       emoji: '⚡',  key: '1', color: 'from-blue-500 to-cyan-500'   },
+    { id: 'explosion', name: 'Explosion',   emoji: '💥',  key: '2', color: 'from-red-500 to-orange-500'  },
+    { id: 'whoosh',    name: 'Whoosh',      emoji: '💨',  key: '3', color: 'from-sky-400 to-blue-500'    },
+    { id: 'alarm',     name: 'Alarm!',      emoji: '🚨',  key: '4', color: 'from-red-600 to-red-500'     },
+    { id: 'twinkle',   name: 'Magic',       emoji: '✨',  key: '5', color: 'from-purple-400 to-pink-400' },
+    { id: 'coin',      name: 'Coin',        emoji: '🪙',  key: '6', color: 'from-yellow-400 to-amber-500' },
+    { id: 'ufo',       name: 'UFO',         emoji: '🛸',  key: '7', color: 'from-green-400 to-teal-500'  },
+    { id: 'boing',     name: 'Boing!',      emoji: '🏀',  key: '8', color: 'from-orange-400 to-yellow-400' },
+  ],
+  reactions: [
+    { id: 'applause',   name: 'Applause',    emoji: '👏', key: 'F1', color: 'from-amber-400 to-yellow-400' },
+    { id: 'drumroll',   name: 'Drum Roll',   emoji: '🥁', key: 'F2', color: 'from-red-400 to-pink-500'    },
+    { id: 'levelup',    name: 'Level Up!',   emoji: '⬆️', key: 'F3', color: 'from-green-500 to-teal-500'  },
+    { id: 'gameover',   name: 'Game Over',   emoji: '💀', key: 'F4', color: 'from-gray-700 to-gray-900'   },
+    { id: 'tadaa',      name: 'Ta-Daa!',     emoji: '🎉', key: 'F5', color: 'from-purple-500 to-pink-500' },
+    { id: 'ohno',       name: 'Oh No!',      emoji: '😱', key: 'F6', color: 'from-red-500 to-rose-600'    },
+    { id: 'woo',        name: 'Woo!',        emoji: '🙌', key: 'F7', color: 'from-pink-400 to-purple-400' },
+    { id: 'crickets',   name: 'Crickets',    emoji: '🦗', key: 'F8', color: 'from-slate-400 to-gray-500'  },
+  ],
+};
+
+interface FlyingEmoji { id: number; emoji: string; x: number; y: number; dx: number; dy: number }
+
+export default function SoundBoard() {
   const { incrementSoundEffectsPlayed } = useGameStore();
   const [activeSound, setActiveSound] = useState<string | null>(null);
   const [volume, setVolume] = useState(0.7);
-  const [activeCategory, setActiveCategory] = useState<'funny' | 'animals' | 'instruments' | 'effects'>('funny');
-  const audioContextRef = useRef<AudioContext | null>(null);
+  const [activeCategory, setActiveCategory] = useState<Category>('funny');
+  const [flyingEmojis, setFlyingEmojis] = useState<FlyingEmoji[]>([]);
+  const [chaosMode, setChaosMode] = useState(false);
+  const audioRef = useRef<AudioContext | null>(null);
+  const emojiIdRef = useRef(0);
+  const chaosRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Initialize AudioContext lazily
-  const getAudioContext = useCallback(() => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+  const getCtx = useCallback((): AudioContext => {
+    if (!audioRef.current) {
+      const AC = window.AudioContext || (window as any).webkitAudioContext;
+      audioRef.current = new AC();
     }
-    if (audioContextRef.current.state === 'suspended') {
-      audioContextRef.current.resume();
-    }
-    return audioContextRef.current;
+    if (audioRef.current.state === 'suspended') audioRef.current.resume();
+    return audioRef.current;
   }, []);
 
-  // Sound categories
-  const soundCategories = {
-    funny: [
-      { id: 'burp', name: 'Burp', emoji: '💨', key: 'Q' },
-      { id: 'fart', name: 'Fart', emoji: '💨', key: 'W' },
-      { id: 'sneeze', name: 'Sneeze', emoji: '🤧', key: 'E' },
-      { id: 'giggle', name: 'Giggle', emoji: '🤭', key: 'R' },
-      { id: 'pop', name: 'Pop!', emoji: '💥', key: 'T' },
-      { id: 'boing', name: 'Boing!', emoji: '🏀', key: 'Y' },
-    ],
-    animals: [
-      { id: 'cat', name: 'Cat Meow', emoji: '🐱', key: 'A' },
-      { id: 'dog', name: 'Dog Bark', emoji: '🐶', key: 'S' },
-      { id: 'bird', name: 'Bird Chirp', emoji: '🐦', key: 'D' },
-      { id: 'cow', name: 'Cow Moo', emoji: '🐄', key: 'F' },
-      { id: 'lion', name: 'Lion Roar', emoji: '🦁', key: 'G' },
-      { id: 'elephant', name: 'Elephant', emoji: '🐘', key: 'H' },
-    ],
-    instruments: [
-      { id: 'drum', name: 'Drum', emoji: '🥁', key: 'Z' },
-      { id: 'piano', name: 'Piano', emoji: '🎹', key: 'X' },
-      { id: 'trumpet', name: 'Trumpet', emoji: '🎺', key: 'C' },
-      { id: 'violin', name: 'Violin', emoji: '🎻', key: 'V' },
-      { id: 'guitar', name: 'Guitar', emoji: '🎸', key: 'B' },
-      { id: 'xylophone', name: 'Xylophone', emoji: '🎵', key: 'N' },
-    ],
-    effects: [
-      { id: 'laser', name: 'Laser', emoji: '⚡', key: '1' },
-      { id: 'explosion', name: 'Explosion', emoji: '💥', key: '2' },
-      { id: 'whoosh', name: 'Whoosh', emoji: '💨', key: '3' },
-      { id: 'alarm', name: 'Alarm', emoji: '🚨', key: '4' },
-      { id: 'twinkle', name: 'Twinkle', emoji: '✨', key: '5' },
-      { id: 'coin', name: 'Coin Drop', emoji: '🪙', key: '6' },
-    ],
-  };
+  const noise = useCallback((ctx: AudioContext, dur: number, vol: number) => {
+    const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const g = ctx.createGain();
+    g.gain.value = vol;
+    src.connect(g).connect(ctx.destination);
+    src.start();
+    return g;
+  }, []);
 
-  const playSynthSound = (id: string) => {
-    const ctx = getAudioContext();
+  const playSynthSound = useCallback((id: string) => {
+    const ctx = getCtx();
     const t = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    
-    // Master volume
-    gain.gain.value = volume;
-    
-    osc.connect(gain);
-    gain.connect(ctx.destination);
+    const v = volume;
 
-    // Helper for Noise
-    const playNoise = (duration: number, _type: 'white' | 'pink' = 'white') => {
-        const bufferSize = ctx.sampleRate * duration;
-        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) {
-            data[i] = Math.random() * 2 - 1;
-        }
-        const noise = ctx.createBufferSource();
-        noise.buffer = buffer;
-        const noiseGain = ctx.createGain();
-        noiseGain.gain.value = volume;
-        noise.connect(noiseGain);
-        noiseGain.connect(ctx.destination);
-        noise.start();
-        return { noise, noiseGain };
+    const osc = (type: OscillatorType, freq: number) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = type;
+      o.frequency.value = freq;
+      o.connect(g).connect(ctx.destination);
+      return { o, g };
     };
 
     switch (id) {
-      // --- FUNNY ---
-      case 'burp':
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(80, t);
-        osc.frequency.linearRampToValueAtTime(60, t + 0.4);
-        gain.gain.setValueAtTime(volume, t);
-        gain.gain.linearRampToValueAtTime(0, t + 0.4);
-        osc.start();
-        osc.stop(t + 0.4);
+      // ── FUNNY ────────────────────────────────────────────────────────────
+      case 'burp': {
+        const { o, g } = osc('sawtooth', 90);
+        o.frequency.linearRampToValueAtTime(50, t + 0.5);
+        g.gain.setValueAtTime(v, t); g.gain.linearRampToValueAtTime(0, t + 0.5);
+        o.start(); o.stop(t + 0.5); break;
+      }
+      case 'fart': {
+        const { o, g } = osc('sawtooth', 75);
+        o.frequency.linearRampToValueAtTime(45, t + 0.4);
+        g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
+        o.start(); o.stop(t + 0.4); break;
+      }
+      case 'sneeze': {
+        const { o, g } = osc('triangle', 200);
+        o.frequency.exponentialRampToValueAtTime(600, t + 0.12);
+        g.gain.setValueAtTime(v, t); g.gain.linearRampToValueAtTime(0, t + 0.12);
+        o.start(); o.stop(t + 0.12);
+        const ng = noise(ctx, 0.25, v * 0.6);
+        ng.gain.exponentialRampToValueAtTime(0.01, t + 0.35);
         break;
-      case 'fart':
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(70, t);
-        osc.frequency.linearRampToValueAtTime(50, t + 0.3);
-        gain.gain.setValueAtTime(volume, t);
-        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
-        osc.start();
-        osc.stop(t + 0.3);
-        break;
-      case 'sneeze':
-        // Short oscillation then noise
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(200, t);
-        osc.frequency.linearRampToValueAtTime(500, t + 0.1);
-        gain.gain.setValueAtTime(volume, t);
-        gain.gain.linearRampToValueAtTime(0, t + 0.1);
-        osc.start(); 
-        osc.stop(t + 0.1);
-        setTimeout(() => {
-            const { noiseGain } = playNoise(0.2);
-            noiseGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-        }, 100);
-        break;
-      case 'giggle':
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(400, t);
-        osc.frequency.linearRampToValueAtTime(600, t + 0.1);
-        osc.frequency.linearRampToValueAtTime(400, t + 0.2);
-        osc.frequency.linearRampToValueAtTime(600, t + 0.3);
-        gain.gain.setValueAtTime(volume, t);
-        gain.gain.linearRampToValueAtTime(0, t + 0.4);
-        osc.start();
-        osc.stop(t + 0.4);
-        break;
-      case 'pop':
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(600, t);
-        osc.frequency.exponentialRampToValueAtTime(100, t + 0.1);
-        gain.gain.setValueAtTime(volume, t);
-        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
-        osc.start();
-        osc.stop(t + 0.1);
-        break;
-      case 'boing':
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(200, t);
-        osc.frequency.linearRampToValueAtTime(300, t + 0.2);
-        osc.frequency.linearRampToValueAtTime(200, t + 0.4);
-        gain.gain.setValueAtTime(volume, t);
-        gain.gain.linearRampToValueAtTime(0, t + 0.5);
-        osc.start();
-        osc.stop(t + 0.5);
-        break;
+      }
+      case 'hiccup': {
+        const { o, g } = osc('triangle', 700);
+        o.frequency.exponentialRampToValueAtTime(400, t + 0.08);
+        g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+        o.start(); o.stop(t + 0.1); break;
+      }
+      case 'yawn': {
+        const { o, g } = osc('sine', 200);
+        o.frequency.linearRampToValueAtTime(500, t + 0.5);
+        o.frequency.linearRampToValueAtTime(200, t + 1.2);
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(v * 0.5, t + 0.3);
+        g.gain.linearRampToValueAtTime(v * 0.5, t + 0.9);
+        g.gain.linearRampToValueAtTime(0, t + 1.3);
+        o.start(); o.stop(t + 1.3); break;
+      }
+      case 'giggle': {
+        [0, 0.15, 0.3].forEach(off => {
+          const { o, g } = osc('sine', 500);
+          o.frequency.linearRampToValueAtTime(700, t + off + 0.1);
+          g.gain.setValueAtTime(v * 0.7, t + off);
+          g.gain.linearRampToValueAtTime(0, t + off + 0.12);
+          o.start(t + off); o.stop(t + off + 0.12);
+        }); break;
+      }
+      case 'sadtrombone': {
+        [494, 440, 392, 330].forEach((freq, i) => {
+          const { o, g } = osc('sawtooth', freq);
+          g.gain.setValueAtTime(0, t + i * 0.18);
+          g.gain.linearRampToValueAtTime(v * 0.6, t + i * 0.18 + 0.04);
+          g.gain.linearRampToValueAtTime(0, t + i * 0.18 + 0.2);
+          o.start(t + i * 0.18); o.stop(t + i * 0.18 + 0.22);
+        }); break;
+      }
+      case 'airhorn': {
+        const { o, g } = osc('sawtooth', 440);
+        const { o: o2, g: g2 } = osc('sawtooth', 554);
+        g.gain.setValueAtTime(v * 0.6, t); g.gain.linearRampToValueAtTime(0, t + 0.8);
+        g2.gain.setValueAtTime(v * 0.6, t); g2.gain.linearRampToValueAtTime(0, t + 0.8);
+        o.start(); o.stop(t + 0.8); o2.start(); o2.stop(t + 0.8); break;
+      }
 
-      // --- ANIMALS ---
-      case 'cat':
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(600, t);
-        osc.frequency.linearRampToValueAtTime(800, t + 0.3);
-        osc.frequency.linearRampToValueAtTime(500, t + 0.6);
-        gain.gain.setValueAtTime(0, t);
-        gain.gain.linearRampToValueAtTime(volume, t + 0.2);
-        gain.gain.linearRampToValueAtTime(0, t + 0.6);
-        osc.start();
-        osc.stop(t + 0.6);
-        break;
-      case 'dog':
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(150, t);
-        osc.frequency.linearRampToValueAtTime(100, t + 0.1);
-        gain.gain.setValueAtTime(volume, t);
-        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
-        osc.start();
-        osc.stop(t + 0.15);
-        break;
-      case 'bird':
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(800, t);
-        osc.frequency.linearRampToValueAtTime(1200, t + 0.1);
-        osc.frequency.linearRampToValueAtTime(800, t + 0.2);
-        gain.gain.linearRampToValueAtTime(0, t + 0.3);
-        osc.start();
-        osc.stop(t + 0.3);
-        break;
-      case 'cow':
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(100, t);
-        osc.frequency.linearRampToValueAtTime(80, t + 1);
-        gain.gain.setValueAtTime(0, t);
-        gain.gain.linearRampToValueAtTime(volume, t + 0.2);
-        gain.gain.linearRampToValueAtTime(0, t + 1);
-        osc.start();
-        osc.stop(t + 1);
-        break;
-      case 'lion':
-        playNoise(1.0).noiseGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.0);
-        break;
-      case 'elephant':
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(400, t);
-        osc.frequency.linearRampToValueAtTime(600, t + 0.3);
-        osc.frequency.linearRampToValueAtTime(300, t + 0.8);
-        gain.gain.linearRampToValueAtTime(0, t + 0.8);
-        osc.start();
-        osc.stop(t + 0.8);
-        break;
+      // ── ANIMALS ──────────────────────────────────────────────────────────
+      case 'cat': {
+        const { o, g } = osc('triangle', 620);
+        o.frequency.linearRampToValueAtTime(820, t + 0.25);
+        o.frequency.linearRampToValueAtTime(550, t + 0.6);
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.15);
+        g.gain.linearRampToValueAtTime(0, t + 0.7);
+        o.start(); o.stop(t + 0.7); break;
+      }
+      case 'dog': {
+        [0, 0.22].forEach(off => {
+          const { o, g } = osc('sawtooth', 180);
+          o.frequency.linearRampToValueAtTime(120, t + off + 0.15);
+          g.gain.setValueAtTime(v, t + off); g.gain.exponentialRampToValueAtTime(0.01, t + off + 0.18);
+          o.start(t + off); o.stop(t + off + 0.18);
+        }); break;
+      }
+      case 'duck': {
+        const { o, g } = osc('square', 400);
+        o.frequency.linearRampToValueAtTime(300, t + 0.1);
+        o.frequency.linearRampToValueAtTime(400, t + 0.18);
+        g.gain.setValueAtTime(v * 0.7, t); g.gain.linearRampToValueAtTime(0, t + 0.22);
+        o.start(); o.stop(t + 0.22); break;
+      }
+      case 'pig': {
+        const { o, g } = osc('triangle', 300);
+        o.frequency.linearRampToValueAtTime(250, t + 0.15);
+        o.frequency.linearRampToValueAtTime(340, t + 0.3);
+        g.gain.setValueAtTime(v * 0.8, t); g.gain.linearRampToValueAtTime(0, t + 0.35);
+        o.start(); o.stop(t + 0.35); break;
+      }
+      case 'cow': {
+        const { o, g } = osc('sawtooth', 110);
+        o.frequency.linearRampToValueAtTime(85, t + 1.0);
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.2);
+        g.gain.linearRampToValueAtTime(0, t + 1.1);
+        o.start(); o.stop(t + 1.1); break;
+      }
+      case 'frog': {
+        [0, 0.18].forEach(off => {
+          const { o, g } = osc('square', 200);
+          o.frequency.linearRampToValueAtTime(150, t + off + 0.08);
+          g.gain.setValueAtTime(v * 0.7, t + off); g.gain.exponentialRampToValueAtTime(0.01, t + off + 0.12);
+          o.start(t + off); o.stop(t + off + 0.12);
+        }); break;
+      }
+      case 'horse': {
+        const { o, g } = osc('sawtooth', 500);
+        o.frequency.linearRampToValueAtTime(200, t + 0.5);
+        o.frequency.linearRampToValueAtTime(350, t + 0.7);
+        g.gain.setValueAtTime(v * 0.5, t); g.gain.linearRampToValueAtTime(0, t + 0.8);
+        o.start(); o.stop(t + 0.8); break;
+      }
+      case 'elephant': {
+        const { o, g } = osc('sawtooth', 500);
+        o.frequency.exponentialRampToValueAtTime(200, t + 0.8);
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.1);
+        g.gain.linearRampToValueAtTime(0, t + 0.9);
+        o.start(); o.stop(t + 0.9); break;
+      }
+      case 'lion': {
+        const ng = noise(ctx, 1.2, v * 0.8);
+        ng.gain.setValueAtTime(v * 0.8, t); ng.gain.exponentialRampToValueAtTime(0.01, t + 1.2);
+        const { o, g } = osc('sawtooth', 80);
+        o.frequency.linearRampToValueAtTime(50, t + 1.0);
+        g.gain.setValueAtTime(v * 0.5, t); g.gain.exponentialRampToValueAtTime(0.01, t + 1.0);
+        o.start(); o.stop(t + 1.0); break;
+      }
+      case 'monkey': {
+        [400, 600, 400, 700, 350].forEach((f, i) => {
+          const { o, g } = osc('triangle', f);
+          g.gain.setValueAtTime(v * 0.6, t + i * 0.1); g.gain.exponentialRampToValueAtTime(0.01, t + i * 0.1 + 0.09);
+          o.start(t + i * 0.1); o.stop(t + i * 0.1 + 0.09);
+        }); break;
+      }
+      case 'sheep': {
+        const { o, g } = osc('triangle', 350);
+        o.frequency.linearRampToValueAtTime(280, t + 0.5);
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v * 0.7, t + 0.1);
+        g.gain.linearRampToValueAtTime(0, t + 0.6);
+        o.start(); o.stop(t + 0.6); break;
+      }
+      case 'bird': {
+        [800, 1100, 900, 1300, 950].forEach((f, i) => {
+          const { o, g } = osc('sine', f);
+          g.gain.setValueAtTime(v * 0.5, t + i * 0.07);
+          g.gain.exponentialRampToValueAtTime(0.01, t + i * 0.07 + 0.06);
+          o.start(t + i * 0.07); o.stop(t + i * 0.07 + 0.06);
+        }); break;
+      }
 
-      // --- INSTRUMENTS ---
-      case 'piano':
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(440, t); // A4
-        gain.gain.setValueAtTime(volume, t);
-        gain.gain.exponentialRampToValueAtTime(0.01, t + 1.0);
-        osc.start();
-        osc.stop(t + 1.0);
-        break;
-      case 'drum':
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(100, t);
-        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
-        osc.start();
-        osc.stop(t + 0.1);
-        break;
-      case 'trumpet':
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(523.25, t); // C5
-        gain.gain.setValueAtTime(0, t);
-        gain.gain.linearRampToValueAtTime(volume, t + 0.05);
-        gain.gain.linearRampToValueAtTime(volume * 0.8, t + 0.1);
-        gain.gain.linearRampToValueAtTime(0, t + 0.5);
-        osc.start();
-        osc.stop(t + 0.5);
-        break;
-      case 'violin':
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(659.25, t); // E5
-        gain.gain.setValueAtTime(0, t);
-        gain.gain.linearRampToValueAtTime(volume, t + 0.2);
-        gain.gain.linearRampToValueAtTime(0, t + 1.0);
-        // Add vibrato? complex, stick to simple
-        osc.start();
-        osc.stop(t + 1.0);
-        break;
-      case 'guitar':
-        osc.type = 'triangle'; // Pluck approx
-        osc.frequency.setValueAtTime(329.63, t); // E4
-        gain.gain.setValueAtTime(volume, t);
-        gain.gain.exponentialRampToValueAtTime(0.01, t + 1.5);
-        osc.start();
-        osc.stop(t + 1.5);
-        break;
-      case 'xylophone':
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, t); // A5
-        gain.gain.setValueAtTime(volume, t);
-        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
-        osc.start();
-        osc.stop(t + 0.3);
-        break;
+      // ── INSTRUMENTS ──────────────────────────────────────────────────────
+      case 'drum': {
+        const ng = noise(ctx, 0.05, v * 0.9);
+        ng.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+        const { o, g } = osc('sine', 120);
+        o.frequency.exponentialRampToValueAtTime(40, t + 0.08);
+        g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+        o.start(); o.stop(t + 0.1); break;
+      }
+      case 'piano': {
+        [440, 554, 659].forEach((f, i) => {
+          const { o, g } = osc('triangle', f);
+          g.gain.setValueAtTime(v * 0.4, t + i * 0.01);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 1.2);
+          o.start(t + i * 0.01); o.stop(t + 1.3);
+        }); break;
+      }
+      case 'trumpet': {
+        const { o, g } = osc('sawtooth', 523);
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.06);
+        g.gain.setValueAtTime(v * 0.8, t + 0.1); g.gain.linearRampToValueAtTime(0, t + 0.5);
+        o.start(); o.stop(t + 0.5); break;
+      }
+      case 'violin': {
+        const { o, g } = osc('sawtooth', 659);
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v * 0.7, t + 0.2);
+        g.gain.linearRampToValueAtTime(0, t + 1.0);
+        o.start(); o.stop(t + 1.0); break;
+      }
+      case 'guitar': {
+        const { o, g } = osc('triangle', 330);
+        g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.001, t + 1.5);
+        o.start(); o.stop(t + 1.5); break;
+      }
+      case 'xylophone': {
+        [880, 1047, 1319].forEach((f, i) => {
+          const { o, g } = osc('sine', f);
+          g.gain.setValueAtTime(v * 0.6, t + i * 0.12);
+          g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.3);
+          o.start(t + i * 0.12); o.stop(t + i * 0.12 + 0.3);
+        }); break;
+      }
+      case 'kazoo': {
+        const { o, g } = osc('square', 220);
+        o.frequency.linearRampToValueAtTime(280, t + 0.3); o.frequency.linearRampToValueAtTime(220, t + 0.6);
+        g.gain.setValueAtTime(v * 0.3, t); g.gain.linearRampToValueAtTime(0, t + 0.7);
+        o.start(); o.stop(t + 0.7); break;
+      }
+      case 'airguitar': {
+        [220, 330, 440, 330, 220].forEach((f, i) => {
+          const { o, g } = osc('triangle', f);
+          g.gain.setValueAtTime(v * 0.5, t + i * 0.09);
+          g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.09 + 0.12);
+          o.start(t + i * 0.09); o.stop(t + i * 0.09 + 0.12);
+        }); break;
+      }
 
-      // --- EFFECTS ---
-      case 'laser':
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(800, t);
-        osc.frequency.exponentialRampToValueAtTime(100, t + 0.2);
-        gain.gain.linearRampToValueAtTime(0, t + 0.2);
-        osc.start();
-        osc.stop(t + 0.2);
-        break;
-      case 'explosion':
-        const { noiseGain } = playNoise(0.5);
-        noiseGain.gain.setValueAtTime(volume, t);
-        noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
-        break;
-      case 'whoosh':
-        const w = playNoise(0.5, 'white');
-        w.noiseGain.gain.setValueAtTime(0, t);
-        w.noiseGain.gain.linearRampToValueAtTime(volume, t + 0.25);
-        w.noiseGain.gain.linearRampToValueAtTime(0, t + 0.5);
-        break;
-      case 'alarm':
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(800, t);
-        osc.frequency.setValueAtTime(1000, t + 0.2);
-        osc.frequency.setValueAtTime(800, t + 0.4);
-        osc.frequency.setValueAtTime(1000, t + 0.6);
-        gain.gain.linearRampToValueAtTime(0, t + 0.8);
-        osc.start();
-        osc.stop(t + 0.8);
-        break;
-      case 'twinkle':
-        // Arpeggio
-        const now = ctx.currentTime;
-        [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
-            const o = ctx.createOscillator();
-            const g = ctx.createGain();
-            o.type = 'sine';
-            o.frequency.value = freq;
-            o.connect(g);
-            g.connect(ctx.destination);
-            g.gain.setValueAtTime(volume * 0.2, now + i * 0.1);
-            g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.1 + 0.3);
-            o.start(now + i * 0.1);
-            o.stop(now + i * 0.1 + 0.3);
-        });
-        break;
-      case 'coin':
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(1000, t);
-        osc.frequency.setValueAtTime(1500, t + 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
-        osc.start();
-        osc.stop(t + 0.3);
-        break;
-        
-      default:
-        // Default beep
-        osc.frequency.setValueAtTime(440, t);
-        osc.start();
-        osc.stop(t + 0.1);
+      // ── EFFECTS ──────────────────────────────────────────────────────────
+      case 'laser': {
+        const { o, g } = osc('sawtooth', 900);
+        o.frequency.exponentialRampToValueAtTime(100, t + 0.25);
+        g.gain.setValueAtTime(v * 0.7, t); g.gain.linearRampToValueAtTime(0, t + 0.25);
+        o.start(); o.stop(t + 0.25); break;
+      }
+      case 'explosion': {
+        const ng = noise(ctx, 0.6, v);
+        ng.gain.setValueAtTime(v, t); ng.gain.exponentialRampToValueAtTime(0.01, t + 0.6); break;
+      }
+      case 'whoosh': {
+        const ng = noise(ctx, 0.5, 0);
+        ng.gain.setValueAtTime(0, t); ng.gain.linearRampToValueAtTime(v, t + 0.2);
+        ng.gain.linearRampToValueAtTime(0, t + 0.5); break;
+      }
+      case 'alarm': {
+        [0, 0.2, 0.4, 0.6].forEach((off, i) => {
+          const { o, g } = osc('square', i % 2 === 0 ? 880 : 1100);
+          g.gain.setValueAtTime(v * 0.5, t + off); g.gain.linearRampToValueAtTime(0, t + off + 0.18);
+          o.start(t + off); o.stop(t + off + 0.18);
+        }); break;
+      }
+      case 'twinkle': {
+        [523, 659, 784, 1047, 784, 659].forEach((f, i) => {
+          const { o, g } = osc('sine', f);
+          g.gain.setValueAtTime(v * 0.3, t + i * 0.1);
+          g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.1 + 0.28);
+          o.start(t + i * 0.1); o.stop(t + i * 0.1 + 0.3);
+        }); break;
+      }
+      case 'coin': {
+        [1047, 1319].forEach((f, i) => {
+          const { o, g } = osc('sine', f);
+          g.gain.setValueAtTime(v * 0.5, t + i * 0.05);
+          g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.05 + 0.25);
+          o.start(t + i * 0.05); o.stop(t + i * 0.05 + 0.25);
+        }); break;
+      }
+      case 'ufo': {
+        const { o, g } = osc('sine', 300);
+        o.frequency.linearRampToValueAtTime(600, t + 0.5);
+        o.frequency.linearRampToValueAtTime(300, t + 1.0);
+        g.gain.setValueAtTime(v * 0.5, t); g.gain.linearRampToValueAtTime(0, t + 1.1);
+        o.start(); o.stop(t + 1.1); break;
+      }
+      case 'boing': {
+        const { o, g } = osc('sine', 150);
+        o.frequency.exponentialRampToValueAtTime(600, t + 0.3);
+        o.frequency.exponentialRampToValueAtTime(150, t + 0.6);
+        g.gain.setValueAtTime(v * 0.8, t); g.gain.linearRampToValueAtTime(0, t + 0.7);
+        o.start(); o.stop(t + 0.7); break;
+      }
+
+      // ── REACTIONS ────────────────────────────────────────────────────────
+      case 'applause': {
+        for (let i = 0; i < 8; i++) {
+          const ng = noise(ctx, 0.06, v * 0.4);
+          ng.gain.setValueAtTime(v * 0.4, t + i * 0.08);
+          ng.gain.exponentialRampToValueAtTime(0.01, t + i * 0.08 + 0.06);
+        } break;
+      }
+      case 'drumroll': {
+        for (let i = 0; i < 16; i++) {
+          const ng = noise(ctx, 0.03, v * 0.5);
+          ng.gain.setValueAtTime(v * 0.5, t + i * 0.05);
+          ng.gain.exponentialRampToValueAtTime(0.01, t + i * 0.05 + 0.03);
+        } break;
+      }
+      case 'levelup': {
+        [523, 659, 784, 1047, 1319].forEach((f, i) => {
+          const { o, g } = osc('triangle', f);
+          g.gain.setValueAtTime(v * 0.4, t + i * 0.1);
+          g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.1 + 0.18);
+          o.start(t + i * 0.1); o.stop(t + i * 0.1 + 0.2);
+        }); break;
+      }
+      case 'gameover': {
+        [392, 330, 294, 220].forEach((f, i) => {
+          const { o, g } = osc('sawtooth', f);
+          g.gain.setValueAtTime(v * 0.5, t + i * 0.2);
+          g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.2 + 0.3);
+          o.start(t + i * 0.2); o.stop(t + i * 0.2 + 0.3);
+        }); break;
+      }
+      case 'tadaa': {
+        [[523, 659, 784], [659, 784, 988]].forEach((chord, ci) => {
+          chord.forEach(f => {
+            const { o, g } = osc('triangle', f);
+            g.gain.setValueAtTime(0, t + ci * 0.25);
+            g.gain.linearRampToValueAtTime(v * 0.3, t + ci * 0.25 + 0.05);
+            g.gain.linearRampToValueAtTime(0, t + ci * 0.25 + 0.4);
+            o.start(t + ci * 0.25); o.stop(t + ci * 0.25 + 0.4);
+          });
+        }); break;
+      }
+      case 'ohno': {
+        const { o, g } = osc('sine', 600);
+        o.frequency.linearRampToValueAtTime(200, t + 0.5);
+        g.gain.setValueAtTime(v * 0.6, t); g.gain.linearRampToValueAtTime(0, t + 0.6);
+        o.start(); o.stop(t + 0.6); break;
+      }
+      case 'woo': {
+        const { o, g } = osc('sine', 400);
+        o.frequency.linearRampToValueAtTime(700, t + 0.4);
+        g.gain.setValueAtTime(v * 0.7, t); g.gain.linearRampToValueAtTime(0, t + 0.5);
+        o.start(); o.stop(t + 0.5); break;
+      }
+      case 'crickets': {
+        for (let i = 0; i < 12; i++) {
+          const { o, g } = osc('sine', 3000 + Math.random() * 500);
+          g.gain.setValueAtTime(v * 0.15, t + i * 0.07);
+          g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.07 + 0.06);
+          o.start(t + i * 0.07); o.stop(t + i * 0.07 + 0.06);
+        } break;
+      }
+
+      default: {
+        const { o, g } = osc('sine', 440);
+        g.gain.setValueAtTime(v * 0.3, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+        o.start(); o.stop(t + 0.1);
+      }
     }
+  }, [volume, getCtx, noise]);
+
+  const spawnEmoji = useCallback((emoji: string) => {
+    const id = ++emojiIdRef.current;
+    const dx = (Math.random() - 0.5) * 400;
+    const dy = -(Math.random() * 200 + 100);
+    setFlyingEmojis(prev => [...prev, { id, emoji, x: 0, y: 0, dx, dy }]);
+    setTimeout(() => setFlyingEmojis(prev => prev.filter(e => e.id !== id)), 900);
+  }, []);
+
+  const playSound = useCallback((sound: SoundEffect) => {
+    playSynthSound(sound.id);
+    setActiveSound(sound.id);
+    spawnEmoji(sound.emoji);
+    setTimeout(() => setActiveSound(null), 350);
+    incrementSoundEffectsPlayed();
+  }, [playSynthSound, spawnEmoji, incrementSoundEffectsPlayed]);
+
+  const triggerChaos = () => {
+    if (chaosMode) {
+      setChaosMode(false);
+      if (chaosRef.current) clearInterval(chaosRef.current);
+      return;
+    }
+    setChaosMode(true);
+    const allSounds = Object.values(soundCategories).flat();
+    let count = 0;
+    chaosRef.current = setInterval(() => {
+      const s = allSounds[Math.floor(Math.random() * allSounds.length)];
+      playSound(s);
+      count++;
+      if (count >= 18) {
+        clearInterval(chaosRef.current!);
+        setChaosMode(false);
+      }
+    }, 180);
   };
 
-  const playSound = useCallback((soundEffect: SoundEffect) => {
-    playSynthSound(soundEffect.id);
-    setActiveSound(soundEffect.id);
-    setTimeout(() => setActiveSound(null), 300);
-    incrementSoundEffectsPlayed();
-  }, [incrementSoundEffectsPlayed, volume]); // Volume used via ref in synthesis potentially or state, using getAudioContext
-
-  // Keyboard event listener
+  // Keyboard shortcuts
   useEffect(() => {
-    const handleKeyPress = (event: KeyboardEvent) => {
-      const key = event.key.toUpperCase();
-      const allSounds = Object.values(soundCategories).flat();
-      const sound = allSounds.find(s => s.key === key);
-      if (sound) {
-        event.preventDefault();
-        playSound(sound);
-      }
+    const handler = (e: KeyboardEvent) => {
+      const key = e.key.toUpperCase();
+      const all = Object.values(soundCategories).flat();
+      const s = all.find(x => x.key?.toUpperCase() === key);
+      if (s) { e.preventDefault(); playSound(s); }
     };
-
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, [playSound]);
 
+  useEffect(() => () => { if (chaosRef.current) clearInterval(chaosRef.current); }, []);
+
+  const categoryMeta: { id: Category; label: string; emoji: string }[] = [
+    { id: 'funny',      label: 'Funny',       emoji: '😂' },
+    { id: 'animals',    label: 'Animals',      emoji: '🐾' },
+    { id: 'instruments',label: 'Instruments',  emoji: '🎸' },
+    { id: 'effects',    label: 'Effects',      emoji: '⚡' },
+    { id: 'reactions',  label: 'Reactions',    emoji: '🎉' },
+  ];
+
   const currentSounds = soundCategories[activeCategory];
-  const categoryNames = {
-    funny: 'Funny Sounds',
-    animals: 'Animal Noises',
-    instruments: 'Instruments',
-    effects: 'Sound Effects'
-  };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 relative select-none">
+
+      {/* Flying emoji layer */}
+      <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center">
+        <AnimatePresence>
+          {flyingEmojis.map(fe => (
+            <motion.div key={fe.id}
+              initial={{ x: 0, y: 0, scale: 0.5, opacity: 1 }}
+              animate={{ x: fe.dx, y: fe.dy, scale: 2.5, opacity: 0 }}
+              transition={{ duration: 0.85, ease: 'easeOut' }}
+              className="absolute text-5xl pointer-events-none">
+              {fe.emoji}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
       {/* Header */}
       <div className="text-center">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 0.5, type: "spring" }}
-          className="text-4xl mb-2"
-        >
-          🎵
-        </motion.div>
-        <h3 className="text-2xl font-fredoka font-bold text-blue-600 mb-2">
-          Sound Effects Board
-        </h3>
-        <p className="text-sm font-nunito text-gray-600">
-          Click the buttons or use your keyboard! 🎹
-        </p>
+        <h3 className="text-2xl font-fredoka font-bold text-blue-600">🎵 Sound Board 🎵</h3>
+        <p className="text-sm text-gray-500 font-nunito">Click any button — use keyboard shortcuts too!</p>
       </div>
 
-      {/* Volume Control */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className="bg-white p-4 rounded-xl border-2 border-blue-200 mx-auto max-w-xs"
-      >
-        <div className="text-center mb-2">
-          <span className="text-sm font-nunito text-blue-600">🔊 Volume</span>
+      {/* Volume + CHAOS row */}
+      <div className="flex items-center gap-4 flex-wrap justify-center">
+        <div className="flex items-center gap-2 bg-white rounded-xl px-4 py-2 border-2 border-blue-200">
+          <span>🔇</span>
+          <input type="range" min="0" max="1" step="0.05" value={volume}
+            onChange={e => setVolume(Number(e.target.value))}
+            className="w-28 accent-blue-500" />
+          <span>🔊</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm">🔇</span>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            value={volume}
-            onChange={(e) => setVolume(Number(e.target.value))}
-            className="flex-1 h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer slider"
-          />
-          <span className="text-sm">🔊</span>
-        </div>
-      </motion.div>
 
-      {/* Category Tabs */}
+        <motion.button
+          whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
+          onClick={triggerChaos}
+          className={`px-5 py-2 rounded-xl font-fredoka font-bold text-white shadow-lg transition-all ${
+            chaosMode
+              ? 'bg-red-500 animate-pulse ring-4 ring-red-300'
+              : 'bg-gradient-to-r from-orange-500 to-red-500'
+          }`}>
+          {chaosMode ? '🛑 Stop Chaos' : '🔥 CHAOS MODE'}
+        </motion.button>
+      </div>
+
+      {/* Category tabs */}
       <div className="flex justify-center gap-2 flex-wrap">
-        {Object.entries(categoryNames).map(([category, name], index) => (
-          <motion.button
-            key={category}
+        {categoryMeta.map(cat => (
+          <motion.button key={cat.id}
+            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+            onClick={() => setActiveCategory(cat.id)}
+            className={`px-4 py-2 rounded-full font-fredoka font-bold text-sm transition-all ${
+              activeCategory === cat.id
+                ? 'bg-blue-500 text-white shadow-md'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}>
+            {cat.emoji} {cat.label}
+          </motion.button>
+        ))}
+      </div>
+
+      {/* Sound grid */}
+      <motion.div key={activeCategory}
+        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+        className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {currentSounds.map((sound, i) => (
+          <motion.button key={sound.id}
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.1 * index }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setActiveCategory(category as typeof activeCategory)}
-            className={`px-4 py-2 rounded-lg font-fredoka font-semibold text-sm transition-all duration-300 ${
-              activeCategory === category
-                ? 'bg-blue-500 text-white shadow-lg'
-                : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-            }`}
-          >
-            {name}
-          </motion.button>
-        ))}
-      </div>
-
-      {/* Sound Buttons Grid */}
-      <motion.div
-        key={activeCategory}
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="grid grid-cols-2 md:grid-cols-3 gap-4"
-      >
-        {currentSounds.map((sound, index) => (
-          <motion.button
-            key={sound.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            whileHover={{ scale: 1.05, rotate: activeSound === sound.id ? 5 : 0 }}
-            whileTap={{ scale: 0.95 }}
+            transition={{ delay: i * 0.04 }}
+            whileHover={{ scale: 1.08, rotate: [-1, 1, -1] }}
+            whileTap={{ scale: 0.88 }}
             onClick={() => playSound(sound)}
-            className={`p-6 rounded-xl font-fredoka font-bold text-lg transition-all duration-300 relative overflow-hidden ${
-              activeSound === sound.id
-                ? 'bg-gradient-to-br from-yellow-400 to-orange-500 text-white shadow-2xl transform scale-105'
-                : 'bg-gradient-to-br from-white to-gray-100 text-gray-800 shadow-md hover:shadow-lg border-2 border-gray-200'
-            }`}
-          >
-            {/* Background pattern */}
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 right-0 text-4xl">🎵</div>
-            </div>
-
-            <div className="relative z-10 flex flex-col items-center">
-              <div className="text-4xl mb-2">{sound.emoji}</div>
-              <div className={`text-sm transition-all duration-200 ${
-                activeSound === sound.id ? 'text-white' : 'text-gray-600'
-              }`}>
-                {sound.name}
-              </div>
-              {sound.key && (
-                <div className={`text-xs mt-1 px-2 py-1 rounded transition-all duration-200 ${
-                  activeSound === sound.id
-                    ? 'bg-white bg-opacity-30 text-white'
-                    : 'bg-gray-200 text-gray-500'
-                }`}>
-                  [{sound.key}]
-                </div>
-              )}
-
-              {/* Ripple effect */}
-              {activeSound === sound.id && (
-                <motion.div
-                  className="absolute inset-0 bg-white rounded-xl opacity-50"
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 2 }}
-                  transition={{ duration: 0.3, ease: "easeOut" }}
-                />
-              )}
-            </div>
+            className={`p-4 rounded-2xl font-fredoka font-bold text-white shadow-lg transition-all duration-150 bg-gradient-to-br ${sound.color} ${
+              activeSound === sound.id ? 'ring-4 ring-white ring-opacity-80 scale-110' : ''
+            }`}>
+            <div className="text-3xl mb-1">{sound.emoji}</div>
+            <div className="text-sm leading-tight">{sound.name}</div>
+            {sound.key && (
+              <div className="text-xs bg-black bg-opacity-20 rounded-md px-1 mt-1 inline-block">[{sound.key}]</div>
+            )}
           </motion.button>
         ))}
-      </motion.div>
-
-      {/* Instructions */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.6 }}
-        className="text-center bg-blue-50 p-4 rounded-xl border-2 border-blue-200"
-      >
-        <p className="text-sm font-nunito text-blue-600">
-          💡 **Tip:** Try the keyboard shortcuts! Each button shows its [key] above.
-          Adjust volume with the slider and have fun making music! 🎶
-        </p>
       </motion.div>
     </div>
   );
-};
-
-export default SoundBoard;
+}
