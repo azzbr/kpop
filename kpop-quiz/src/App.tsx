@@ -21,6 +21,8 @@ import LivingMural from './components/LivingMural';
 import AgentHQ from './components/AgentHQ';
 import Shop from './components/Shop';
 import KPopRushGame from './components/KPopRushGame';
+import WordScramble from './components/WordScramble';
+import LightningQuiz from './components/LightningQuiz';
 
 function App() {
   const { gameState } = useGameStore();
@@ -67,6 +69,10 @@ function App() {
         return <Shop key="shop" />;
       case 'kpop_rush':
         return <KPopRushGame key="kpop_rush" />;
+      case 'word_scramble':
+        return <WordScramble key="word_scramble" />;
+      case 'lightning_quiz':
+        return <LightningQuiz key="lightning_quiz" />;
       default:
         return <WelcomeScreen key="welcome" />;
     }

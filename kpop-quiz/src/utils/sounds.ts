@@ -1,78 +1,168 @@
-let audioCtx: AudioContext | null = null;
+// ─── Audio Context ───────────────────────────────────────────────────────────
 
-function ctx(): AudioContext | null {
-  if (typeof window === 'undefined') return null;
-  if (!audioCtx) {
-    const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (!AC) return null;
-    audioCtx = new AC();
+let _ctx: AudioContext | null = null;
+
+/** Call this once a user gesture has occurred so the context is running. */
+export function initAudio(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (!_ctx) {
+      const AC =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext;
+      if (!AC) return;
+      _ctx = new AC();
+    }
+    if (_ctx.state === 'suspended') {
+      _ctx.resume().catch(() => {});
+    }
+  } catch (_) {
+    // silently ignore — audio is not critical
   }
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume().catch(() => {});
-  }
-  return audioCtx;
 }
 
-type Tone = { freq: number; duration: number; type?: OscillatorType; volume?: number };
+// Auto-unlock on first user gesture (covers sounds triggered from useEffect)
+if (typeof document !== 'undefined') {
+  const _unlock = () => {
+    initAudio();
+    document.removeEventListener('click', _unlock, true);
+    document.removeEventListener('keydown', _unlock, true);
+    document.removeEventListener('touchstart', _unlock, true);
+  };
+  document.addEventListener('click', _unlock, true);
+  document.addEventListener('keydown', _unlock, true);
+  document.addEventListener('touchstart', _unlock, true);
+}
 
-function playTones(tones: Tone[], gapMs = 0) {
-  const ac = ctx();
-  if (!ac) return;
-  const start = ac.currentTime;
+function ac(): AudioContext | null {
+  if (typeof window === 'undefined') return null;
+  if (!_ctx) return null; // not yet unlocked; skip silently
+  if (_ctx.state === 'suspended') {
+    _ctx.resume().catch(() => {});
+    return null; // skip this sound — will work on next call
+  }
+  return _ctx;
+}
+
+// ─── Core engine ─────────────────────────────────────────────────────────────
+
+type OscType = OscillatorType;
+
+interface Tone {
+  freq: number;
+  dur: number;
+  type?: OscType;
+  vol?: number;
+}
+
+function schedule(tones: Tone[], gapSec = 0.04): void {
+  const ctx = ac();
+  if (!ctx) return;
+  const now = ctx.currentTime + 0.01; // tiny safety buffer
   let offset = 0;
-  tones.forEach((t) => {
-    const osc = ac.createOscillator();
-    const gain = ac.createGain();
+
+  for (const t of tones) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
     osc.type = t.type ?? 'sine';
     osc.frequency.value = t.freq;
-    const v = t.volume ?? 0.15;
-    gain.gain.setValueAtTime(0, start + offset);
-    gain.gain.linearRampToValueAtTime(v, start + offset + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + offset + t.duration);
-    osc.connect(gain).connect(ac.destination);
-    osc.start(start + offset);
-    osc.stop(start + offset + t.duration + 0.05);
-    offset += t.duration + gapMs / 1000;
-  });
+
+    const v = t.vol ?? 0.28;
+    gain.gain.setValueAtTime(0.0001, now + offset);
+    gain.gain.linearRampToValueAtTime(v, now + offset + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + t.dur);
+
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now + offset);
+    osc.stop(now + offset + t.dur + 0.04);
+
+    offset += t.dur + gapSec;
+  }
 }
 
+// ─── Sound effects ────────────────────────────────────────────────────────────
+
+/** Short click — button tap */
 export const playClick = () =>
-  playTones([{ freq: 600, duration: 0.05, type: 'square', volume: 0.08 }]);
+  schedule([{ freq: 720, dur: 0.06, type: 'square', vol: 0.12 }], 0);
 
+/** Two-note rising chime — correct answer */
 export const playCorrect = () =>
-  playTones(
+  schedule(
     [
-      { freq: 660, duration: 0.1, type: 'triangle' },
-      { freq: 880, duration: 0.15, type: 'triangle' },
+      { freq: 660, dur: 0.12, type: 'triangle', vol: 0.28 },
+      { freq: 990, dur: 0.18, type: 'triangle', vol: 0.28 },
     ],
-    20
+    0.03
   );
 
+/** Low buzzer — wrong answer */
 export const playWrong = () =>
-  playTones([{ freq: 180, duration: 0.25, type: 'sawtooth', volume: 0.12 }]);
+  schedule([{ freq: 160, dur: 0.28, type: 'sawtooth', vol: 0.22 }], 0);
 
+/** 4-note ascending fanfare — win / game complete */
 export const playWin = () =>
-  playTones(
+  schedule(
     [
-      { freq: 523, duration: 0.12, type: 'triangle' },
-      { freq: 659, duration: 0.12, type: 'triangle' },
-      { freq: 784, duration: 0.12, type: 'triangle' },
-      { freq: 1047, duration: 0.25, type: 'triangle' },
+      { freq: 523, dur: 0.13, type: 'triangle', vol: 0.30 },
+      { freq: 659, dur: 0.13, type: 'triangle', vol: 0.30 },
+      { freq: 784, dur: 0.13, type: 'triangle', vol: 0.30 },
+      { freq: 1047, dur: 0.30, type: 'triangle', vol: 0.32 },
     ],
-    10
+    0.04
   );
 
+/** Pop — card flip, bubble pop, tile match */
 export const playPop = () =>
-  playTones([{ freq: 900, duration: 0.06, type: 'sine', volume: 0.15 }]);
+  schedule([{ freq: 880, dur: 0.07, type: 'sine', vol: 0.24 }], 0);
 
+/** Hit — rhythm game good tap */
 export const playHit = () =>
-  playTones([{ freq: 740, duration: 0.08, type: 'triangle', volume: 0.18 }]);
+  schedule([{ freq: 740, dur: 0.09, type: 'triangle', vol: 0.26 }], 0);
 
+/** Perfect — rhythm game perfect tap (two-tone sparkle) */
 export const playPerfect = () =>
-  playTones(
+  schedule(
     [
-      { freq: 880, duration: 0.06, type: 'triangle' },
-      { freq: 1320, duration: 0.1, type: 'triangle' },
+      { freq: 1046, dur: 0.07, type: 'triangle', vol: 0.28 },
+      { freq: 1318, dur: 0.12, type: 'triangle', vol: 0.26 },
     ],
-    5
+    0.02
+  );
+
+/** Power-up / unlock — easter egg revealed */
+export const playUnlock = () =>
+  schedule(
+    [
+      { freq: 440, dur: 0.10, type: 'sine', vol: 0.22 },
+      { freq: 554, dur: 0.10, type: 'sine', vol: 0.22 },
+      { freq: 659, dur: 0.10, type: 'sine', vol: 0.22 },
+      { freq: 880, dur: 0.22, type: 'sine', vol: 0.26 },
+    ],
+    0.03
+  );
+
+/** Countdown tick */
+export const playTick = () =>
+  schedule([{ freq: 1100, dur: 0.06, type: 'square', vol: 0.16 }], 0);
+
+/** Time-out warning buzz */
+export const playTimeOut = () =>
+  schedule(
+    [
+      { freq: 300, dur: 0.15, type: 'sawtooth', vol: 0.22 },
+      { freq: 200, dur: 0.20, type: 'sawtooth', vol: 0.22 },
+    ],
+    0.02
+  );
+
+/** Coin / star collect */
+export const playCoin = () =>
+  schedule(
+    [
+      { freq: 987, dur: 0.08, type: 'triangle', vol: 0.25 },
+      { freq: 1318, dur: 0.12, type: 'triangle', vol: 0.25 },
+    ],
+    0.02
   );

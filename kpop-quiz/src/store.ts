@@ -2,9 +2,9 @@ import { create } from 'zustand';
 import type { Question, HunterProfile } from './quizData';
 import { getQuestionsByDifficulty, getProfileByScore } from './quizData';
 
-export type GameState = 'welcome' | 'game_mode' | 'difficulty' | 'quiz' | 'result' | 'memory_game' | 'rhythm_game' | 'trivia_cards' | 'instruments_tutorial' | 'team_maker' | 'friends_trivia' | 'math_challenge' | 'spelling_bee' | 'reading_comprehension' | 'science_quiz' | 'secret_menu' | 'living_mural' | 'agent_hq' | 'shop' | 'kpop_rush';
+export type GameState = 'welcome' | 'game_mode' | 'difficulty' | 'quiz' | 'result' | 'memory_game' | 'rhythm_game' | 'trivia_cards' | 'instruments_tutorial' | 'team_maker' | 'friends_trivia' | 'math_challenge' | 'spelling_bee' | 'reading_comprehension' | 'science_quiz' | 'secret_menu' | 'living_mural' | 'agent_hq' | 'shop' | 'kpop_rush' | 'word_scramble' | 'lightning_quiz';
 export type Difficulty = 'easy' | 'normal' | 'hard' | 'lyrics' | 'demon';
-export type GameMode = 'quiz' | 'memory' | 'rhythm' | 'trivia' | 'instruments' | 'teams' | 'friends';
+export type GameMode = 'quiz' | 'memory' | 'rhythm' | 'trivia' | 'instruments' | 'teams' | 'friends' | 'word_scramble' | 'lightning_quiz';
 
 // Mini-games types
 export interface MemoryCard {

@@ -1,12 +1,37 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
 import DailyChallenge from './DailyChallenge';
+import { playUnlock, playClick, playWin } from '../utils/sounds';
+import ConfettiBurst from './ConfettiBurst';
+
+const KPOP_FACTS = [
+  "🎵 The word 'K-pop' stands for Korean Popular music!",
+  "⭐ BTS holds the record for the most sold album in South Korean history!",
+  "💜 K-pop fans are called 'fandoms' and each has a unique official colour!",
+  "🌍 K-pop is enjoyed by millions of fans in over 100 countries!",
+  "🎤 Idols train for years — sometimes 5+ years — before debuting!",
+  "💿 K-pop albums often include photocards, postcards, and posters!",
+  "🕺 K-pop choreography is so precise that groups practice 8+ hours daily!",
+  "🇰🇷 Seoul, South Korea is the K-pop capital of the world!",
+  "🎧 Streaming parties by fans can push K-pop songs to #1 worldwide!",
+  "✨ HUNTR/X is the coolest K-pop group in the universe — fact!",
+];
 
 const WelcomeScreen: React.FC = () => {
   const [inputName, setInputName] = useState('');
   const [pAnimationState, setPAnimationState] = useState<'idle' | 'discovering' | 'unlocked'>('idle');
   const [fAnimationState, setFAnimationState] = useState<'idle' | 'discovering' | 'unlocked'>('idle');
+
+  // Easter egg 1: HUNTRX name
+  const [huntrxMode, setHuntrxMode] = useState(false);
+  // Easter egg 2: Q click — fact bubble
+  const [factBubble, setFactBubble] = useState<string | null>(null);
+  const [qClicks, setQClicks] = useState(0);
+  // Easter egg 3: 🎵 tap 5× for DJ pulse
+  const [noteClicks, setNoteClicks] = useState(0);
+  const [djMode, setDjMode] = useState(false);
+
   const { setUserName, setGameState } = useGameStore();
   const audioContextRef = React.useRef<AudioContext | null>(null);
 
@@ -41,11 +66,44 @@ const WelcomeScreen: React.FC = () => {
     }
   };
 
+  // Easter egg 1: detect HUNTRX in name input
+  const handleNameChange = (val: string) => {
+    setInputName(val);
+    if (val.toUpperCase().trim() === 'HUNTRX' && !huntrxMode) {
+      setHuntrxMode(true);
+      playWin();
+    } else if (val.toUpperCase().trim() !== 'HUNTRX') {
+      setHuntrxMode(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputName.trim()) {
       setUserName(inputName.trim());
       setGameState('game_mode');
+    }
+  };
+
+  // Easter egg 2: click Q in Quest
+  const handleQClick = () => {
+    const next = qClicks + 1;
+    setQClicks(next);
+    playClick();
+    const fact = KPOP_FACTS[Math.floor(Math.random() * KPOP_FACTS.length)];
+    setFactBubble(fact);
+    setTimeout(() => setFactBubble(null), 4000);
+  };
+
+  // Easter egg 3: tap 🎵 5 times
+  const handleNoteClick = () => {
+    const next = noteClicks + 1;
+    setNoteClicks(next);
+    playClick();
+    if (next >= 5) {
+      setDjMode(true);
+      playUnlock();
+      setTimeout(() => { setDjMode(false); setNoteClicks(0); }, 5000);
     }
   };
 
@@ -76,14 +134,35 @@ const WelcomeScreen: React.FC = () => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={
-        fAnimationState === 'discovering' 
-        ? { scale: [1, 1.5, 20], opacity: [1, 0.8, 0] } // Zoom and Fade effect
+        djMode
+        ? { scale: [1, 1.02, 0.98, 1.02, 1], filter: ['hue-rotate(0deg)', 'hue-rotate(60deg)', 'hue-rotate(180deg)', 'hue-rotate(300deg)', 'hue-rotate(360deg)'] }
+        : huntrxMode
+        ? { scale: [1, 1.04, 1, 1.04, 1] }
+        : fAnimationState === 'discovering'
+        ? { scale: [1, 1.5, 20], opacity: [1, 0.8, 0] }
         : { opacity: 1, y: 0, scale: 1 }
       }
       exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: fAnimationState === 'discovering' ? 1.5 : 0.5 }}
+      transition={{ duration: djMode ? 5 : fAnimationState === 'discovering' ? 1.5 : 0.5, repeat: djMode ? Infinity : 0 }}
       className="flex flex-col items-center justify-center min-h-screen px-4 text-center bg-kid-pattern"
     >
+      {huntrxMode && <ConfettiBurst count={50} durationMs={3000} />}
+
+      {/* Fact bubble — easter egg 2 */}
+      <AnimatePresence>
+        {factBubble && (
+          <motion.div
+            key={factBubble}
+            initial={{ opacity: 0, y: -20, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="fixed top-6 left-1/2 -translate-x-1/2 bg-purple-600 text-white font-fredoka text-lg rounded-2xl px-6 py-3 shadow-2xl max-w-xs z-50 text-center"
+          >
+            {factBubble}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="max-w-2xl mx-auto">
         <motion.div
           initial={{ scale: 0.8, rotate: -5 }}
@@ -91,7 +170,24 @@ const WelcomeScreen: React.FC = () => {
           transition={{ delay: 0.2, duration: 0.5, type: "spring", stiffness: 200 }}
           className="mb-6"
         >
-          <span className="text-6xl md:text-8xl">🎵</span>
+          <motion.span
+            onClick={handleNoteClick}
+            whileHover={{ scale: 1.15, rotate: [0, -8, 8, 0] }}
+            whileTap={{ scale: 0.85 }}
+            className="text-6xl md:text-8xl cursor-pointer select-none inline-block"
+            title={noteClicks > 0 ? `${5 - noteClicks} more taps...` : '🎵'}
+          >
+            {djMode ? '🎧' : '🎵'}
+          </motion.span>
+          {noteClicks > 0 && noteClicks < 5 && (
+            <div className="text-purple-400 text-sm font-fredoka mt-1">{5 - noteClicks} more…</div>
+          )}
+          {djMode && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="text-pink-500 font-fredoka font-bold text-xl mt-1">
+              🎧 DJ MODE ACTIVATED! 🎧
+            </motion.div>
+          )}
         </motion.div>
 
         <motion.h1
@@ -132,7 +228,17 @@ const WelcomeScreen: React.FC = () => {
           >
             F
           </motion.span>
-          <span>un Quest</span>
+          <span>un </span>
+          <motion.span
+            onClick={handleQClick}
+            whileHover={{ scale: 1.15, color: '#f59e0b' }}
+            whileTap={{ scale: 0.85 }}
+            className="cursor-pointer hover:text-yellow-500 inline-block transition-colors duration-200"
+            title="Did you know? 💡"
+          >
+            Q
+          </motion.span>
+          <span>uest</span>
         </motion.h1>
 
         <motion.h2
@@ -173,20 +279,32 @@ const WelcomeScreen: React.FC = () => {
           <div className="max-w-md mx-auto">
             <label
               htmlFor="player-name"
-              className="block text-lg font-bold text-purple-600 mb-3 font-fredoka"
+              className={`block text-lg font-bold mb-3 font-fredoka ${huntrxMode ? 'text-yellow-500' : 'text-purple-600'}`}
             >
-              What's your name, superstar? ✨
+              {huntrxMode ? '🌟 SUPERSTAR MODE UNLOCKED! 🌟' : "What's your name, superstar? ✨"}
             </label>
             <input
               id="player-name"
               type="text"
               value={inputName}
-              onChange={(e) => setInputName(e.target.value)}
+              onChange={(e) => handleNameChange(e.target.value)}
               placeholder="Enter your awesome name..."
-              className="w-full px-6 py-4 bg-white border-3 border-purple-300 rounded-full text-gray-800 placeholder-purple-400 focus:outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-200 transition-all duration-300 text-lg font-nunito shadow-lg"
+              className={`w-full px-6 py-4 bg-white border-3 rounded-full text-gray-800 placeholder-purple-400 focus:outline-none focus:ring-4 transition-all duration-300 text-lg font-nunito shadow-lg ${
+                huntrxMode
+                  ? 'border-yellow-400 focus:border-yellow-500 focus:ring-yellow-200 text-yellow-600 font-bold'
+                  : 'border-purple-300 focus:border-pink-400 focus:ring-pink-200'
+              }`}
               autoFocus
               required
             />
+            <AnimatePresence>
+              {huntrxMode && (
+                <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  className="text-yellow-600 font-fredoka font-bold text-center mt-2">
+                  ✨ You've unlocked the HUNTR/X secret! ✨
+                </motion.p>
+              )}
+            </AnimatePresence>
           </div>
 
           <motion.button
@@ -194,11 +312,15 @@ const WelcomeScreen: React.FC = () => {
             whileTap={{ scale: 0.9 }}
             type="submit"
             disabled={!inputName.trim()}
-            className={`btn-kid font-fredoka ${
-              !inputName.trim() ? 'opacity-50 cursor-not-allowed transform-none hover:scale-100' : ''
+            className={`font-fredoka text-xl font-bold px-10 py-4 rounded-full shadow-xl transition-all duration-300 ${
+              !inputName.trim()
+                ? 'opacity-50 cursor-not-allowed bg-gray-300 text-gray-500'
+                : huntrxMode
+                ? 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white ring-4 ring-yellow-300 hover:from-yellow-500 hover:to-orange-500'
+                : 'btn-kid'
             }`}
           >
-            Start the Fun! 🚀
+            {huntrxMode ? '⭐ Enter Superstar Mode!' : 'Start the Fun! 🚀'}
           </motion.button>
         </motion.form>
 

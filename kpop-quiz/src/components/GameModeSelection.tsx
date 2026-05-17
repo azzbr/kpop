@@ -105,7 +105,25 @@ const GameModeSelection: React.FC = () => {
       color: 'from-teal-400 to-green-500',
       bgColor: 'bg-teal-100',
       borderColor: 'border-teal-300'
-    }
+    },
+    {
+      id: 'word_scramble' as GameMode,
+      title: 'Word Scramble',
+      description: 'Unscramble K-pop words before time runs out!',
+      icon: '🔤',
+      color: 'from-amber-400 to-yellow-500',
+      bgColor: 'bg-amber-100',
+      borderColor: 'border-amber-300'
+    },
+    {
+      id: 'lightning_quiz' as GameMode,
+      title: 'Lightning Quiz ⚡',
+      description: '8 seconds per question — can you handle the speed?',
+      icon: '⚡',
+      color: 'from-yellow-500 to-orange-500',
+      bgColor: 'bg-yellow-100',
+      borderColor: 'border-yellow-400'
+    },
   ];
 
   const handleGameModeSelect = (mode: GameMode) => {
@@ -132,6 +150,10 @@ const GameModeSelection: React.FC = () => {
       setGameState('reading_comprehension');
     } else if (mode === 'science') {
       setGameState('science_quiz');
+    } else if (mode === 'word_scramble') {
+      setGameState('word_scramble');
+    } else if (mode === 'lightning_quiz') {
+      setGameState('lightning_quiz');
     }
   };
 
