@@ -1,10 +1,39 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
 import type { GameMode } from '../store';
+import PlayerLevelBadge from './PlayerLevelBadge';
+import { playClick, playWin } from '../utils/sounds';
+import ConfettiBurst from './ConfettiBurst';
 
 const GameModeSelection: React.FC = () => {
-  const { userName, setGameState, setSelectedGameMode } = useGameStore();
+  const { userName, setGameState, setSelectedGameMode, addXP } = useGameStore();
+  const [discoMode, setDiscoMode] = useState(false);
+  const [discoTaps, setDiscoTaps] = useState(0);
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  const handleTitleClick = () => {
+    const next = discoTaps + 1;
+    setDiscoTaps(next);
+    playClick();
+    if (next >= 5) {
+      setDiscoMode(true);
+      setDiscoTaps(0);
+      setShowConfetti(true);
+      playWin();
+      setTimeout(() => {
+        setDiscoMode(false);
+        setShowConfetti(false);
+      }, 6000);
+    }
+  };
+
+  useEffect(() => {
+    if (discoTaps > 0 && discoTaps < 5) {
+      const t = setTimeout(() => setDiscoTaps(0), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [discoTaps]);
 
   const gameModes = [
     {
@@ -133,6 +162,42 @@ const GameModeSelection: React.FC = () => {
       bgColor: 'bg-green-100',
       borderColor: 'border-green-300'
     },
+    {
+      id: 'song_title_generator' as GameMode,
+      title: 'Song Title Generator',
+      description: 'Create your own K-pop banger title in seconds!',
+      icon: '🎤',
+      color: 'from-violet-400 to-purple-600',
+      bgColor: 'bg-violet-100',
+      borderColor: 'border-violet-300'
+    },
+    {
+      id: 'idol_personality_quiz' as GameMode,
+      title: 'Which Idol Are You?',
+      description: 'Answer questions and discover your inner HUNTR/X idol!',
+      icon: '🌟',
+      color: 'from-pink-500 to-violet-500',
+      bgColor: 'bg-pink-100',
+      borderColor: 'border-pink-300'
+    },
+    {
+      id: 'dance_battle' as GameMode,
+      title: 'Dance Battle!',
+      description: 'Watch the dance sequence and repeat it perfectly!',
+      icon: '💃',
+      color: 'from-rose-400 to-pink-600',
+      bgColor: 'bg-rose-100',
+      borderColor: 'border-rose-300'
+    },
+    {
+      id: 'daily_spin_wheel' as GameMode,
+      title: 'Daily Spin Wheel',
+      description: 'Spin the wheel to win bonus XP and surprises!',
+      icon: '🎡',
+      color: 'from-yellow-400 to-amber-500',
+      bgColor: 'bg-yellow-100',
+      borderColor: 'border-yellow-300'
+    },
   ];
 
   const handleGameModeSelect = (mode: GameMode) => {
@@ -165,7 +230,16 @@ const GameModeSelection: React.FC = () => {
       setGameState('lightning_quiz');
     } else if (mode === 'animal_sound_quiz') {
       setGameState('animal_sound_quiz');
+    } else if (mode === 'song_title_generator') {
+      setGameState('song_title_generator');
+    } else if (mode === 'idol_personality_quiz') {
+      setGameState('idol_personality_quiz');
+    } else if (mode === 'dance_battle') {
+      setGameState('dance_battle');
+    } else if (mode === 'daily_spin_wheel') {
+      setGameState('daily_spin_wheel');
     }
+    addXP(5);
   };
 
   return (
@@ -175,27 +249,75 @@ const GameModeSelection: React.FC = () => {
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.5 }}
       className="flex flex-col items-center justify-center min-h-screen px-4 text-center bg-kid-pattern"
+      style={discoMode ? { filter: 'hue-rotate(0deg)', animation: 'discoSpin 0.8s linear infinite' } : {}}
     >
+      {showConfetti && <ConfettiBurst count={80} durationMs={4000} />}
+
+      {/* Disco mode overlay */}
+      <AnimatePresence>
+        {discoMode && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 pointer-events-none z-50"
+            style={{ background: 'repeating-linear-gradient(45deg, rgba(255,0,255,0.04) 0px, transparent 4px, rgba(0,255,255,0.04) 8px, transparent 12px)' }}
+          />
+        )}
+      </AnimatePresence>
+
       <div className="max-w-4xl mx-auto">
+        {/* Disco mode banner */}
+        <AnimatePresence>
+          {discoMode && (
+            <motion.div
+              initial={{ opacity: 0, y: -30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -30 }}
+              className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-gradient-to-r from-fuchsia-500 to-cyan-500 text-white px-8 py-3 rounded-full font-fredoka text-2xl font-bold shadow-2xl"
+            >
+              🪩 DISCO MODE! 🪩
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <motion.div
           initial={{ scale: 0.8 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.2, duration: 0.5 }}
-          className="mb-8"
+          className="mb-4"
         >
-          <h1 className="text-3xl md:text-5xl font-fredoka font-bold text-purple-600 mb-2 text-kid-glow">
+          <motion.h1
+            className="text-3xl md:text-5xl font-fredoka font-bold text-purple-600 mb-2 text-kid-glow cursor-pointer select-none"
+            animate={discoMode ? { color: ['#9333ea', '#ec4899', '#06b6d4', '#8b5cf6', '#9333ea'] } : {}}
+            transition={discoMode ? { duration: 0.8, repeat: Infinity } : {}}
+            onClick={handleTitleClick}
+            title="Tap 5 times for a surprise! 🎉"
+          >
             Welcome, {userName}! 🌟
-          </h1>
+          </motion.h1>
+          {discoTaps > 0 && discoTaps < 5 && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-sm font-nunito text-purple-400"
+            >
+              🎵 {5 - discoTaps} more taps for a surprise...
+            </motion.p>
+          )}
           <p className="text-xl md:text-2xl font-fredoka font-semibold text-pink-500">
             Choose Your Adventure!
           </p>
         </motion.div>
 
+        <PlayerLevelBadge />
+
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4, duration: 0.5 }}
-          className="text-lg text-gray-700 mb-12 max-w-2xl mx-auto leading-relaxed font-nunito"
+          className="text-lg text-gray-700 mb-8 max-w-2xl mx-auto leading-relaxed font-nunito"
         >
           What would you like to play today? Each game offers unique K-pop fun and challenges!
         </motion.p>

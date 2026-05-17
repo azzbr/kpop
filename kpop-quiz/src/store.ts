@@ -2,9 +2,29 @@ import { create } from 'zustand';
 import type { Question, HunterProfile } from './quizData';
 import { getQuestionsByDifficulty, getProfileByScore } from './quizData';
 
-export type GameState = 'welcome' | 'game_mode' | 'difficulty' | 'quiz' | 'result' | 'memory_game' | 'rhythm_game' | 'trivia_cards' | 'instruments_tutorial' | 'team_maker' | 'friends_trivia' | 'math_challenge' | 'spelling_bee' | 'reading_comprehension' | 'science_quiz' | 'secret_menu' | 'living_mural' | 'agent_hq' | 'shop' | 'kpop_rush' | 'word_scramble' | 'lightning_quiz' | 'animal_sound_quiz';
+export type GameState = 'welcome' | 'game_mode' | 'difficulty' | 'quiz' | 'result' | 'memory_game' | 'rhythm_game' | 'trivia_cards' | 'instruments_tutorial' | 'team_maker' | 'friends_trivia' | 'math_challenge' | 'spelling_bee' | 'reading_comprehension' | 'science_quiz' | 'secret_menu' | 'living_mural' | 'agent_hq' | 'shop' | 'kpop_rush' | 'word_scramble' | 'lightning_quiz' | 'animal_sound_quiz' | 'song_title_generator' | 'idol_personality_quiz' | 'dance_battle' | 'daily_spin_wheel';
 export type Difficulty = 'easy' | 'normal' | 'hard' | 'lyrics' | 'demon';
-export type GameMode = 'quiz' | 'memory' | 'rhythm' | 'trivia' | 'instruments' | 'teams' | 'friends' | 'math' | 'spelling' | 'reading' | 'science' | 'word_scramble' | 'lightning_quiz' | 'animal_sound_quiz';
+export type GameMode = 'quiz' | 'memory' | 'rhythm' | 'trivia' | 'instruments' | 'teams' | 'friends' | 'math' | 'spelling' | 'reading' | 'science' | 'word_scramble' | 'lightning_quiz' | 'animal_sound_quiz' | 'song_title_generator' | 'idol_personality_quiz' | 'dance_battle' | 'daily_spin_wheel';
+
+export type Theme = 'default' | 'neon' | 'ocean' | 'forest' | 'sunset' | 'galaxy';
+
+export const LEVEL_NAMES = ['Rookie', 'Trainee', 'Debut', 'Rising Star', 'Star', 'Superstar', 'HUNTR/X Legend'];
+export const LEVEL_THRESHOLDS = [0, 100, 250, 500, 1000, 2000, 4000];
+
+export function getLevel(xp: number): number {
+  let level = 0;
+  for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
+    if (xp >= LEVEL_THRESHOLDS[i]) { level = i; break; }
+  }
+  return level;
+}
+
+export function xpToNextLevel(xp: number): { current: number; needed: number; level: number } {
+  const level = getLevel(xp);
+  const current = xp - LEVEL_THRESHOLDS[level];
+  const needed = level + 1 < LEVEL_THRESHOLDS.length ? LEVEL_THRESHOLDS[level + 1] - LEVEL_THRESHOLDS[level] : 999;
+  return { current, needed, level };
+}
 
 // Mini-games types
 export interface MemoryCard {
@@ -150,6 +170,14 @@ interface GameStore {
   friendsScore: number;
   friendsGameActive: boolean;
 
+  // XP + Level system
+  xp: number;
+  addXP: (amount: number) => void;
+
+  // Theme
+  currentTheme: Theme;
+  setTheme: (theme: Theme) => void;
+
   // Secret menu state
   secretMenuUnlocked: boolean;
   secretStickerCollection: string[];
@@ -247,6 +275,8 @@ interface GameStore {
 export const useGameStore = create<GameStore>((set, get) => ({
   // Initial state
   gameState: 'welcome',
+  xp: Number(localStorage.getItem('kpop_xp') || '0'),
+  currentTheme: (localStorage.getItem('kpop_theme') as Theme) || 'default',
   userName: '',
   difficulty: null,
   questions: [],
@@ -864,6 +894,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!state.inventory.includes(itemId)) {
       set({ inventory: [...state.inventory, itemId] });
     }
+  },
+
+  addXP: (amount) => {
+    const newXp = get().xp + amount;
+    localStorage.setItem('kpop_xp', String(newXp));
+    set({ xp: newXp });
+  },
+
+  setTheme: (theme) => {
+    localStorage.setItem('kpop_theme', theme);
+    document.documentElement.setAttribute('data-theme', theme);
+    set({ currentTheme: theme });
   },
 
 }));

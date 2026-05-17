@@ -8,6 +8,7 @@ import SoundBoard from './SoundBoard';
 import PatternMaker from './PatternMaker';
 import AppStatsDashboard from './AppStatsDashboard';
 import JokeMachine from './JokeMachine';
+import ThemeSwitcher from './ThemeSwitcher';
 
 const SecretMenu: React.FC = () => {
   const { setGameState } = useGameStore();
@@ -354,9 +355,12 @@ const SecretMenu: React.FC = () => {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="w-full"
+                className="w-full space-y-8"
               >
-                <AppStatsDashboard />
+                <ThemeSwitcher />
+                <div className="border-t-4 border-green-200 pt-6">
+                  <AppStatsDashboard />
+                </div>
               </motion.div>
             )}
           </motion.div>

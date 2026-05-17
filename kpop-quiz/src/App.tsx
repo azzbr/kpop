@@ -24,6 +24,10 @@ import KPopRushGame from './components/KPopRushGame';
 import WordScramble from './components/WordScramble';
 import LightningQuiz from './components/LightningQuiz';
 import AnimalSoundQuiz from './components/AnimalSoundQuiz';
+import SongTitleGenerator from './components/SongTitleGenerator';
+import IdolPersonalityQuiz from './components/IdolPersonalityQuiz';
+import DanceBattleSimulator from './components/DanceBattleSimulator';
+import DailySpinWheel from './components/DailySpinWheel';
 
 function App() {
   const { gameState } = useGameStore();
@@ -76,6 +80,14 @@ function App() {
         return <LightningQuiz key="lightning_quiz" />;
       case 'animal_sound_quiz':
         return <AnimalSoundQuiz key="animal_sound_quiz" />;
+      case 'song_title_generator':
+        return <SongTitleGenerator key="song_title_generator" />;
+      case 'idol_personality_quiz':
+        return <IdolPersonalityQuiz key="idol_personality_quiz" />;
+      case 'dance_battle':
+        return <DanceBattleSimulator key="dance_battle" />;
+      case 'daily_spin_wheel':
+        return <DailySpinWheel key="daily_spin_wheel" />;
       default:
         return <WelcomeScreen key="welcome" />;
     }

@@ -41,3 +41,43 @@
                       radial-gradient(circle at 75% 75%, rgba(173, 216, 230, 0.1) 0%, transparent 50%);
   }
 }
+
+/* Theme overrides */
+[data-theme="neon"] body {
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e) !important;
+  color: #f0f0ff;
+}
+[data-theme="neon"] .bg-kid-pattern {
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e) !important;
+}
+[data-theme="ocean"] body {
+  background: linear-gradient(135deg, #c8e6f5, #d4f1f4, #b2e0f5) !important;
+}
+[data-theme="ocean"] .bg-kid-pattern {
+  background: linear-gradient(135deg, #c8e6f5, #d4f1f4, #b2e0f5) !important;
+}
+[data-theme="forest"] body {
+  background: linear-gradient(135deg, #d4edda, #c3e6cb, #b8dfc2) !important;
+}
+[data-theme="forest"] .bg-kid-pattern {
+  background: linear-gradient(135deg, #d4edda, #c3e6cb, #b8dfc2) !important;
+}
+[data-theme="sunset"] body {
+  background: linear-gradient(135deg, #ffd6a5, #ffb347, #ff6b6b) !important;
+}
+[data-theme="sunset"] .bg-kid-pattern {
+  background: linear-gradient(135deg, #ffd6a5, #ffb347, #ff6b6b) !important;
+}
+[data-theme="galaxy"] body {
+  background: linear-gradient(135deg, #1a0533, #2d1b69, #11998e) !important;
+  color: #f0e6ff;
+}
+[data-theme="galaxy"] .bg-kid-pattern {
+  background: linear-gradient(135deg, #1a0533, #2d1b69, #11998e) !important;
+}
+
+/* Disco mode */
+@keyframes discoSpin {
+  from { filter: hue-rotate(0deg); }
+  to { filter: hue-rotate(360deg); }
+}
