@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../store';
 import BadgeGallery from './BadgeGallery';
+import ConfettiBurst from './ConfettiBurst';
+import { playWin } from '../utils/sounds';
 
 const ResultScreen: React.FC = () => {
   const { userName, score, questions, hunterProfile, resetGame, earnedBadges } = useGameStore();
@@ -13,6 +15,10 @@ const ResultScreen: React.FC = () => {
     // Update localStorage with current badges
     localStorage.setItem('previousBadges', JSON.stringify(earnedBadges));
   }, [earnedBadges]);
+
+  useEffect(() => {
+    if (isSuccess) playWin();
+  }, [isSuccess]);
 
   const handleRetry = () => {
     resetGame();
@@ -55,6 +61,7 @@ const ResultScreen: React.FC = () => {
       transition={{ duration: 0.5 }}
       className="flex flex-col items-center justify-center min-h-screen px-4 py-8 bg-kid-pattern"
     >
+      {isSuccess && <ConfettiBurst count={60} durationMs={3000} />}
       <div className="max-w-2xl mx-auto w-full text-center">
         {isSuccess ? (
           // Success Screen

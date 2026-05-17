@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { playClick, playCorrect, playWrong, playWin } from '../utils/sounds';
+import ConfettiBurst from './ConfettiBurst';
 
 const FriendsTrivia: React.FC = () => {
   const {
@@ -20,9 +22,12 @@ const FriendsTrivia: React.FC = () => {
   } = useGameStore();
 
   const [newFriendName, setNewFriendName] = useState('');
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [showFeedback, setShowFeedback] = useState<'correct' | 'wrong' | null>(null);
 
   const handleAddFriend = () => {
     if (newFriendName.trim()) {
+      playClick();
       addFriend(newFriendName.trim());
       setNewFriendName('');
     }
@@ -50,10 +55,17 @@ const FriendsTrivia: React.FC = () => {
   };
 
   const handleAnswerSelect = (answerIndex: number) => {
+    if (selectedAnswer !== null) return;
+    const isCorrect = answerIndex === currentQuestion.correctAnswer;
+    setSelectedAnswer(answerIndex);
+    setShowFeedback(isCorrect ? 'correct' : 'wrong');
+    if (isCorrect) playCorrect(); else playWrong();
     answerFriendsQuestion(answerIndex);
     setTimeout(() => {
+      setSelectedAnswer(null);
+      setShowFeedback(null);
       nextFriendsQuestion();
-    }, 1500);
+    }, 1400);
   };
 
   const handleBackToMenu = () => {
@@ -236,24 +248,55 @@ const FriendsTrivia: React.FC = () => {
 
             {/* Answer Options */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {currentQuestion.answers.map((answer, index) => (
-                <motion.button
-                  key={index}
-                  initial={{ scale: 1 }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleAnswerSelect(index)}
-                  className="bg-gradient-to-r from-blue-400 to-cyan-500 hover:from-blue-500 hover:to-cyan-600 text-white p-4 rounded-2xl font-fredoka font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl bg-white bg-opacity-20 rounded-full w-8 h-8 flex items-center justify-center font-bold">
-                      {String.fromCharCode(65 + index)}
-                    </span>
-                    <span className="flex-1 text-left">{answer}</span>
-                  </div>
-                </motion.button>
-              ))}
+              {currentQuestion.answers.map((answer, index) => {
+                const isSelected = selectedAnswer === index;
+                const isCorrectIdx = index === currentQuestion.correctAnswer;
+                const revealing = selectedAnswer !== null;
+                let buttonClass = 'bg-gradient-to-r from-blue-400 to-cyan-500 hover:from-blue-500 hover:to-cyan-600';
+                if (revealing && isCorrectIdx) {
+                  buttonClass = 'bg-gradient-to-r from-green-400 to-emerald-500 ring-4 ring-green-300';
+                } else if (revealing && isSelected && !isCorrectIdx) {
+                  buttonClass = 'bg-gradient-to-r from-red-400 to-pink-500 ring-4 ring-red-300';
+                } else if (revealing) {
+                  buttonClass = 'bg-gradient-to-r from-gray-300 to-gray-400 opacity-60';
+                }
+                return (
+                  <motion.button
+                    key={index}
+                    initial={{ scale: 1 }}
+                    whileHover={selectedAnswer === null ? { scale: 1.05 } : {}}
+                    whileTap={selectedAnswer === null ? { scale: 0.95 } : {}}
+                    onClick={() => handleAnswerSelect(index)}
+                    disabled={selectedAnswer !== null}
+                    className={`${buttonClass} text-white p-4 rounded-2xl font-fredoka font-bold text-lg shadow-lg transition-all duration-300`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl bg-white bg-opacity-20 rounded-full w-8 h-8 flex items-center justify-center font-bold">
+                        {revealing && isCorrectIdx ? '✓' : revealing && isSelected ? '✗' : String.fromCharCode(65 + index)}
+                      </span>
+                      <span className="flex-1 text-left">{answer}</span>
+                    </div>
+                  </motion.button>
+                );
+              })}
             </div>
+
+            {/* Feedback Banner */}
+            <AnimatePresence>
+              {showFeedback && (
+                <motion.div
+                  key={showFeedback}
+                  initial={{ opacity: 0, scale: 0.6, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className={`mt-4 text-center text-3xl font-fredoka font-bold ${
+                    showFeedback === 'correct' ? 'text-green-600' : 'text-pink-500'
+                  }`}
+                >
+                  {showFeedback === 'correct' ? '🎉 Great guess! +10' : '😊 Good try!'}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Progress Bar */}
             <div className="mt-6">
@@ -272,8 +315,10 @@ const FriendsTrivia: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
+            onAnimationStart={() => playWin()}
             className="bg-white rounded-3xl shadow-lg p-6 text-center"
           >
+            <ConfettiBurst />
             <div className="text-6xl mb-4">🎉</div>
             <h2 className="text-3xl font-fredoka font-bold text-purple-600 mb-4">
               Trivia Complete!

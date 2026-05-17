@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { playHit, playPerfect, playWrong, playWin } from '../utils/sounds';
+import ConfettiBurst from './ConfettiBurst';
 
 const RhythmGame: React.FC = () => {
   const {
@@ -27,9 +29,13 @@ const RhythmGame: React.FC = () => {
   const [perfectHits, setPerfectHits] = useState(0);
   const [goodHits, setGoodHits] = useState(0);
   const [missedHits, setMissedHits] = useState(0);
+  const [hitFx, setHitFx] = useState<{ id: number; label: string; color: string; x: number } | null>(null);
+  const [gameEnded, setGameEnded] = useState(false);
 
   const gameAreaRef = useRef<HTMLDivElement>(null);
   const noteIdRef = useRef(0);
+  const fxIdRef = useRef(0);
+  const statsRef = useRef({ perfect: 0, good: 0, missed: 0 });
 
   // Generate rhythm notes for the selected song
   const generateNotes = () => {
@@ -59,6 +65,8 @@ const RhythmGame: React.FC = () => {
     setPerfectHits(0);
     setGoodHits(0);
     setMissedHits(0);
+    statsRef.current = { perfect: 0, good: 0, missed: 0 };
+    setGameEnded(false);
 
     const gameNotes = generateNotes();
     setNotes(gameNotes);
@@ -78,15 +86,20 @@ const RhythmGame: React.FC = () => {
 
       // Check for missed notes
       setNotes(prevNotes => {
-        return prevNotes.map(note => {
+        let missedThisTick = 0;
+        const next = prevNotes.map(note => {
           if (!note.hit && elapsed > note.timestamp + 500) {
-            // Note missed
-            setMissedHits(prev => prev + 1);
-            setRhythmCombo(0);
-            return { ...note, hit: true }; // Mark as processed
+            missedThisTick++;
+            return { ...note, hit: true };
           }
           return note;
         });
+        if (missedThisTick > 0) {
+          statsRef.current.missed += missedThisTick;
+          setMissedHits(statsRef.current.missed);
+          setRhythmCombo(0);
+        }
+        return next;
       });
 
       // End game after 45 seconds
@@ -121,28 +134,36 @@ const RhythmGame: React.FC = () => {
     });
 
     if (foundNote !== null && foundNote !== undefined) {
-      const timeDiff = Math.abs(currentTime - (foundNote as { id: number; position: number; timestamp: number; hit: boolean }).timestamp);
+      const note = foundNote as { id: number; position: number; timestamp: number; hit: boolean };
+      const timeDiff = Math.abs(currentTime - note.timestamp);
 
-      if (timeDiff < 100) {
-        // Perfect hit
-        setPerfectHits(prev => prev + 1);
-        setRhythmScore(rhythmScore + 100);
-        setRhythmCombo(rhythmCombo + 1);
-      } else if (timeDiff < 250) {
-        // Good hit
-        setGoodHits(prev => prev + 1);
-        setRhythmScore(rhythmScore + 50);
-        setRhythmCombo(rhythmCombo + 1);
+      const showFx = (label: string, color: string) => {
+        setHitFx({ id: ++fxIdRef.current, label, color, x: note.position });
+        setTimeout(() => setHitFx((fx) => (fx && fx.id === fxIdRef.current ? null : fx)), 600);
+      };
+
+      if (timeDiff < 150) {
+        statsRef.current.perfect++;
+        setPerfectHits(statsRef.current.perfect);
+        setRhythmScore(useGameStore.getState().rhythmScore + 100);
+        setRhythmCombo(useGameStore.getState().rhythmCombo + 1);
+        playPerfect();
+        showFx('PERFECT!', 'text-yellow-400');
+      } else if (timeDiff < 300) {
+        statsRef.current.good++;
+        setGoodHits(statsRef.current.good);
+        setRhythmScore(useGameStore.getState().rhythmScore + 50);
+        setRhythmCombo(useGameStore.getState().rhythmCombo + 1);
+        playHit();
+        showFx('GOOD!', 'text-green-500');
       } else {
-        // Poor hit
         setRhythmCombo(0);
+        playWrong();
+        showFx('OFF!', 'text-red-500');
       }
 
-      // Mark note as hit
       setNotes(prevNotes =>
-        prevNotes.map(note =>
-          note.id === foundNote!.id ? { ...note, hit: true } : note
-        )
+        prevNotes.map(n => (n.id === note.id ? { ...n, hit: true } : n))
       );
     }
   };
@@ -150,12 +171,14 @@ const RhythmGame: React.FC = () => {
   const endGame = () => {
     setRhythmGameActive(false);
     setIsPlaying(false);
-
-    const totalHits = perfectHits + goodHits + missedHits;
+    const { perfect, good, missed } = statsRef.current;
+    const totalHits = perfect + good + missed;
     if (totalHits > 0) {
-      const accuracy = ((perfectHits + goodHits) / totalHits) * 100;
+      const accuracy = ((perfect + good) / totalHits) * 100;
       setRhythmAccuracy(accuracy);
     }
+    setGameEnded(true);
+    playWin();
   };
 
   const resetGame = () => {
@@ -165,7 +188,40 @@ const RhythmGame: React.FC = () => {
     setNotes([]);
     setGameStartTime(null);
     setCurrentTime(0);
+    setGameEnded(false);
+    setHitFx(null);
   };
+
+  if (gameEnded) {
+    const total = perfectHits + goodHits + missedHits;
+    const hitRate = total > 0 ? Math.round(((perfectHits + goodHits) / total) * 100) : 0;
+    const rating = hitRate >= 90 ? '🏆 K-POP SUPERSTAR!' : hitRate >= 70 ? '⭐ Awesome!' : hitRate >= 40 ? '👍 Nice rhythm!' : '🎵 Keep practicing!';
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="flex flex-col items-center justify-center min-h-screen px-4 bg-kid-pattern"
+      >
+        <ConfettiBurst />
+        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
+          <div className="text-6xl mb-2">🎉</div>
+          <h2 className="text-3xl font-fredoka font-bold text-purple-600 mb-2">Song Complete!</h2>
+          <div className="text-xl font-fredoka text-pink-500 mb-4">{rating}</div>
+          <div className="space-y-2 mb-6 text-lg">
+            <div className="text-purple-600 font-bold">Score: {rhythmScore}</div>
+            <div className="text-green-600">✨ Perfect: {perfectHits}</div>
+            <div className="text-blue-600">👍 Good: {goodHits}</div>
+            <div className="text-gray-500">😅 Missed: {missedHits}</div>
+            <div className="text-purple-500 font-bold">Accuracy: {hitRate}%</div>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={resetGame} className="btn-kid-primary flex-1">🔄 New Song</button>
+            <button onClick={() => setGameState('game_mode')} className="btn-kid-secondary flex-1">🏠 Home</button>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
 
   if (showSongSelection) {
     return (
@@ -296,15 +352,32 @@ const RhythmGame: React.FC = () => {
             })}
           </AnimatePresence>
 
-          {/* Hit Effects */}
-          {rhythmCombo > 0 && (
+          {/* Per-hit feedback */}
+          <AnimatePresence>
+            {hitFx && (
+              <motion.div
+                key={hitFx.id}
+                initial={{ scale: 0.4, opacity: 1, y: 0 }}
+                animate={{ scale: 1.4, opacity: 0, y: -30 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.6 }}
+                className={`absolute font-fredoka font-extrabold text-3xl md:text-4xl ${hitFx.color} drop-shadow-lg pointer-events-none`}
+                style={{ left: `${hitFx.x}%`, bottom: '20%', transform: 'translateX(-50%)' }}
+              >
+                {hitFx.label}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Combo counter */}
+          {rhythmCombo >= 3 && (
             <motion.div
-              initial={{ scale: 0, opacity: 1 }}
-              animate={{ scale: 1, opacity: 0 }}
-              transition={{ duration: 0.5 }}
-              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-4xl font-bold text-green-600"
+              key={rhythmCombo}
+              initial={{ scale: 0.7, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="absolute top-4 right-4 text-2xl font-fredoka font-bold text-pink-500 drop-shadow"
             >
-              {rhythmCombo >= 5 ? '🔥 COMBO!' : 'HIT!'}
+              🔥 {rhythmCombo}x
             </motion.div>
           )}
         </div>
