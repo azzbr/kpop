@@ -198,6 +198,15 @@ const GameModeSelection: React.FC = () => {
       bgColor: 'bg-yellow-100',
       borderColor: 'border-yellow-300'
     },
+    {
+      id: 'beat_maker' as GameMode,
+      title: 'Beat Maker',
+      description: 'Build your own K-pop beat with a 16-step drum machine!',
+      icon: '🎛️',
+      color: 'from-red-400 to-orange-500',
+      bgColor: 'bg-red-50',
+      borderColor: 'border-red-300'
+    },
   ];
 
   const handleGameModeSelect = (mode: GameMode) => {
@@ -238,6 +247,8 @@ const GameModeSelection: React.FC = () => {
       setGameState('dance_battle');
     } else if (mode === 'daily_spin_wheel') {
       setGameState('daily_spin_wheel');
+    } else if (mode === 'beat_maker') {
+      setGameState('beat_maker');
     }
     addXP(5);
   };

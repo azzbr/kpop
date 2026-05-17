@@ -28,6 +28,7 @@ import SongTitleGenerator from './components/SongTitleGenerator';
 import IdolPersonalityQuiz from './components/IdolPersonalityQuiz';
 import DanceBattleSimulator from './components/DanceBattleSimulator';
 import DailySpinWheel from './components/DailySpinWheel';
+import BeatMaker from './components/BeatMaker';
 
 function App() {
   const { gameState } = useGameStore();
@@ -88,6 +89,8 @@ function App() {
         return <DanceBattleSimulator key="dance_battle" />;
       case 'daily_spin_wheel':
         return <DailySpinWheel key="daily_spin_wheel" />;
+      case 'beat_maker':
+        return <BeatMaker key="beat_maker" />;
       default:
         return <WelcomeScreen key="welcome" />;
     }

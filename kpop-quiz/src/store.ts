@@ -2,9 +2,9 @@ import { create } from 'zustand';
 import type { Question, HunterProfile } from './quizData';
 import { getQuestionsByDifficulty, getProfileByScore } from './quizData';
 
-export type GameState = 'welcome' | 'game_mode' | 'difficulty' | 'quiz' | 'result' | 'memory_game' | 'rhythm_game' | 'trivia_cards' | 'instruments_tutorial' | 'team_maker' | 'friends_trivia' | 'math_challenge' | 'spelling_bee' | 'reading_comprehension' | 'science_quiz' | 'secret_menu' | 'living_mural' | 'agent_hq' | 'shop' | 'kpop_rush' | 'word_scramble' | 'lightning_quiz' | 'animal_sound_quiz' | 'song_title_generator' | 'idol_personality_quiz' | 'dance_battle' | 'daily_spin_wheel';
+export type GameState = 'welcome' | 'game_mode' | 'difficulty' | 'quiz' | 'result' | 'memory_game' | 'rhythm_game' | 'trivia_cards' | 'instruments_tutorial' | 'team_maker' | 'friends_trivia' | 'math_challenge' | 'spelling_bee' | 'reading_comprehension' | 'science_quiz' | 'secret_menu' | 'living_mural' | 'agent_hq' | 'shop' | 'kpop_rush' | 'word_scramble' | 'lightning_quiz' | 'animal_sound_quiz' | 'song_title_generator' | 'idol_personality_quiz' | 'dance_battle' | 'daily_spin_wheel' | 'beat_maker';
 export type Difficulty = 'easy' | 'normal' | 'hard' | 'lyrics' | 'demon';
-export type GameMode = 'quiz' | 'memory' | 'rhythm' | 'trivia' | 'instruments' | 'teams' | 'friends' | 'math' | 'spelling' | 'reading' | 'science' | 'word_scramble' | 'lightning_quiz' | 'animal_sound_quiz' | 'song_title_generator' | 'idol_personality_quiz' | 'dance_battle' | 'daily_spin_wheel';
+export type GameMode = 'quiz' | 'memory' | 'rhythm' | 'trivia' | 'instruments' | 'teams' | 'friends' | 'math' | 'spelling' | 'reading' | 'science' | 'word_scramble' | 'lightning_quiz' | 'animal_sound_quiz' | 'song_title_generator' | 'idol_personality_quiz' | 'dance_battle' | 'daily_spin_wheel' | 'beat_maker';
 
 export type Theme = 'default' | 'neon' | 'ocean' | 'forest' | 'sunset' | 'galaxy';
 
