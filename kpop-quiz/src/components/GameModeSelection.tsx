@@ -207,6 +207,15 @@ const GameModeSelection: React.FC = () => {
       bgColor: 'bg-red-50',
       borderColor: 'border-red-300'
     },
+    {
+      id: 'korean_word' as GameMode,
+      title: 'Korean Word of the Day',
+      description: 'Learn a new Korean word every day and test yourself!',
+      icon: '🇰🇷',
+      color: 'from-blue-400 to-indigo-500',
+      bgColor: 'bg-blue-50',
+      borderColor: 'border-blue-300'
+    },
   ];
 
   const handleGameModeSelect = (mode: GameMode) => {
@@ -249,6 +258,8 @@ const GameModeSelection: React.FC = () => {
       setGameState('daily_spin_wheel');
     } else if (mode === 'beat_maker') {
       setGameState('beat_maker');
+    } else if (mode === 'korean_word') {
+      setGameState('korean_word');
     }
     addXP(5);
   };
@@ -332,6 +343,41 @@ const GameModeSelection: React.FC = () => {
         >
           What would you like to play today? Each game offers unique K-pop fun and challenges!
         </motion.p>
+
+        {/* Random Fun Button */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.5, type: 'spring', stiffness: 180 }}
+          className="flex justify-center mb-8"
+        >
+          <motion.button
+            whileHover={{ scale: 1.08, rotate: [-1, 1, -1, 0] }}
+            whileTap={{ scale: 0.92 }}
+            onClick={() => {
+              playWin();
+              const random = gameModes[Math.floor(Math.random() * gameModes.length)];
+              handleGameModeSelect(random.id);
+            }}
+            className="bg-gradient-to-r from-fuchsia-500 via-pink-500 to-orange-400 text-white font-fredoka font-bold text-xl px-10 py-4 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center gap-3"
+          >
+            <motion.span
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+              className="text-2xl"
+            >
+              🎲
+            </motion.span>
+            Surprise Me! Play a Random Game!
+            <motion.span
+              animate={{ rotate: -360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+              className="text-2xl"
+            >
+              🎲
+            </motion.span>
+          </motion.button>
+        </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           {gameModes.map((mode, index) => (

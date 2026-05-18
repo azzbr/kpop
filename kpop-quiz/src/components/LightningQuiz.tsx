@@ -10,7 +10,8 @@ const TOTAL_Q = 12;
 
 const ALL_Q = [...easyQuestions, ...normalQuestions]
   .sort(() => Math.random() - 0.5)
-  .slice(0, TOTAL_Q);
+  .slice(0, TOTAL_Q)
+  .map(q => ({ ...q, answers: [...q.answers].sort(() => Math.random() - 0.5) }));
 
 type Phase = 'intro' | 'playing' | 'done';
 

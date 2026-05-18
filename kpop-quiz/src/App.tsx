@@ -29,6 +29,8 @@ import IdolPersonalityQuiz from './components/IdolPersonalityQuiz';
 import DanceBattleSimulator from './components/DanceBattleSimulator';
 import DailySpinWheel from './components/DailySpinWheel';
 import BeatMaker from './components/BeatMaker';
+import HuntrxSplash from './components/HuntrxSplash';
+import KoreanWordOfDay from './components/KoreanWordOfDay';
 
 function App() {
   const { gameState } = useGameStore();
@@ -91,6 +93,10 @@ function App() {
         return <DailySpinWheel key="daily_spin_wheel" />;
       case 'beat_maker':
         return <BeatMaker key="beat_maker" />;
+      case 'huntrx_splash':
+        return <HuntrxSplash key="huntrx_splash" />;
+      case 'korean_word':
+        return <KoreanWordOfDay key="korean_word" />;
       default:
         return <WelcomeScreen key="welcome" />;
     }

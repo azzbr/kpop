@@ -81,7 +81,11 @@ const WelcomeScreen: React.FC = () => {
     e.preventDefault();
     if (inputName.trim()) {
       setUserName(inputName.trim());
-      setGameState('game_mode');
+      if (huntrxMode) {
+        setGameState('huntrx_splash');
+      } else {
+        setGameState('game_mode');
+      }
     }
   };
 
