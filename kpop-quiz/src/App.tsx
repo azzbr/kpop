@@ -31,6 +31,9 @@ import DailySpinWheel from './components/DailySpinWheel';
 import BeatMaker from './components/BeatMaker';
 import HuntrxSplash from './components/HuntrxSplash';
 import KoreanWordOfDay from './components/KoreanWordOfDay';
+import TruthOrDare from './components/TruthOrDare';
+import TriviaBattle from './components/TriviaBattle';
+import TalentShow from './components/TalentShow';
 
 function App() {
   const { gameState } = useGameStore();
@@ -97,6 +100,12 @@ function App() {
         return <HuntrxSplash key="huntrx_splash" />;
       case 'korean_word':
         return <KoreanWordOfDay key="korean_word" />;
+      case 'truth_or_dare':
+        return <TruthOrDare key="truth_or_dare" />;
+      case 'trivia_battle':
+        return <TriviaBattle key="trivia_battle" />;
+      case 'talent_show':
+        return <TalentShow key="talent_show" />;
       default:
         return <WelcomeScreen key="welcome" />;
     }

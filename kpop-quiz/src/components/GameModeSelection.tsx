@@ -216,6 +216,33 @@ const GameModeSelection: React.FC = () => {
       bgColor: 'bg-blue-50',
       borderColor: 'border-blue-300'
     },
+    {
+      id: 'truth_or_dare' as GameMode,
+      title: 'Truth or Dare!',
+      description: 'K-pop themed truths and hilarious dares for 2–4 players!',
+      icon: '🎯',
+      color: 'from-orange-400 to-red-500',
+      bgColor: 'bg-orange-50',
+      borderColor: 'border-orange-300'
+    },
+    {
+      id: 'trivia_battle' as GameMode,
+      title: 'Trivia Battle ⚔️',
+      description: 'Two players race to answer — fastest correct tap wins!',
+      icon: '⚔️',
+      color: 'from-pink-500 to-rose-600',
+      bgColor: 'bg-pink-50',
+      borderColor: 'border-pink-300'
+    },
+    {
+      id: 'talent_show' as GameMode,
+      title: 'Talent Show',
+      description: 'Perform, get judged, and see who\'s the ultimate star!',
+      icon: '🎭',
+      color: 'from-purple-500 to-fuchsia-500',
+      bgColor: 'bg-purple-50',
+      borderColor: 'border-purple-300'
+    },
   ];
 
   const handleGameModeSelect = (mode: GameMode) => {
@@ -260,6 +287,12 @@ const GameModeSelection: React.FC = () => {
       setGameState('beat_maker');
     } else if (mode === 'korean_word') {
       setGameState('korean_word');
+    } else if (mode === 'truth_or_dare') {
+      setGameState('truth_or_dare');
+    } else if (mode === 'trivia_battle') {
+      setGameState('trivia_battle');
+    } else if (mode === 'talent_show') {
+      setGameState('talent_show');
     }
     addXP(5);
   };
