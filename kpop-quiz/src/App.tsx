@@ -36,6 +36,13 @@ import TriviaBattle from './components/TriviaBattle';
 import TalentShow from './components/TalentShow';
 import ZipGame from './components/ZipGame';
 import MiniSudoku from './components/MiniSudoku';
+import CrosswordMini from './components/CrosswordMini';
+import WordLadder from './components/WordLadder';
+import MemorySpeedRound from './components/MemorySpeedRound';
+import ReactionDuel from './components/ReactionDuel';
+import DailyStreakCalendar from './components/DailyStreakCalendar';
+import AchievementShowcase from './components/AchievementShowcase';
+import PatternMemory from './components/PatternMemory';
 
 function App() {
   const { gameState } = useGameStore();
@@ -112,6 +119,20 @@ function App() {
         return <ZipGame key="zip_game" />;
       case 'mini_sudoku':
         return <MiniSudoku key="mini_sudoku" />;
+      case 'crossword_mini':
+        return <CrosswordMini key="crossword_mini" />;
+      case 'word_ladder':
+        return <WordLadder key="word_ladder" />;
+      case 'memory_speed':
+        return <MemorySpeedRound key="memory_speed" />;
+      case 'reaction_duel':
+        return <ReactionDuel key="reaction_duel" />;
+      case 'streak_calendar':
+        return <DailyStreakCalendar key="streak_calendar" />;
+      case 'achievement_showcase':
+        return <AchievementShowcase key="achievement_showcase" />;
+      case 'pattern_memory':
+        return <PatternMemory key="pattern_memory" />;
       default:
         return <WelcomeScreen key="welcome" />;
     }

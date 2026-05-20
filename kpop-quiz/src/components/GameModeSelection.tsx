@@ -261,6 +261,69 @@ const GameModeSelection: React.FC = () => {
       bgColor: 'bg-emerald-50',
       borderColor: 'border-emerald-300'
     },
+    {
+      id: 'crossword_mini' as GameMode,
+      title: 'Crossword Mini',
+      description: 'K-Pop themed mini crossword puzzle — fill in the answers!',
+      icon: '📰',
+      color: 'from-indigo-400 to-violet-500',
+      bgColor: 'bg-indigo-50',
+      borderColor: 'border-indigo-300'
+    },
+    {
+      id: 'word_ladder' as GameMode,
+      title: 'Word Ladder',
+      description: 'Change one letter at a time to climb from the start word to the end!',
+      icon: '🔤',
+      color: 'from-blue-400 to-sky-500',
+      bgColor: 'bg-blue-50',
+      borderColor: 'border-blue-300'
+    },
+    {
+      id: 'memory_speed' as GameMode,
+      title: 'Speed Memory!',
+      description: 'Match all pairs in 60 seconds — chain combos to multiply your XP!',
+      icon: '⚡',
+      color: 'from-yellow-400 to-orange-500',
+      bgColor: 'bg-yellow-50',
+      borderColor: 'border-yellow-300'
+    },
+    {
+      id: 'reaction_duel' as GameMode,
+      title: 'Reaction Duel',
+      description: '2 players, 1 device — tap your side first when the signal flashes!',
+      icon: '⚡',
+      color: 'from-red-400 to-pink-500',
+      bgColor: 'bg-red-50',
+      borderColor: 'border-red-300'
+    },
+    {
+      id: 'streak_calendar' as GameMode,
+      title: 'Daily Streak',
+      description: 'Track your daily play streak — how many days in a row can you play?',
+      icon: '🔥',
+      color: 'from-orange-400 to-red-500',
+      bgColor: 'bg-orange-50',
+      borderColor: 'border-orange-300'
+    },
+    {
+      id: 'achievement_showcase' as GameMode,
+      title: 'Trophy Room',
+      description: 'See all your achievements, level, themes, and stats in one place!',
+      icon: '🏆',
+      color: 'from-yellow-400 to-amber-500',
+      bgColor: 'bg-yellow-50',
+      borderColor: 'border-yellow-300'
+    },
+    {
+      id: 'pattern_memory' as GameMode,
+      title: 'Pattern Memory',
+      description: 'Simon Says style — watch the color pattern and repeat it. How far can you go?',
+      icon: '🧠',
+      color: 'from-purple-500 to-fuchsia-500',
+      bgColor: 'bg-purple-50',
+      borderColor: 'border-purple-300'
+    },
   ];
 
   const handleGameModeSelect = (mode: GameMode) => {
@@ -315,6 +378,20 @@ const GameModeSelection: React.FC = () => {
       setGameState('zip_game');
     } else if (mode === 'mini_sudoku') {
       setGameState('mini_sudoku');
+    } else if (mode === 'crossword_mini') {
+      setGameState('crossword_mini');
+    } else if (mode === 'word_ladder') {
+      setGameState('word_ladder');
+    } else if (mode === 'memory_speed') {
+      setGameState('memory_speed');
+    } else if (mode === 'reaction_duel') {
+      setGameState('reaction_duel');
+    } else if (mode === 'streak_calendar') {
+      setGameState('streak_calendar');
+    } else if (mode === 'achievement_showcase') {
+      setGameState('achievement_showcase');
+    } else if (mode === 'pattern_memory') {
+      setGameState('pattern_memory');
     }
     addXP(5);
   };
