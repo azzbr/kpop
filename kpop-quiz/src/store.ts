@@ -2,9 +2,9 @@ import { create } from 'zustand';
 import type { Question, HunterProfile } from './quizData';
 import { getQuestionsByDifficulty, getProfileByScore } from './quizData';
 
-export type GameState = 'welcome' | 'game_mode' | 'difficulty' | 'quiz' | 'result' | 'memory_game' | 'rhythm_game' | 'trivia_cards' | 'instruments_tutorial' | 'team_maker' | 'friends_trivia' | 'math_challenge' | 'spelling_bee' | 'reading_comprehension' | 'science_quiz' | 'secret_menu' | 'living_mural' | 'agent_hq' | 'shop' | 'kpop_rush' | 'word_scramble' | 'lightning_quiz' | 'animal_sound_quiz' | 'song_title_generator' | 'idol_personality_quiz' | 'dance_battle' | 'daily_spin_wheel' | 'beat_maker' | 'korean_word' | 'huntrx_splash' | 'truth_or_dare' | 'trivia_battle' | 'talent_show';
+export type GameState = 'welcome' | 'game_mode' | 'difficulty' | 'quiz' | 'result' | 'memory_game' | 'rhythm_game' | 'trivia_cards' | 'instruments_tutorial' | 'team_maker' | 'friends_trivia' | 'math_challenge' | 'spelling_bee' | 'reading_comprehension' | 'science_quiz' | 'secret_menu' | 'living_mural' | 'agent_hq' | 'shop' | 'kpop_rush' | 'word_scramble' | 'lightning_quiz' | 'animal_sound_quiz' | 'song_title_generator' | 'idol_personality_quiz' | 'dance_battle' | 'daily_spin_wheel' | 'beat_maker' | 'korean_word' | 'huntrx_splash' | 'truth_or_dare' | 'trivia_battle' | 'talent_show' | 'zip_game' | 'mini_sudoku';
 export type Difficulty = 'easy' | 'normal' | 'hard' | 'lyrics' | 'demon';
-export type GameMode = 'quiz' | 'memory' | 'rhythm' | 'trivia' | 'instruments' | 'teams' | 'friends' | 'math' | 'spelling' | 'reading' | 'science' | 'word_scramble' | 'lightning_quiz' | 'animal_sound_quiz' | 'song_title_generator' | 'idol_personality_quiz' | 'dance_battle' | 'daily_spin_wheel' | 'beat_maker' | 'korean_word' | 'truth_or_dare' | 'trivia_battle' | 'talent_show';
+export type GameMode = 'quiz' | 'memory' | 'rhythm' | 'trivia' | 'instruments' | 'teams' | 'friends' | 'math' | 'spelling' | 'reading' | 'science' | 'word_scramble' | 'lightning_quiz' | 'animal_sound_quiz' | 'song_title_generator' | 'idol_personality_quiz' | 'dance_battle' | 'daily_spin_wheel' | 'beat_maker' | 'korean_word' | 'truth_or_dare' | 'trivia_battle' | 'talent_show' | 'zip_game' | 'mini_sudoku';
 
 export type Theme = 'default' | 'neon' | 'ocean' | 'forest' | 'sunset' | 'galaxy';
 
@@ -174,6 +174,10 @@ interface GameStore {
   xp: number;
   addXP: (amount: number) => void;
 
+  // HUNTR/X Superstar mode (persistent easter egg perk)
+  huntrxUnlocked: boolean;
+  unlockHuntrx: () => void;
+
   // Theme
   currentTheme: Theme;
   setTheme: (theme: Theme) => void;
@@ -276,6 +280,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   // Initial state
   gameState: 'welcome',
   xp: Number(localStorage.getItem('kpop_xp') || '0'),
+  huntrxUnlocked: localStorage.getItem('kpop_huntrx') === 'true',
   currentTheme: (localStorage.getItem('kpop_theme') as Theme) || 'default',
   userName: '',
   difficulty: null,
@@ -903,6 +908,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const newXp = get().xp + amount;
     localStorage.setItem('kpop_xp', String(newXp));
     set({ xp: newXp });
+  },
+
+  unlockHuntrx: () => {
+    if (get().huntrxUnlocked) return;
+    const newXp = get().xp + 500;
+    localStorage.setItem('kpop_huntrx', 'true');
+    localStorage.setItem('kpop_xp', String(newXp));
+    set({ huntrxUnlocked: true, xp: newXp });
   },
 
   setTheme: (theme) => {

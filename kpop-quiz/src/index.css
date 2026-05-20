@@ -81,3 +81,10 @@
   from { filter: hue-rotate(0deg); }
   to { filter: hue-rotate(360deg); }
 }
+
+/* Reserve space at the bottom of every screen so the fixed music player
+   never covers back buttons or other content. The music player div has the
+   .fixed class, so :not(.fixed) targets only the active screen wrapper. */
+.App > div:not(.fixed) {
+  padding-bottom: 6rem;
+}

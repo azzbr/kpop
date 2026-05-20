@@ -24,15 +24,17 @@ const THEMES: ThemeOption[] = [
 ];
 
 const ThemeSwitcher: React.FC = () => {
-  const { currentTheme, setTheme, xp } = useGameStore();
+  const { currentTheme, setTheme, xp, huntrxUnlocked } = useGameStore();
   const currentLevel = getLevel(xp);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', currentTheme);
   }, [currentTheme]);
 
+  const isLocked = (theme: ThemeOption) => !huntrxUnlocked && currentLevel < theme.unlockLevel;
+
   const handleSelect = (theme: ThemeOption) => {
-    if (currentLevel < theme.unlockLevel) {
+    if (isLocked(theme)) {
       playClick();
       return;
     }
@@ -44,10 +46,12 @@ const ThemeSwitcher: React.FC = () => {
   return (
     <div className="w-full">
       <h3 className="text-xl font-fredoka font-bold text-purple-700 mb-1 text-center">🎨 Theme Switcher</h3>
-      <p className="text-sm font-nunito text-gray-500 text-center mb-4">Unlock new themes by leveling up!</p>
+      <p className="text-sm font-nunito text-gray-500 text-center mb-4">
+        {huntrxUnlocked ? '👑 Superstar Mode — all themes unlocked!' : 'Unlock new themes by leveling up!'}
+      </p>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {THEMES.map((theme, i) => {
-          const locked = currentLevel < theme.unlockLevel;
+          const locked = isLocked(theme);
           const active = currentTheme === theme.id;
           return (
             <motion.button

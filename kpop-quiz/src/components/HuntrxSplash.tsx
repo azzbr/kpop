@@ -11,12 +11,20 @@ const POWERS = [
   { name: 'Celine', emoji: '🌟', power: 'Star Magic', color: 'text-purple-400' },
 ];
 
+const PERKS = [
+  { emoji: '🎁', text: '+500 bonus XP added to your level!' },
+  { emoji: '🎨', text: 'All 6 colour themes unlocked instantly!' },
+  { emoji: '👑', text: 'Golden Superstar crown on your profile — forever!' },
+];
+
 const HuntrxSplash: React.FC = () => {
-  const { setGameState, userName } = useGameStore();
+  const { setGameState, userName, unlockHuntrx, huntrxUnlocked } = useGameStore();
   const [countdown, setCountdown] = useState(5);
+  const alreadyHad = useState(huntrxUnlocked)[0];
 
   useEffect(() => {
     playWin();
+    unlockHuntrx();
     const interval = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
@@ -28,7 +36,7 @@ const HuntrxSplash: React.FC = () => {
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, [setGameState]);
+  }, [setGameState, unlockHuntrx]);
 
   return (
     <motion.div
@@ -86,25 +94,48 @@ const HuntrxSplash: React.FC = () => {
           </p>
         </motion.div>
 
-        {/* Member powers */}
+        {/* Perks unlocked — the real reward */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="grid grid-cols-2 gap-3 mb-8"
+          className="mb-6"
         >
-          {POWERS.map((member, i) => (
-            <motion.div
+          <p className="font-fredoka font-bold text-yellow-400 text-lg mb-3">
+            {alreadyHad ? '⭐ Your Superstar Perks' : '🎉 Rewards Unlocked!'}
+          </p>
+          <div className="space-y-2">
+            {PERKS.map((perk, i) => (
+              <motion.div
+                key={perk.text}
+                initial={{ opacity: 0, x: -30 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.8 + i * 0.2 }}
+                className="flex items-center gap-3 bg-white bg-opacity-10 rounded-2xl p-3 backdrop-blur-sm border border-white border-opacity-20"
+              >
+                <span className="text-3xl flex-shrink-0">{perk.emoji}</span>
+                <span className="font-nunito text-white text-left text-sm">{perk.text}</span>
+                <span className="ml-auto text-green-400 text-xl flex-shrink-0">✓</span>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Member powers */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.4 }}
+          className="grid grid-cols-4 gap-2 mb-6"
+        >
+          {POWERS.map((member) => (
+            <div
               key={member.name}
-              initial={{ opacity: 0, x: i % 2 === 0 ? -20 : 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.7 + i * 0.1 }}
-              className="bg-white bg-opacity-10 rounded-2xl p-3 backdrop-blur-sm border border-white border-opacity-20"
+              className="bg-white bg-opacity-10 rounded-xl p-2 backdrop-blur-sm border border-white border-opacity-20"
             >
-              <div className="text-3xl mb-1">{member.emoji}</div>
-              <p className="font-fredoka font-bold text-white">{member.name}</p>
-              <p className={`text-xs font-nunito ${member.color}`}>{member.power}</p>
-            </motion.div>
+              <div className="text-2xl">{member.emoji}</div>
+              <p className="font-fredoka font-bold text-white text-xs">{member.name}</p>
+            </div>
           ))}
         </motion.div>
 

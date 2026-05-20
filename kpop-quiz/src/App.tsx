@@ -34,6 +34,8 @@ import KoreanWordOfDay from './components/KoreanWordOfDay';
 import TruthOrDare from './components/TruthOrDare';
 import TriviaBattle from './components/TriviaBattle';
 import TalentShow from './components/TalentShow';
+import ZipGame from './components/ZipGame';
+import MiniSudoku from './components/MiniSudoku';
 
 function App() {
   const { gameState } = useGameStore();
@@ -106,6 +108,10 @@ function App() {
         return <TriviaBattle key="trivia_battle" />;
       case 'talent_show':
         return <TalentShow key="talent_show" />;
+      case 'zip_game':
+        return <ZipGame key="zip_game" />;
+      case 'mini_sudoku':
+        return <MiniSudoku key="mini_sudoku" />;
       default:
         return <WelcomeScreen key="welcome" />;
     }

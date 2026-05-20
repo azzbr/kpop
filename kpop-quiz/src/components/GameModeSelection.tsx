@@ -243,6 +243,24 @@ const GameModeSelection: React.FC = () => {
       bgColor: 'bg-purple-50',
       borderColor: 'border-purple-300'
     },
+    {
+      id: 'zip_game' as GameMode,
+      title: 'Zip — 30s Break',
+      description: 'Connect the dots in order and fill the whole grid fast!',
+      icon: '🔗',
+      color: 'from-cyan-400 to-blue-500',
+      bgColor: 'bg-cyan-50',
+      borderColor: 'border-cyan-300'
+    },
+    {
+      id: 'mini_sudoku' as GameMode,
+      title: 'Mini Sudoku — 3min Break',
+      description: 'The classic number puzzle, made mini for a quick brain break!',
+      icon: '🔢',
+      color: 'from-emerald-400 to-teal-500',
+      bgColor: 'bg-emerald-50',
+      borderColor: 'border-emerald-300'
+    },
   ];
 
   const handleGameModeSelect = (mode: GameMode) => {
@@ -293,6 +311,10 @@ const GameModeSelection: React.FC = () => {
       setGameState('trivia_battle');
     } else if (mode === 'talent_show') {
       setGameState('talent_show');
+    } else if (mode === 'zip_game') {
+      setGameState('zip_game');
+    } else if (mode === 'mini_sudoku') {
+      setGameState('mini_sudoku');
     }
     addXP(5);
   };
