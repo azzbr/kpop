@@ -324,6 +324,15 @@ const GameModeSelection: React.FC = () => {
       bgColor: 'bg-purple-50',
       borderColor: 'border-purple-300'
     },
+    {
+      id: 'boys_zone' as GameMode,
+      title: '🔥 Boys Zone',
+      description: 'Ninja Slice, Battle Arena & Rocket Launch — 3 action-packed challenges in one epic hub!',
+      icon: '⚔️',
+      color: 'from-blue-700 to-indigo-900',
+      bgColor: 'bg-slate-900',
+      borderColor: 'border-blue-500'
+    },
   ];
 
   const handleGameModeSelect = (mode: GameMode) => {
@@ -392,6 +401,8 @@ const GameModeSelection: React.FC = () => {
       setGameState('achievement_showcase');
     } else if (mode === 'pattern_memory') {
       setGameState('pattern_memory');
+    } else if (mode === 'boys_zone') {
+      setGameState('boys_zone');
     }
     addXP(5);
   };
@@ -530,10 +541,10 @@ const GameModeSelection: React.FC = () => {
                     {mode.icon}
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-xl md:text-2xl font-fredoka font-bold text-gray-800 mb-2">
+                    <h3 className={`text-xl md:text-2xl font-fredoka font-bold mb-2 ${mode.id === 'boys_zone' ? 'text-white' : 'text-gray-800'}`}>
                       {mode.title}
                     </h3>
-                    <p className="text-sm md:text-base text-gray-600 leading-relaxed font-nunito">
+                    <p className={`text-sm md:text-base leading-relaxed font-nunito ${mode.id === 'boys_zone' ? 'text-blue-200' : 'text-gray-600'}`}>
                       {mode.description}
                     </p>
                   </div>

@@ -43,6 +43,10 @@ import ReactionDuel from './components/ReactionDuel';
 import DailyStreakCalendar from './components/DailyStreakCalendar';
 import AchievementShowcase from './components/AchievementShowcase';
 import PatternMemory from './components/PatternMemory';
+import BoysZone from './components/BoysZone';
+import NinjaSlice from './components/NinjaSlice';
+import BattleArena from './components/BattleArena';
+import RocketLaunch from './components/RocketLaunch';
 
 function App() {
   const { gameState } = useGameStore();
@@ -133,6 +137,14 @@ function App() {
         return <AchievementShowcase key="achievement_showcase" />;
       case 'pattern_memory':
         return <PatternMemory key="pattern_memory" />;
+      case 'boys_zone':
+        return <BoysZone key="boys_zone" />;
+      case 'ninja_slice':
+        return <NinjaSlice key="ninja_slice" />;
+      case 'battle_arena':
+        return <BattleArena key="battle_arena" />;
+      case 'rocket_launch':
+        return <RocketLaunch key="rocket_launch" />;
       default:
         return <WelcomeScreen key="welcome" />;
     }
