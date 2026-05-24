@@ -1,42 +1,83 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
-import { playClick, playPop, playWin, playCorrect, playWrong, playUnlock, playTick } from '../utils/sounds';
+import { playClick, playPop, playWin, playCorrect, playWrong, playUnlock, playTick, playTimeOut } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
-type Tab = 'quiz' | 'rollcall' | 'stars' | 'noise';
+type Tab = 'quiz' | 'rollcall' | 'stars' | 'battle' | 'reward' | 'timer' | 'noise';
 
-interface QuizQ {
-  q: string;
-  options: string[];
-  correct: number;
-  joke?: string;
-}
+interface QuizQ { q: string; options: string[]; correct: number; joke?: string; }
 
 const POP_QUIZ: QuizQ[] = [
   { q: "What does 'K' in K-Pop stand for?", options: ['Korean', 'Kool', 'Karaoke', 'Kimchi'], correct: 0, joke: "Not Kimchi, though that's delicious!" },
   { q: "Which country is the home of K-Pop?", options: ['Japan', 'China', 'South Korea', 'Thailand'], correct: 2, joke: "Seoul-id answer! 🌏" },
   { q: "How many minutes are in 2 hours?", options: ['100', '120', '60', '240'], correct: 1, joke: "Math + music = 🎵🧮" },
-  { q: "What language do K-Pop songs often use?", options: ['Spanish', 'Korean', 'French', 'German'], correct: 1, joke: "안녕하세요 (Annyeonghaseyo!)" },
+  { q: "What language do K-Pop songs often use?", options: ['Spanish', 'Korean', 'French', 'German'], correct: 1, joke: "안녕하세요!" },
   { q: "An idol practices 8 hours a day. How many in 5 days?", options: ['30', '35', '40', '45'], correct: 2, joke: "That's a LOT of dancing! 💃" },
   { q: "Which of these is NOT a musical instrument?", options: ['Piano', 'Drum', 'Stapler', 'Guitar'], correct: 2, joke: "Unless you play jazz stapler... 🎷" },
   { q: "What do you call a group of K-Pop fans?", options: ['A team', 'A fandom', 'A crew', 'A class'], correct: 1, joke: "Class is also acceptable, Mr. Jarvis!" },
   { q: "What rhymes with 'star'?", options: ['Cloud', 'Far', 'Tree', 'Book'], correct: 1, joke: "Twinkle twinkle little ⭐" },
   { q: "If a song is 3 minutes long, how many seconds is that?", options: ['120', '150', '180', '300'], correct: 2, joke: "Time flies when you're vibing!" },
-  { q: "Which color is NOT in a rainbow?", options: ['Red', 'Brown', 'Blue', 'Green'], correct: 1, joke: "Sorry brown — try again next rainbow! 🌈" },
+  { q: "Which color is NOT in a rainbow?", options: ['Red', 'Brown', 'Blue', 'Green'], correct: 1, joke: "Sorry brown — maybe next rainbow! 🌈" },
   { q: "Capital of South Korea?", options: ['Tokyo', 'Beijing', 'Seoul', 'Bangkok'], correct: 2, joke: "Where the K-Pop magic happens! ✨" },
   { q: "10 + 7 × 2 = ?", options: ['34', '24', '17', '20'], correct: 1, joke: "Order of operations! Multiply first 🤓" },
 ];
 
 const CHEER_LINES = [
-  '🎉 ROUND OF APPLAUSE!',
-  '⭐ GOLD STAR FOR THE CLASS!',
-  '🎊 EVERYONE GETS PIZZA! (just kidding) 🍕',
-  '🔥 ON FIRE! Keep going!',
-  '🎓 You all just LEVELED UP!',
-  '🌟 Class average: AWESOME%',
-  '👏 Mr. Jarvis is PROUD!',
-  '🚀 To the moon! Whoosh!',
+  '🎉 ROUND OF APPLAUSE!', '⭐ GOLD STAR FOR THE CLASS!', '🎊 EVERYONE GETS PIZZA! (just kidding) 🍕',
+  '🔥 ON FIRE! Keep going!', '🎓 You all just LEVELED UP!', '🌟 Class average: AWESOME%',
+  '👏 Mr. Jarvis is PROUD!', '🚀 To the moon! Whoosh!',
+];
+
+interface Challenge { category: string; emoji: string; text: string; }
+const CHALLENGES: Challenge[] = [
+  // Brain
+  { category: 'Brain', emoji: '🧠', text: 'Spell K-POP backwards out loud!' },
+  { category: 'Brain', emoji: '🧠', text: 'Name 3 K-Pop groups in 10 seconds!' },
+  { category: 'Brain', emoji: '🧠', text: 'Count to 20 by 2s as fast as you can!' },
+  { category: 'Brain', emoji: '🧠', text: 'Math relay: 7+5, 12+8, 20+15 — go!' },
+  { category: 'Brain', emoji: '🧠', text: 'Name 5 countries that start with "S"!' },
+  { category: 'Brain', emoji: '🧠', text: 'List the rainbow colors in order!' },
+  // Body
+  { category: 'Body', emoji: '🏃', text: '30-second plank challenge — GO!' },
+  { category: 'Body', emoji: '🏃', text: '20 jumping jacks — let\'s see!' },
+  { category: 'Body', emoji: '🏃', text: 'Spin in a circle 5 times without falling!' },
+  { category: 'Body', emoji: '🏃', text: 'Hop on one foot for 15 seconds!' },
+  { category: 'Body', emoji: '🏃', text: 'Touch your toes 10 times!' },
+  { category: 'Body', emoji: '🏃', text: 'Wall sit for 20 seconds!' },
+  // Voice
+  { category: 'Voice', emoji: '🎤', text: 'Hum a K-Pop song — class guesses!' },
+  { category: 'Voice', emoji: '🎤', text: 'Sing the alphabet — but only in whispers!' },
+  { category: 'Voice', emoji: '🎤', text: 'Tongue twister: "She sells seashells…" x3!' },
+  { category: 'Voice', emoji: '🎤', text: 'Make up a 4-word K-Pop song title!' },
+  // Silly
+  { category: 'Silly', emoji: '🤪', text: 'Make the silliest face — others vote!' },
+  { category: 'Silly', emoji: '🤪', text: 'Dance for 10 seconds without smiling!' },
+  { category: 'Silly', emoji: '🤪', text: 'Animal noise contest — pick a farm animal!' },
+  { category: 'Silly', emoji: '🤪', text: 'Walk like a penguin across the room!' },
+  { category: 'Silly', emoji: '🤪', text: 'Talk in your robot voice for 30 seconds!' },
+  // Team
+  { category: 'Team', emoji: '🤝', text: 'Form a human spelling of your team name!' },
+  { category: 'Team', emoji: '🤝', text: 'Invent a 5-second team cheer — perform it!' },
+  { category: 'Team', emoji: '🤝', text: 'Mirror game — one leads, others copy!' },
+  { category: 'Team', emoji: '🤝', text: 'Pass a clap around the team — no breaks!' },
+];
+
+const REWARDS = [
+  { emoji: '🏃', text: '10 minutes of PE!' },
+  { emoji: '💃', text: '5-minute dance party!' },
+  { emoji: '✏️', text: 'Free draw time!' },
+  { emoji: '🍪', text: 'Class picks tomorrow\'s snack!' },
+  { emoji: '🎮', text: '10 mins extra recess!' },
+  { emoji: '🎵', text: 'Pick the next K-Pop game!' },
+  { emoji: '🎬', text: 'Short movie clip (5 min)!' },
+  { emoji: '🏐', text: 'Silent ball game!' },
+  { emoji: '🪑', text: 'Sit anywhere day!' },
+  { emoji: '🎩', text: 'Wear a hat in class!' },
+  { emoji: '📚', text: 'Storytime — student picks!' },
+  { emoji: '⏰', text: 'Free 5 minutes — your choice!' },
+  { emoji: '🎨', text: 'Whiteboard graffiti time!' },
+  { emoji: '🐾', text: 'Show & tell — bring a toy tomorrow!' },
 ];
 
 interface Student { name: string; stars: number; }
@@ -44,6 +85,13 @@ interface Student { name: string; stars: number; }
 const JarvisHQ: React.FC = () => {
   const { setGameState } = useGameStore();
   const [tab, setTab] = useState<Tab>('quiz');
+
+  // ---- INTRO MODAL ----
+  const [showIntro, setShowIntro] = useState(() => localStorage.getItem('jarvis_seen_intro') !== '1');
+  const closeIntro = () => { localStorage.setItem('jarvis_seen_intro', '1'); setShowIntro(false); playUnlock(); };
+
+  // ---- CLASS WINS overlay (fires on Pop Quiz wrong answer) ----
+  const [classWins, setClassWins] = useState<string | null>(null);
 
   // ---- POP QUIZ ----
   const [qIdx, setQIdx] = useState(0);
@@ -59,17 +107,17 @@ const JarvisHQ: React.FC = () => {
     setPick(i);
     setRevealed(true);
     if (i === q.correct) { playCorrect(); setClassScore(s => s + 1); }
-    else { playWrong(); setClassMisses(m => m + 1); }
+    else {
+      playWrong(); setClassMisses(m => m + 1);
+      const reward = REWARDS[Math.floor(Math.random() * REWARDS.length)];
+      setClassWins(`${reward.emoji} ${reward.text}`);
+      setTimeout(() => playWin(), 600);
+    }
   };
-  const nextQ = () => {
-    playPop();
-    setRevealed(false);
-    setPick(null);
-    setQIdx(i => (i + 1) % POP_QUIZ.length);
-  };
+  const nextQ = () => { playPop(); setRevealed(false); setPick(null); setQIdx(i => (i + 1) % POP_QUIZ.length); };
   const resetQuiz = () => { setClassScore(0); setClassMisses(0); setQIdx(0); setRevealed(false); setPick(null); playClick(); };
 
-  // ---- ROLL CALL ----
+  // ---- ROSTER ----
   const [students, setStudents] = useState<Student[]>(() => {
     try { return JSON.parse(localStorage.getItem('jarvis_students') || '[]'); } catch { return []; }
   });
@@ -85,32 +133,20 @@ const JarvisHQ: React.FC = () => {
   const addStudent = () => {
     const n = studentInput.trim();
     if (!n || students.find(s => s.name.toLowerCase() === n.toLowerCase())) return;
-    setStudents([...students, { name: n, stars: 0 }]);
-    setStudentInput('');
-    playPop();
+    setStudents([...students, { name: n, stars: 0 }]); setStudentInput(''); playPop();
   };
   const removeStudent = (name: string) => { setStudents(students.filter(s => s.name !== name)); playClick(); };
 
   const spinPick = () => {
     if (students.length < 2 || spinning) return;
-    setSpinning(true);
-    setChosen(null);
-    setTeams(null);
+    setSpinning(true); setChosen(null); setTeams(null);
     let count = 0;
-    const totalTicks = 20 + Math.floor(Math.random() * 10);
+    const total = 20 + Math.floor(Math.random() * 10);
     const tick = () => {
-      const r = students[Math.floor(Math.random() * students.length)];
-      setChosen(r.name);
-      playTick();
-      count++;
-      if (count < totalTicks) {
-        setTimeout(tick, 80 + count * 12);
-      } else {
-        setSpinning(false);
-        playWin();
-        setConfetti(true);
-        setTimeout(() => setConfetti(false), 2000);
-      }
+      setChosen(students[Math.floor(Math.random() * students.length)].name);
+      playTick(); count++;
+      if (count < total) setTimeout(tick, 80 + count * 12);
+      else { setSpinning(false); playWin(); setConfetti(true); setTimeout(() => setConfetti(false), 2000); }
     };
     tick();
   };
@@ -121,16 +157,13 @@ const JarvisHQ: React.FC = () => {
     const shuffled = [...students].sort(() => Math.random() - 0.5).map(s => s.name);
     const t: string[][] = Array.from({ length: teamCount }, () => []);
     shuffled.forEach((n, i) => t[i % teamCount].push(n));
-    setTeams(t);
-    setChosen(null);
+    setTeams(t); setChosen(null);
   };
 
   // ---- GOLD STARS ----
   const awardStar = (name: string) => {
     setStudents(students.map(s => s.name === name ? { ...s, stars: s.stars + 1 } : s));
-    playCorrect();
-    setConfetti(true);
-    setTimeout(() => setConfetti(false), 1200);
+    playCorrect(); setConfetti(true); setTimeout(() => setConfetti(false), 1200);
   };
   const removeStar = (name: string) => {
     setStudents(students.map(s => s.name === name ? { ...s, stars: Math.max(0, s.stars - 1) } : s));
@@ -138,24 +171,98 @@ const JarvisHQ: React.FC = () => {
   };
   const sortedByStars = [...students].sort((a, b) => b.stars - a.stars);
 
+  // ---- CLASS BATTLE (1v1 + challenge) ----
+  const [battlePair, setBattlePair] = useState<[string, string] | null>(null);
+  const [battleChallenge, setBattleChallenge] = useState<Challenge | null>(null);
+  const [filterCategory, setFilterCategory] = useState<string>('Any');
+
+  const rollBattle = () => {
+    playUnlock();
+    if (students.length >= 2) {
+      const a = Math.floor(Math.random() * students.length);
+      let b = Math.floor(Math.random() * students.length);
+      while (b === a) b = Math.floor(Math.random() * students.length);
+      setBattlePair([students[a].name, students[b].name]);
+    } else {
+      setBattlePair(null);
+    }
+    const pool = filterCategory === 'Any' ? CHALLENGES : CHALLENGES.filter(c => c.category === filterCategory);
+    setBattleChallenge(pool[Math.floor(Math.random() * pool.length)]);
+    setConfetti(true);
+    setTimeout(() => setConfetti(false), 1500);
+  };
+
+  // ---- REWARD ROULETTE ----
+  const [rewardSpin, setRewardSpin] = useState(false);
+  const [rewardIdx, setRewardIdx] = useState<number | null>(null);
+  const rollReward = () => {
+    if (rewardSpin) return;
+    setRewardSpin(true);
+    let count = 0;
+    const total = 18 + Math.floor(Math.random() * 8);
+    const tick = () => {
+      setRewardIdx(Math.floor(Math.random() * REWARDS.length));
+      playTick(); count++;
+      if (count < total) setTimeout(tick, 70 + count * 14);
+      else {
+        setRewardSpin(false); playWin(); setConfetti(true);
+        setTimeout(() => setConfetti(false), 2500);
+      }
+    };
+    tick();
+  };
+
+  // ---- TIMER ----
+  const [timerSec, setTimerSec] = useState(60);
+  const [timerLeft, setTimerLeft] = useState(60);
+  const [timerRun, setTimerRun] = useState(false);
+  const timerRef = useRef<number | null>(null);
+  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
+  const startTimer = () => {
+    if (timerRun) return;
+    setTimerRun(true); playClick();
+    timerRef.current = window.setInterval(() => {
+      setTimerLeft(t => {
+        if (t <= 1) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          setTimerRun(false); playTimeOut(); setConfetti(true);
+          setTimeout(() => setConfetti(false), 3000);
+          return 0;
+        }
+        if (t <= 4) playTick();
+        return t - 1;
+      });
+    }, 1000);
+  };
+  const pauseTimer = () => { if (timerRef.current) clearInterval(timerRef.current); setTimerRun(false); playClick(); };
+  const resetTimer = (s: number) => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    setTimerRun(false); setTimerSec(s); setTimerLeft(s); playPop();
+  };
+  const timerPct = timerSec > 0 ? (timerLeft / timerSec) * 100 : 0;
+  const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+
   // ---- NOISE ----
   const [cheer, setCheer] = useState<string | null>(null);
   const cheerTimer = useRef<number | null>(null);
   const fireCheer = () => {
     const line = CHEER_LINES[Math.floor(Math.random() * CHEER_LINES.length)];
-    setCheer(line);
-    setConfetti(true);
-    playWin();
+    setCheer(line); setConfetti(true); playWin();
     if (cheerTimer.current) clearTimeout(cheerTimer.current);
     cheerTimer.current = window.setTimeout(() => { setCheer(null); setConfetti(false); }, 2500);
   };
 
   const TABS: { id: Tab; emoji: string; label: string }[] = [
-    { id: 'quiz', emoji: '🍎', label: 'Pop Quiz' },
-    { id: 'rollcall', emoji: '📋', label: 'Roll Call' },
-    { id: 'stars', emoji: '⭐', label: 'Gold Stars' },
-    { id: 'noise', emoji: '🔔', label: 'Cheer!' },
+    { id: 'quiz', emoji: '🍎', label: 'Quiz' },
+    { id: 'rollcall', emoji: '📋', label: 'Roll' },
+    { id: 'stars', emoji: '⭐', label: 'Stars' },
+    { id: 'battle', emoji: '🏆', label: 'Battle' },
+    { id: 'reward', emoji: '🎁', label: 'Reward' },
+    { id: 'timer', emoji: '⏱️', label: 'Timer' },
+    { id: 'noise', emoji: '🔔', label: 'Cheer' },
   ];
+
+  const PANEL_BG = { background: 'linear-gradient(135deg, #2d3a2e 0%, #1e2a1f 100%)' };
 
   return (
     <motion.div
@@ -165,15 +272,65 @@ const JarvisHQ: React.FC = () => {
     >
       {confetti && <ConfettiBurst count={50} durationMs={2000} />}
 
-      {/* Cheer overlay */}
+      {/* INTRO MODAL */}
+      <AnimatePresence>
+        {showIntro && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/85 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.7, y: 30 }} animate={{ scale: 1, y: 0 }}
+              className="rounded-3xl border-4 border-amber-500 p-6 max-w-md w-full text-center"
+              style={PANEL_BG}>
+              <div className="text-6xl mb-2">👨‍🏫</div>
+              <h2 className="font-fredoka font-bold text-amber-300 text-2xl mb-2">Hello, Mr. Jarvis!</h2>
+              <p className="font-nunito text-amber-100 text-base mb-3 leading-relaxed">
+                This is <span className="font-bold text-amber-300">YOUR</span> teacher's secret menu. The class doesn't know it exists. 🤫
+              </p>
+              <div className="bg-amber-100 text-stone-900 rounded-2xl p-4 mb-3 text-left font-nunito text-sm leading-relaxed border-2 border-amber-700">
+                <p className="font-fredoka font-bold text-amber-700 text-base mb-2">📜 The Pact:</p>
+                <p>• If <span className="font-bold">YOU</span> get a Pop Quiz answer wrong, the class wins a <span className="font-bold">10-minute fun reward</span>.</p>
+                <p>• They choose: 🏃 PE · 💃 dance · ✏️ free draw · or anything else from the Reward Roulette.</p>
+                <p>• Roll 1v1 Battles · Spin Class Rewards · Big classroom Timer · Cheer Cannon.</p>
+                <p className="mt-2 text-xs italic text-stone-600">Sign here: <span className="font-bold">Mr. Jarvis ✍️</span></p>
+              </div>
+              <button onClick={closeIntro}
+                className="w-full py-3 rounded-full bg-amber-500 hover:bg-amber-400 text-stone-900 font-fredoka font-bold text-lg">
+                🍎 Accept &amp; Enter the Lounge
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* CLASS WINS overlay */}
+      <AnimatePresence>
+        {classWins && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[55] bg-black/70 flex items-center justify-center p-4"
+            onClick={() => setClassWins(null)}>
+            <ConfettiBurst count={80} durationMs={3000} />
+            <motion.div
+              initial={{ scale: 0.5, rotate: -8 }} animate={{ scale: 1, rotate: 0 }}
+              className="bg-amber-400 text-stone-900 rounded-3xl p-6 max-w-sm w-full text-center border-8 border-red-500">
+              <div className="text-5xl mb-2">🎉</div>
+              <p className="font-fredoka font-bold text-2xl mb-2">CLASS WINS!</p>
+              <p className="font-nunito text-sm mb-3">Mr. Jarvis got that one wrong! 😂<br/>Your reward:</p>
+              <div className="bg-stone-900 text-amber-300 rounded-2xl p-4 font-fredoka text-xl mb-3">{classWins}</div>
+              <button onClick={() => setClassWins(null)}
+                className="px-6 py-2 rounded-full bg-stone-900 text-amber-300 font-fredoka">Tap to claim 🎊</button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* CHEER overlay */}
       <AnimatePresence>
         {cheer && (
           <motion.div
-            initial={{ scale: 0, rotate: -10 }}
-            animate={{ scale: 1, rotate: 0 }}
-            exit={{ scale: 0, opacity: 0 }}
-            className="fixed inset-0 flex items-center justify-center pointer-events-none z-50"
-          >
+            initial={{ scale: 0, rotate: -10 }} animate={{ scale: 1, rotate: 0 }} exit={{ scale: 0, opacity: 0 }}
+            className="fixed inset-0 flex items-center justify-center pointer-events-none z-50">
             <div className="bg-amber-400 text-stone-900 font-fredoka font-bold text-4xl md:text-6xl px-8 py-6 rounded-3xl shadow-2xl border-8 border-amber-600 text-center">
               {cheer}
             </div>
@@ -182,24 +339,25 @@ const JarvisHQ: React.FC = () => {
       </AnimatePresence>
 
       <div className="max-w-2xl w-full mx-auto">
-        <button onClick={() => { playClick(); setGameState('game_mode'); }}
-          className="mb-3 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-stone-900 rounded-full font-fredoka text-sm">
-          ← Back
-        </button>
+        <div className="flex gap-2 mb-3">
+          <button onClick={() => { playClick(); setGameState('game_mode'); }}
+            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-stone-900 rounded-full font-fredoka text-sm">← Back</button>
+          <button onClick={() => setShowIntro(true)}
+            className="px-3 py-2 bg-stone-800 hover:bg-stone-700 text-amber-300 rounded-full font-fredoka text-xs border border-amber-700">📜 Pact</button>
+        </div>
 
-        {/* Header — chalkboard look */}
-        <div className="text-center mb-4 p-5 rounded-3xl border-4 border-amber-700"
-             style={{ background: 'linear-gradient(135deg, #2d3a2e 0%, #1e2a1f 100%)' }}>
+        {/* Header */}
+        <div className="text-center mb-4 p-5 rounded-3xl border-4 border-amber-700" style={PANEL_BG}>
           <div className="text-5xl mb-1">👨‍🏫</div>
           <h1 className="text-3xl md:text-4xl font-fredoka font-bold text-amber-200">Mr. Jarvis's Lounge</h1>
           <p className="font-nunito text-amber-100/80 text-sm">Class is in session 🍎📋⭐</p>
         </div>
 
         {/* Tabs */}
-        <div className="grid grid-cols-4 gap-1 mb-4 bg-stone-800 rounded-2xl p-1 border-2 border-amber-700">
+        <div className="grid grid-cols-4 md:grid-cols-7 gap-1 mb-4 bg-stone-800 rounded-2xl p-1 border-2 border-amber-700">
           {TABS.map(t => (
             <button key={t.id} onClick={() => { playClick(); setTab(t.id); }}
-              className={`py-2 px-1 rounded-xl font-fredoka text-xs md:text-sm transition-colors ${tab === t.id ? 'bg-amber-500 text-stone-900' : 'text-amber-200 hover:bg-stone-700'}`}>
+              className={`py-2 px-1 rounded-xl font-fredoka text-xs transition-colors ${tab === t.id ? 'bg-amber-500 text-stone-900' : 'text-amber-200 hover:bg-stone-700'}`}>
               <div className="text-lg">{t.emoji}</div>
               <div>{t.label}</div>
             </button>
@@ -208,12 +366,14 @@ const JarvisHQ: React.FC = () => {
 
         {/* POP QUIZ */}
         {tab === 'quiz' && (
-          <div className="rounded-3xl p-5 border-4 border-amber-700"
-               style={{ background: 'linear-gradient(135deg, #2d3a2e 0%, #1e2a1f 100%)' }}>
+          <div className="rounded-3xl p-5 border-4 border-amber-700" style={PANEL_BG}>
             <div className="flex justify-between items-center mb-2 text-amber-100 font-fredoka text-sm">
               <span>Question {qIdx + 1} / {POP_QUIZ.length}</span>
               <span>✅ {classScore} · ❌ {classMisses}</span>
             </div>
+            <p className="text-amber-300/80 font-nunito text-xs mb-2 text-center italic">
+              ⚠️ Get this wrong → Class wins a reward!
+            </p>
             <div className="bg-stone-900/60 border-2 border-dashed border-amber-300 rounded-2xl p-4 mb-4">
               <p className="font-fredoka text-amber-100 text-lg md:text-xl leading-snug text-center">{q.q}</p>
             </div>
@@ -228,11 +388,7 @@ const JarvisHQ: React.FC = () => {
                   else style = 'bg-stone-700 text-stone-400';
                 }
                 return (
-                  <motion.button
-                    key={i}
-                    whileTap={{ scale: 0.96 }}
-                    onClick={() => answer(i)}
-                    disabled={revealed}
+                  <motion.button key={i} whileTap={{ scale: 0.96 }} onClick={() => answer(i)} disabled={revealed}
                     className={`py-3 px-3 rounded-xl font-fredoka text-sm md:text-base transition-colors ${style}`}>
                     <span className="font-bold mr-1">{['A','B','C','D'][i]}.</span> {opt}
                   </motion.button>
@@ -247,39 +403,27 @@ const JarvisHQ: React.FC = () => {
             )}
             <div className="flex gap-2">
               <button onClick={() => { setRevealed(true); playUnlock(); }} disabled={revealed}
-                className="flex-1 py-2 rounded-full font-fredoka text-sm bg-amber-500 text-stone-900 disabled:opacity-40 hover:bg-amber-400">
-                🔍 Reveal
-              </button>
+                className="flex-1 py-2 rounded-full font-fredoka text-sm bg-amber-500 text-stone-900 disabled:opacity-40 hover:bg-amber-400">🔍 Reveal</button>
               <button onClick={nextQ}
-                className="flex-1 py-2 rounded-full font-fredoka text-sm bg-stone-700 text-amber-100 hover:bg-stone-600">
-                ➡️ Next
-              </button>
+                className="flex-1 py-2 rounded-full font-fredoka text-sm bg-stone-700 text-amber-100 hover:bg-stone-600">➡️ Next</button>
               <button onClick={resetQuiz}
-                className="px-3 py-2 rounded-full font-fredoka text-xs bg-red-700 text-white hover:bg-red-600">
-                Reset
-              </button>
+                className="px-3 py-2 rounded-full font-fredoka text-xs bg-red-700 text-white hover:bg-red-600">Reset</button>
             </div>
           </div>
         )}
 
         {/* ROLL CALL */}
         {tab === 'rollcall' && (
-          <div className="rounded-3xl p-5 border-4 border-amber-700 space-y-3"
-               style={{ background: 'linear-gradient(135deg, #2d3a2e 0%, #1e2a1f 100%)' }}>
+          <div className="rounded-3xl p-5 border-4 border-amber-700 space-y-3" style={PANEL_BG}>
             <h3 className="font-fredoka text-amber-200 text-lg">📋 Roster ({students.length})</h3>
-
             <div className="flex gap-2">
-              <input
-                value={studentInput}
-                onChange={e => setStudentInput(e.target.value)}
+              <input value={studentInput} onChange={e => setStudentInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') addStudent(); }}
                 placeholder="Add student name…"
-                className="flex-1 px-3 py-2 rounded-full bg-stone-900 text-amber-100 placeholder-stone-500 border-2 border-amber-700 focus:outline-none focus:border-amber-400 font-nunito text-sm"
-              />
+                className="flex-1 px-3 py-2 rounded-full bg-stone-900 text-amber-100 placeholder-stone-500 border-2 border-amber-700 focus:outline-none focus:border-amber-400 font-nunito text-sm"/>
               <button onClick={addStudent}
                 className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-stone-900 rounded-full font-fredoka text-sm">+ Add</button>
             </div>
-
             {students.length === 0 ? (
               <p className="text-amber-100/70 font-nunito text-sm text-center py-3">Add a few students to start!</p>
             ) : (
@@ -292,7 +436,6 @@ const JarvisHQ: React.FC = () => {
                 ))}
               </div>
             )}
-
             <div className="border-t border-amber-700/50 pt-3">
               <button onClick={spinPick} disabled={students.length < 2 || spinning}
                 className="w-full py-3 rounded-2xl font-fredoka text-lg bg-gradient-to-r from-amber-500 to-orange-500 text-stone-900 disabled:opacity-40 hover:from-amber-400">
@@ -300,31 +443,22 @@ const JarvisHQ: React.FC = () => {
               </button>
               <AnimatePresence mode="wait">
                 {chosen && (
-                  <motion.div
-                    key={chosen}
-                    initial={{ scale: 0.7, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.7, opacity: 0 }}
+                  <motion.div key={chosen} initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.7, opacity: 0 }}
                     className="mt-3 text-center bg-amber-100 text-stone-900 rounded-2xl p-4 font-fredoka text-2xl border-4 border-amber-400">
                     {spinning ? '🎰' : '⭐'} {chosen}
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
-
             <div className="border-t border-amber-700/50 pt-3">
               <div className="flex gap-2 items-center mb-2">
                 <span className="font-fredoka text-amber-200 text-sm">Teams of</span>
                 {[2, 3, 4].map(n => (
                   <button key={n} onClick={() => setTeamCount(n)}
-                    className={`w-8 h-8 rounded-full font-fredoka text-sm ${teamCount === n ? 'bg-amber-500 text-stone-900' : 'bg-stone-700 text-amber-100'}`}>
-                    {n}
-                  </button>
+                    className={`w-8 h-8 rounded-full font-fredoka text-sm ${teamCount === n ? 'bg-amber-500 text-stone-900' : 'bg-stone-700 text-amber-100'}`}>{n}</button>
                 ))}
                 <button onClick={makeTeams} disabled={students.length < teamCount}
-                  className="flex-1 py-2 px-3 bg-stone-700 hover:bg-stone-600 text-amber-100 rounded-full font-fredoka text-sm disabled:opacity-40">
-                  Split into teams!
-                </button>
+                  className="flex-1 py-2 px-3 bg-stone-700 hover:bg-stone-600 text-amber-100 rounded-full font-fredoka text-sm disabled:opacity-40">Split into teams!</button>
               </div>
               {teams && (
                 <div className="grid grid-cols-2 gap-2">
@@ -343,13 +477,10 @@ const JarvisHQ: React.FC = () => {
 
         {/* GOLD STARS */}
         {tab === 'stars' && (
-          <div className="rounded-3xl p-5 border-4 border-amber-700"
-               style={{ background: 'linear-gradient(135deg, #2d3a2e 0%, #1e2a1f 100%)' }}>
+          <div className="rounded-3xl p-5 border-4 border-amber-700" style={PANEL_BG}>
             <h3 className="font-fredoka text-amber-200 text-lg mb-2">⭐ Gold Star Awards</h3>
             {students.length === 0 ? (
-              <p className="text-amber-100/70 font-nunito text-sm text-center py-3">
-                Add students in the Roll Call tab first!
-              </p>
+              <p className="text-amber-100/70 font-nunito text-sm text-center py-3">Add students in the Roll Call tab first!</p>
             ) : (
               <div className="space-y-2">
                 {sortedByStars.map((s, i) => (
@@ -357,10 +488,8 @@ const JarvisHQ: React.FC = () => {
                     <span className="font-fredoka text-amber-300 w-6 text-center">{i === 0 && s.stars > 0 ? '👑' : `#${i + 1}`}</span>
                     <span className="flex-1 font-fredoka text-amber-100 text-sm">{s.name}</span>
                     <span className="font-fredoka text-amber-300 text-sm min-w-[2rem] text-right">{s.stars}⭐</span>
-                    <button onClick={() => removeStar(s.name)}
-                      className="w-7 h-7 bg-stone-700 text-amber-100 rounded-full text-sm">−</button>
-                    <button onClick={() => awardStar(s.name)}
-                      className="w-7 h-7 bg-amber-500 hover:bg-amber-400 text-stone-900 rounded-full font-bold">+</button>
+                    <button onClick={() => removeStar(s.name)} className="w-7 h-7 bg-stone-700 text-amber-100 rounded-full text-sm">−</button>
+                    <button onClick={() => awardStar(s.name)} className="w-7 h-7 bg-amber-500 hover:bg-amber-400 text-stone-900 rounded-full font-bold">+</button>
                   </div>
                 ))}
               </div>
@@ -368,23 +497,121 @@ const JarvisHQ: React.FC = () => {
           </div>
         )}
 
-        {/* NOISE */}
+        {/* CLASS BATTLE */}
+        {tab === 'battle' && (
+          <div className="rounded-3xl p-5 border-4 border-amber-700" style={PANEL_BG}>
+            <h3 className="font-fredoka text-amber-200 text-lg mb-2">🏆 Class Battle</h3>
+            <p className="font-nunito text-amber-100/80 text-sm mb-3">
+              Pick 2 students + a random challenge. Whoever wins gets a Gold Star! ⭐
+            </p>
+            <div className="flex flex-wrap gap-1 mb-3">
+              {['Any', 'Brain', 'Body', 'Voice', 'Silly', 'Team'].map(c => (
+                <button key={c} onClick={() => { setFilterCategory(c); playClick(); }}
+                  className={`px-3 py-1 rounded-full font-fredoka text-xs ${filterCategory === c ? 'bg-amber-500 text-stone-900' : 'bg-stone-700 text-amber-100'}`}>{c}</button>
+              ))}
+            </div>
+            <button onClick={rollBattle}
+              className="w-full py-3 rounded-2xl bg-gradient-to-r from-red-500 via-orange-500 to-amber-500 text-white font-fredoka text-lg shadow-lg mb-3">
+              🎲 ROLL BATTLE!
+            </button>
+            <AnimatePresence mode="wait">
+              {battleChallenge && (
+                <motion.div key={(battlePair?.join('') || '') + battleChallenge.text}
+                  initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }}
+                  className="space-y-3">
+                  {battlePair ? (
+                    <div className="flex items-center gap-2 justify-center">
+                      <div className="flex-1 bg-blue-600 text-white rounded-2xl p-3 font-fredoka text-center text-lg">{battlePair[0]}</div>
+                      <div className="text-amber-300 font-fredoka text-2xl">VS</div>
+                      <div className="flex-1 bg-red-600 text-white rounded-2xl p-3 font-fredoka text-center text-lg">{battlePair[1]}</div>
+                    </div>
+                  ) : (
+                    <p className="text-center text-amber-200 font-nunito text-sm italic">
+                      (Add 2+ students in Roll Call to pick fighters!)
+                    </p>
+                  )}
+                  <div className="bg-amber-100 text-stone-900 rounded-2xl p-4 border-4 border-amber-400">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-3xl">{battleChallenge.emoji}</span>
+                      <span className="font-fredoka text-amber-700 font-bold">{battleChallenge.category} Challenge</span>
+                    </div>
+                    <p className="font-fredoka text-lg leading-snug">{battleChallenge.text}</p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* REWARD ROULETTE */}
+        {tab === 'reward' && (
+          <div className="rounded-3xl p-5 border-4 border-amber-700 text-center" style={PANEL_BG}>
+            <h3 className="font-fredoka text-amber-200 text-xl mb-2">🎁 Reward Roulette</h3>
+            <p className="font-nunito text-amber-100/80 text-sm mb-3">
+              Class earned a treat? Spin the wheel of fun!
+            </p>
+            <motion.button whileTap={{ scale: 0.95 }} onClick={rollReward} disabled={rewardSpin}
+              className="w-full py-4 rounded-2xl bg-gradient-to-br from-pink-500 via-amber-500 to-yellow-400 text-white font-fredoka text-2xl shadow-xl mb-4 disabled:opacity-60">
+              🎰 SPIN THE WHEEL!
+            </motion.button>
+            {rewardIdx !== null && (
+              <motion.div
+                key={rewardIdx + (rewardSpin ? 'spin' : 'done')}
+                initial={{ scale: 0.9, opacity: 0.5 }} animate={{ scale: rewardSpin ? 1 : 1.05, opacity: 1 }}
+                className={`rounded-3xl p-6 border-4 ${rewardSpin ? 'border-amber-400 bg-stone-900' : 'border-amber-300 bg-amber-100'}`}>
+                <div className="text-6xl mb-2">{REWARDS[rewardIdx].emoji}</div>
+                <p className={`font-fredoka text-2xl ${rewardSpin ? 'text-amber-200' : 'text-stone-900'}`}>
+                  {REWARDS[rewardIdx].text}
+                </p>
+                {!rewardSpin && <p className="font-nunito text-stone-700 text-xs mt-2 italic">🎉 Class winners — enjoy!</p>}
+              </motion.div>
+            )}
+          </div>
+        )}
+
+        {/* TIMER */}
+        {tab === 'timer' && (
+          <div className="rounded-3xl p-5 border-4 border-amber-700 text-center" style={PANEL_BG}>
+            <h3 className="font-fredoka text-amber-200 text-xl mb-2">⏱️ Big Class Timer</h3>
+            <div className="bg-stone-900 rounded-3xl p-6 border-4 border-amber-500 mb-3">
+              <div className={`font-fredoka font-bold text-7xl md:text-8xl ${timerLeft <= 5 && timerRun ? 'text-red-400 animate-pulse' : 'text-amber-300'}`}>
+                {fmtTime(timerLeft)}
+              </div>
+              <div className="bg-stone-700 rounded-full h-3 mt-3 overflow-hidden">
+                <motion.div
+                  className="h-3 bg-gradient-to-r from-green-400 via-amber-400 to-red-500"
+                  animate={{ width: `${timerPct}%` }} transition={{ duration: 0.3 }}/>
+              </div>
+            </div>
+            <div className="grid grid-cols-5 gap-1 mb-3">
+              {[30, 60, 120, 300, 600].map(s => (
+                <button key={s} onClick={() => resetTimer(s)}
+                  className={`py-2 rounded-xl font-fredoka text-xs ${timerSec === s ? 'bg-amber-500 text-stone-900' : 'bg-stone-700 text-amber-100'}`}>
+                  {s < 60 ? `${s}s` : `${s / 60}m`}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              {timerRun ? (
+                <button onClick={pauseTimer} className="flex-1 py-3 rounded-full bg-stone-700 text-amber-100 font-fredoka">⏸ Pause</button>
+              ) : (
+                <button onClick={startTimer} disabled={timerLeft === 0}
+                  className="flex-1 py-3 rounded-full bg-green-600 hover:bg-green-500 text-white font-fredoka disabled:opacity-40">▶ Start</button>
+              )}
+              <button onClick={() => resetTimer(timerSec)} className="px-4 py-3 rounded-full bg-amber-500 text-stone-900 font-fredoka">↺ Reset</button>
+            </div>
+          </div>
+        )}
+
+        {/* CHEER */}
         {tab === 'noise' && (
-          <div className="rounded-3xl p-5 border-4 border-amber-700 text-center"
-               style={{ background: 'linear-gradient(135deg, #2d3a2e 0%, #1e2a1f 100%)' }}>
+          <div className="rounded-3xl p-5 border-4 border-amber-700 text-center" style={PANEL_BG}>
             <h3 className="font-fredoka text-amber-200 text-xl mb-2">🔔 Class Cheer Cannon</h3>
             <p className="font-nunito text-amber-100/80 text-sm mb-4">Hit it whenever the class earns a celebration!</p>
-            <motion.button
-              whileTap={{ scale: 0.92 }}
-              whileHover={{ scale: 1.05 }}
-              onClick={fireCheer}
-              className="w-full py-6 rounded-3xl bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 text-white font-fredoka text-3xl shadow-xl"
-            >
+            <motion.button whileTap={{ scale: 0.92 }} whileHover={{ scale: 1.05 }} onClick={fireCheer}
+              className="w-full py-6 rounded-3xl bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 text-white font-fredoka text-3xl shadow-xl">
               🎉 FIRE THE CONFETTI! 🎉
             </motion.button>
-            <p className="font-nunito text-amber-100/60 text-xs mt-3">
-              Tip: Use this when a kid answers the Pop Quiz right!
-            </p>
           </div>
         )}
       </div>
