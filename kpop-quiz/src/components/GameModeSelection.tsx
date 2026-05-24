@@ -333,6 +333,15 @@ const GameModeSelection: React.FC = () => {
       bgColor: 'bg-slate-900',
       borderColor: 'border-blue-500'
     },
+    {
+      id: 'girls_zone' as GameMode,
+      title: '🌸 Girls Zone',
+      description: 'Style Studio, Sparkle Match & Idol Diary — creative, sparkly, and story-filled fun!',
+      icon: '✨',
+      color: 'from-pink-500 to-fuchsia-500',
+      bgColor: 'bg-pink-100',
+      borderColor: 'border-pink-400'
+    },
   ];
 
   const handleGameModeSelect = (mode: GameMode) => {
@@ -403,6 +412,8 @@ const GameModeSelection: React.FC = () => {
       setGameState('pattern_memory');
     } else if (mode === 'boys_zone') {
       setGameState('boys_zone');
+    } else if (mode === 'girls_zone') {
+      setGameState('girls_zone');
     }
     addXP(5);
   };

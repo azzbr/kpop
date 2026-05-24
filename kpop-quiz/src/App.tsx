@@ -47,6 +47,10 @@ import BoysZone from './components/BoysZone';
 import NinjaSlice from './components/NinjaSlice';
 import BattleArena from './components/BattleArena';
 import RocketLaunch from './components/RocketLaunch';
+import GirlsZone from './components/GirlsZone';
+import StyleStudio from './components/StyleStudio';
+import SparkleMatch from './components/SparkleMatch';
+import IdolDiary from './components/IdolDiary';
 
 function App() {
   const { gameState } = useGameStore();
@@ -145,6 +149,14 @@ function App() {
         return <BattleArena key="battle_arena" />;
       case 'rocket_launch':
         return <RocketLaunch key="rocket_launch" />;
+      case 'girls_zone':
+        return <GirlsZone key="girls_zone" />;
+      case 'style_studio':
+        return <StyleStudio key="style_studio" />;
+      case 'sparkle_match':
+        return <SparkleMatch key="sparkle_match" />;
+      case 'idol_diary':
+        return <IdolDiary key="idol_diary" />;
       default:
         return <WelcomeScreen key="welcome" />;
     }
