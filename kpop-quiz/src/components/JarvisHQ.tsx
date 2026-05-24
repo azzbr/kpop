@@ -9,18 +9,26 @@ type Tab = 'quiz' | 'rollcall' | 'stars' | 'battle' | 'reward' | 'timer' | 'nois
 interface QuizQ { q: string; options: string[]; correct: number; joke?: string; }
 
 const POP_QUIZ: QuizQ[] = [
-  { q: "What does 'K' in K-Pop stand for?", options: ['Korean', 'Kool', 'Karaoke', 'Kimchi'], correct: 0, joke: "Not Kimchi, though that's delicious!" },
-  { q: "Which country is the home of K-Pop?", options: ['Japan', 'China', 'South Korea', 'Thailand'], correct: 2, joke: "Seoul-id answer! 🌏" },
-  { q: "How many minutes are in 2 hours?", options: ['100', '120', '60', '240'], correct: 1, joke: "Math + music = 🎵🧮" },
-  { q: "What language do K-Pop songs often use?", options: ['Spanish', 'Korean', 'French', 'German'], correct: 1, joke: "안녕하세요!" },
-  { q: "An idol practices 8 hours a day. How many in 5 days?", options: ['30', '35', '40', '45'], correct: 2, joke: "That's a LOT of dancing! 💃" },
-  { q: "Which of these is NOT a musical instrument?", options: ['Piano', 'Drum', 'Stapler', 'Guitar'], correct: 2, joke: "Unless you play jazz stapler... 🎷" },
-  { q: "What do you call a group of K-Pop fans?", options: ['A team', 'A fandom', 'A crew', 'A class'], correct: 1, joke: "Class is also acceptable, Mr. Jarvis!" },
-  { q: "What rhymes with 'star'?", options: ['Cloud', 'Far', 'Tree', 'Book'], correct: 1, joke: "Twinkle twinkle little ⭐" },
-  { q: "If a song is 3 minutes long, how many seconds is that?", options: ['120', '150', '180', '300'], correct: 2, joke: "Time flies when you're vibing!" },
-  { q: "Which color is NOT in a rainbow?", options: ['Red', 'Brown', 'Blue', 'Green'], correct: 1, joke: "Sorry brown — maybe next rainbow! 🌈" },
-  { q: "Capital of South Korea?", options: ['Tokyo', 'Beijing', 'Seoul', 'Bangkok'], correct: 2, joke: "Where the K-Pop magic happens! ✨" },
-  { q: "10 + 7 × 2 = ?", options: ['34', '24', '17', '20'], correct: 1, joke: "Order of operations! Multiply first 🤓" },
+  { q: "What is the capital city of England?", options: ['Manchester', 'Birmingham', 'London', 'Leeds'], correct: 2, joke: "Home of Big Ben, red buses, and too much rain! ☂️" },
+  { q: "Which river flows through London?", options: ['River Severn', 'River Thames', 'River Trent', 'River Avon'], correct: 1, joke: "Not the Avon — that's Shakespeare's turf! 🎭" },
+  { q: "What is the largest organ in the human body?", options: ['Brain', 'Heart', 'Liver', 'Skin'], correct: 3, joke: "You're literally wearing it right now! 🙌" },
+  { q: "In what year did the Great Fire of London start?", options: ['1566', '1666', '1766', '1866'], correct: 1, joke: "Started in a bakery on Pudding Lane. A baker did THAT." },
+  { q: "How many sides does a hexagon have?", options: ['5', '6', '7', '8'], correct: 1, joke: "Bees know this — check a honeycomb! 🐝" },
+  { q: "Which planet is closest to the Sun?", options: ['Venus', 'Earth', 'Mars', 'Mercury'], correct: 3, joke: "Mercury! Very hot, no atmosphere, 0/10 holiday destination 🌡️" },
+  { q: "What is H₂O more commonly known as?", options: ['Oxygen', 'Water', 'Carbon dioxide', 'Salt'], correct: 1, joke: "Two Hydrogens walk into a bar with Oxygen… 💧" },
+  { q: "Who wrote Romeo and Juliet?", options: ['Charles Dickens', 'Jane Austen', 'William Shakespeare', 'Geoffrey Chaucer'], correct: 2, joke: "Born in Stratford-upon-Avon — that IS the Avon! 🎭" },
+  { q: "How many bones are in the adult human body?", options: ['106', '206', '306', '406'], correct: 1, joke: "Babies have around 300 — they fuse over time! 🦴" },
+  { q: "What gas do plants absorb during photosynthesis?", options: ['Oxygen', 'Nitrogen', 'Carbon dioxide', 'Hydrogen'], correct: 2, joke: "Plants breathe in what we breathe out. Teamwork! 🌿" },
+  { q: "Which London landmark is also called Elizabeth Tower?", options: ['The Shard', 'Buckingham Palace', 'Big Ben', 'St Paul\'s Cathedral'], correct: 2, joke: "Big Ben is actually the BELL, not the tower! 🔔" },
+  { q: "What is the chemical symbol for gold?", options: ['Go', 'Gd', 'Gl', 'Au'], correct: 3, joke: "From the Latin 'Aurum' — Romans loved the stuff 🏅" },
+  { q: "How many chambers does a human heart have?", options: ['2', '3', '4', '5'], correct: 2, joke: "Two atria, two ventricles. It works hard for you! ❤️" },
+  { q: "What is the longest river in the UK?", options: ['River Thames', 'River Trent', 'River Severn', 'River Clyde'], correct: 2, joke: "The Severn stretches 354 km — longer than the Thames! 🌊" },
+  { q: "Which scientist discovered gravity (inspired by an apple)?", options: ['Charles Darwin', 'Isaac Newton', 'Stephen Hawking', 'Albert Einstein'], correct: 1, joke: "Born in Lincolnshire! UK represent! 🍎" },
+  { q: "What does DNA stand for?", options: ['Digital Network Array', 'Deoxyribonucleic Acid', 'Dynamic Nucleic Agent', 'Direct Nerve Alignment'], correct: 1, joke: "Every cell in your body has 2 metres of it. Impossible but true! 🧬" },
+  { q: "At what temperature does water boil (°C)?", options: ['90°C', '95°C', '100°C', '110°C'], correct: 2, joke: "The kettle in the staffroom knows this answer! ☕" },
+  { q: "The Tower of London was originally built by which king?", options: ['King Henry VIII', 'King Richard I', 'King William I', 'King George III'], correct: 2, joke: "William the Conqueror built it in 1066 after a very busy year!" },
+  { q: "Which force pulls objects toward the Earth?", options: ['Magnetism', 'Friction', 'Gravity', 'Tension'], correct: 2, joke: "Same one that keeps Mr. Jarvis's feet on the ground! 🌍" },
+  { q: "How many degrees are in a right angle?", options: ['45°', '90°', '180°', '360°'], correct: 1, joke: "Corners of this screen — all 90°! 📐" },
 ];
 
 const CHEER_LINES = [
