@@ -51,6 +51,7 @@ import GirlsZone from './components/GirlsZone';
 import StyleStudio from './components/StyleStudio';
 import SparkleMatch from './components/SparkleMatch';
 import IdolDiary from './components/IdolDiary';
+import JarvisHQ from './components/JarvisHQ';
 
 function App() {
   const { gameState } = useGameStore();
@@ -157,6 +158,8 @@ function App() {
         return <SparkleMatch key="sparkle_match" />;
       case 'idol_diary':
         return <IdolDiary key="idol_diary" />;
+      case 'jarvis_hq':
+        return <JarvisHQ key="jarvis_hq" />;
       default:
         return <WelcomeScreen key="welcome" />;
     }

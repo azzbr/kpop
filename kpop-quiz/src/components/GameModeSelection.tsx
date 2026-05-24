@@ -342,6 +342,15 @@ const GameModeSelection: React.FC = () => {
       bgColor: 'bg-pink-100',
       borderColor: 'border-pink-400'
     },
+    ...(typeof window !== 'undefined' && localStorage.getItem('jarvis_mode') === '1' ? [{
+      id: 'jarvis_hq' as GameMode,
+      title: "🍎 Mr. Jarvis's Lounge",
+      description: 'Classroom mode — Pop Quiz, Roll Call, Gold Stars & the Cheer Cannon. For teachers!',
+      icon: '👨‍🏫',
+      color: 'from-amber-500 to-red-600',
+      bgColor: 'bg-stone-800',
+      borderColor: 'border-amber-500'
+    }] : []),
   ];
 
   const handleGameModeSelect = (mode: GameMode) => {
@@ -414,6 +423,8 @@ const GameModeSelection: React.FC = () => {
       setGameState('boys_zone');
     } else if (mode === 'girls_zone') {
       setGameState('girls_zone');
+    } else if (mode === 'jarvis_hq') {
+      setGameState('jarvis_hq');
     }
     addXP(5);
   };
@@ -552,10 +563,10 @@ const GameModeSelection: React.FC = () => {
                     {mode.icon}
                   </div>
                   <div className="flex-1">
-                    <h3 className={`text-xl md:text-2xl font-fredoka font-bold mb-2 ${mode.id === 'boys_zone' ? 'text-white' : 'text-gray-800'}`}>
+                    <h3 className={`text-xl md:text-2xl font-fredoka font-bold mb-2 ${mode.id === 'boys_zone' || mode.id === 'jarvis_hq' ? 'text-white' : 'text-gray-800'}`}>
                       {mode.title}
                     </h3>
-                    <p className={`text-sm md:text-base leading-relaxed font-nunito ${mode.id === 'boys_zone' ? 'text-blue-200' : 'text-gray-600'}`}>
+                    <p className={`text-sm md:text-base leading-relaxed font-nunito ${mode.id === 'boys_zone' ? 'text-blue-200' : mode.id === 'jarvis_hq' ? 'text-amber-100' : 'text-gray-600'}`}>
                       {mode.description}
                     </p>
                   </div>

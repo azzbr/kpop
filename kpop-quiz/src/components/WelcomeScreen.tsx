@@ -83,6 +83,7 @@ const WelcomeScreen: React.FC = () => {
     }
     if (upper === 'JARVIS' && !jarvisMode) {
       setJarvisMode(true);
+      localStorage.setItem('jarvis_mode', '1');
       playUnlock();
     } else if (upper !== 'JARVIS') {
       setJarvisMode(false);
