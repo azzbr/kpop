@@ -254,7 +254,7 @@ const IdolDiary: React.FC = () => {
               <h2 className="font-fredoka font-bold text-rose-700 text-xl">{story.title}</h2>
             </div>
             <p className="font-nunito text-gray-800 leading-relaxed text-base mb-4">
-              {story.render(words).split(/(\b(?:${words.join('|')})\b)/).map((part, i) => {
+              {story.render(words).split(new RegExp(`(${words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`)).map((part, i) => {
                 if (words.includes(part)) {
                   return <span key={i} className="bg-yellow-200 font-bold text-rose-700 px-1 rounded">{part}</span>;
                 }
