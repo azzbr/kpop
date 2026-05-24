@@ -52,6 +52,8 @@ import StyleStudio from './components/StyleStudio';
 import SparkleMatch from './components/SparkleMatch';
 import IdolDiary from './components/IdolDiary';
 import JarvisHQ from './components/JarvisHQ';
+import GuessTheIntro from './components/GuessTheIntro';
+import IdolProfileCard from './components/IdolProfileCard';
 
 function App() {
   const { gameState } = useGameStore();
@@ -160,6 +162,10 @@ function App() {
         return <IdolDiary key="idol_diary" />;
       case 'jarvis_hq':
         return <JarvisHQ key="jarvis_hq" />;
+      case 'guess_intro':
+        return <GuessTheIntro key="guess_intro" />;
+      case 'idol_profile':
+        return <IdolProfileCard key="idol_profile" />;
       default:
         return <WelcomeScreen key="welcome" />;
     }

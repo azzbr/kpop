@@ -342,6 +342,24 @@ const GameModeSelection: React.FC = () => {
       bgColor: 'bg-pink-100',
       borderColor: 'border-pink-400'
     },
+    {
+      id: 'guess_intro' as GameMode,
+      title: '🎧 Guess the Intro',
+      description: 'Hear a 1.5-second snippet — name the HUNTR/X song!',
+      icon: '🎧',
+      color: 'from-violet-500 to-fuchsia-600',
+      bgColor: 'bg-violet-50',
+      borderColor: 'border-violet-300'
+    },
+    {
+      id: 'idol_profile' as GameMode,
+      title: '🎙️ Idol Profile Card',
+      description: 'Design your own debut card — stats, signature move, fan club!',
+      icon: '🎙️',
+      color: 'from-pink-500 to-purple-600',
+      bgColor: 'bg-pink-50',
+      borderColor: 'border-pink-300'
+    },
     ...(typeof window !== 'undefined' && localStorage.getItem('jarvis_mode') === '1' ? [{
       id: 'jarvis_hq' as GameMode,
       title: "🍎 Mr. Jarvis's Lounge",
@@ -425,6 +443,10 @@ const GameModeSelection: React.FC = () => {
       setGameState('girls_zone');
     } else if (mode === 'jarvis_hq') {
       setGameState('jarvis_hq');
+    } else if (mode === 'guess_intro') {
+      setGameState('guess_intro');
+    } else if (mode === 'idol_profile') {
+      setGameState('idol_profile');
     }
     addXP(5);
   };

@@ -4,7 +4,39 @@ import { useGameStore } from '../store';
 import { playClick, playPop, playWin, playCorrect, playWrong, playUnlock, playTick, playTimeOut } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
-type Tab = 'quiz' | 'rollcall' | 'stars' | 'battle' | 'reward' | 'timer' | 'noise';
+type Tab = 'quiz' | 'rollcall' | 'stars' | 'battle' | 'reward' | 'timer' | 'noise' | 'power' | 'science';
+
+interface PowerCard { name: string; emoji: string; desc: string; rarity: 'common' | 'rare' | 'legendary'; }
+const POWER_CARDS: PowerCard[] = [
+  { name: 'Double Points', emoji: '⭐', desc: 'Next correct answer counts for DOUBLE!', rarity: 'common' },
+  { name: 'Score Swap', emoji: '🔄', desc: 'Two teams swap scores. Drama!', rarity: 'rare' },
+  { name: 'Freeze', emoji: '❄️', desc: 'One team skips the next round.', rarity: 'common' },
+  { name: 'Bonus Round', emoji: '🎁', desc: 'A surprise mini-challenge worth 5 points!', rarity: 'rare' },
+  { name: 'Lucky Star', emoji: '🍀', desc: 'Remove one wrong option from next question.', rarity: 'common' },
+  { name: 'Steal!', emoji: '🦊', desc: 'Steal 2 points from the leading team.', rarity: 'rare' },
+  { name: 'Comeback', emoji: '🚀', desc: 'Last-place team gets +3 free points!', rarity: 'common' },
+  { name: 'Silent Round', emoji: '🤫', desc: 'Next question must be answered with no talking.', rarity: 'common' },
+  { name: 'Mr. Jarvis Joins', emoji: '👨‍🏫', desc: 'Teacher plays for the losing team next round!', rarity: 'legendary' },
+  { name: 'Wildcard', emoji: '🃏', desc: 'Pick any other power card and use it now!', rarity: 'legendary' },
+  { name: 'Triple Threat', emoji: '⚡', desc: 'Next 3 answers count as one combo. All right = +6!', rarity: 'rare' },
+  { name: 'Sudden Death', emoji: '💥', desc: 'Next question: winner takes 5, loser loses 2.', rarity: 'legendary' },
+];
+
+interface Mission { title: string; brief: string; equipment: string; minutes: number; science: string; }
+const SCIENCE_MISSIONS: Mission[] = [
+  { title: 'Static Hair Training', brief: 'Rub a balloon on your hair, then lift it slowly — your hair follows!', equipment: 'Balloon', minutes: 2, science: 'Static electricity — electrons jump between materials.' },
+  { title: 'Lava Lamp Vocal Warmup', brief: 'Drop a fizzy tablet in water + oil. Watch the bubbles rise!', equipment: 'Cup, water, oil, fizzy tablet', minutes: 5, science: 'Gas bubbles carry oil up; oil and water don\'t mix.' },
+  { title: 'Idol Heart Rate Check', brief: 'Find your pulse on your wrist. Count beats for 15 sec, multiply by 4.', equipment: 'A clock', minutes: 1, science: 'Your heart pumps blood. Faster pulse = more oxygen needed.' },
+  { title: 'Rainbow Skittles Stage', brief: 'Arrange Skittles in a circle on a plate, pour warm water — rainbow!', equipment: 'Plate, Skittles, warm water', minutes: 3, science: 'Sugar dissolves at the same rate; colors don\'t mix instantly.' },
+  { title: 'Paper Plane Concert Tour', brief: 'Fold 3 different paper planes. Time which flies longest.', equipment: 'Paper, stopwatch', minutes: 6, science: 'Lift, drag, and weight — same forces as real planes!' },
+  { title: 'Salt Water Egg Float', brief: 'Make an egg float by adding salt. How many spoons does it take?', equipment: 'Glass, egg, salt, water', minutes: 4, science: 'Density! Salt water is denser than fresh water.' },
+  { title: 'Shadow Stage Lighting', brief: 'Hold a torch close to a toy — shadow is huge. Move it back — shadow shrinks!', equipment: 'Torch, small toy', minutes: 2, science: 'Light travels in straight lines — distance changes shadow size.' },
+  { title: 'Mirror Choreography', brief: 'Two students copy each other in a mirror exactly. 60 sec. Pure focus!', equipment: 'Nothing!', minutes: 2, science: 'Mirror neurons — your brain literally copies what you see.' },
+  { title: 'Sound Cup Phone', brief: 'Two cups, one tight string. Whisper into one, friend hears the other.', equipment: '2 cups, string', minutes: 4, science: 'Sound = vibrations. String carries them between cups.' },
+  { title: 'Volcano Vocalist', brief: 'Bicarb soda + vinegar in a cup. ERUPTION! (Outside, please.)', equipment: 'Vinegar, bicarb, cup', minutes: 3, science: 'Acid + base = CO₂ gas, which makes the fizz.' },
+  { title: 'Floating Pencil Trick', brief: 'Hold a pencil loosely, shake your hand — it looks bendy!', equipment: 'A pencil', minutes: 1, science: 'Persistence of vision — your eyes blur fast motion.' },
+  { title: 'Idol Reaction Time', brief: 'Drop a ruler — partner catches it. cm = your reaction time!', equipment: '30cm ruler', minutes: 2, science: 'Your brain takes ~0.2 sec to react. Practice = faster!' },
+];
 
 interface QuizQ { q: string; options: string[]; correct: number; joke?: string; }
 
@@ -250,6 +282,38 @@ const JarvisHQ: React.FC = () => {
   const timerPct = timerSec > 0 ? (timerLeft / timerSec) * 100 : 0;
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
+  // ---- POWER CARDS ----
+  const [drawnCard, setDrawnCard] = useState<PowerCard | null>(null);
+  const [drawing, setDrawing] = useState(false);
+  const drawPowerCard = () => {
+    if (drawing) return;
+    playClick();
+    setDrawing(true);
+    setDrawnCard(null);
+    setTimeout(() => {
+      const r = Math.random();
+      const pool = r < 0.1
+        ? POWER_CARDS.filter(c => c.rarity === 'legendary')
+        : r < 0.4
+        ? POWER_CARDS.filter(c => c.rarity === 'rare')
+        : POWER_CARDS.filter(c => c.rarity === 'common');
+      const card = pool[Math.floor(Math.random() * pool.length)];
+      setDrawnCard(card);
+      setDrawing(false);
+      if (card.rarity === 'legendary') { playUnlock(); setConfetti(true); setTimeout(() => setConfetti(false), 2500); }
+      else playPop();
+    }, 900);
+  };
+
+  // ---- SCIENCE MISSIONS ----
+  const [mission, setMission] = useState<Mission | null>(null);
+  const drawMission = () => {
+    playClick();
+    const m = SCIENCE_MISSIONS[Math.floor(Math.random() * SCIENCE_MISSIONS.length)];
+    setMission(m);
+    playPop();
+  };
+
   // ---- NOISE ----
   const [cheer, setCheer] = useState<string | null>(null);
   const cheerTimer = useRef<number | null>(null);
@@ -268,6 +332,8 @@ const JarvisHQ: React.FC = () => {
     { id: 'reward', emoji: '🎁', label: 'Reward' },
     { id: 'timer', emoji: '⏱️', label: 'Timer' },
     { id: 'noise', emoji: '🔔', label: 'Cheer' },
+    { id: 'power', emoji: '🃏', label: 'Power' },
+    { id: 'science', emoji: '🧪', label: 'Science' },
   ];
 
   const PANEL_BG = { background: 'linear-gradient(135deg, #2d3a2e 0%, #1e2a1f 100%)' };
@@ -620,6 +686,92 @@ const JarvisHQ: React.FC = () => {
               className="w-full py-6 rounded-3xl bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 text-white font-fredoka text-3xl shadow-xl">
               🎉 FIRE THE CONFETTI! 🎉
             </motion.button>
+          </div>
+        )}
+
+        {tab === 'power' && (
+          <div className="rounded-3xl p-5 border-4 border-amber-700" style={PANEL_BG}>
+            <h3 className="font-fredoka text-amber-200 text-xl mb-1 text-center">🃏 Power Cards</h3>
+            <p className="font-nunito text-amber-100/80 text-sm mb-4 text-center">
+              Flip a card mid-game to keep teams close. Mr. Jarvis decides when to play one!
+            </p>
+            <motion.button whileTap={{ scale: 0.95 }} onClick={drawPowerCard} disabled={drawing}
+              className="w-full py-4 rounded-2xl bg-gradient-to-br from-purple-500 to-fuchsia-700 text-white font-fredoka text-2xl shadow-xl mb-4 disabled:opacity-60">
+              {drawing ? '🔀 Shuffling...' : '🎴 Draw a Power Card'}
+            </motion.button>
+            <AnimatePresence mode="wait">
+              {drawnCard && !drawing && (
+                <motion.div
+                  key={drawnCard.name}
+                  initial={{ rotateY: 180, scale: 0.6, opacity: 0 }}
+                  animate={{ rotateY: 0, scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.6, opacity: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className={`rounded-2xl p-5 border-4 text-center shadow-2xl ${
+                    drawnCard.rarity === 'legendary' ? 'bg-gradient-to-br from-yellow-300 to-amber-500 border-yellow-200 text-stone-900' :
+                    drawnCard.rarity === 'rare' ? 'bg-gradient-to-br from-purple-400 to-violet-600 border-purple-200 text-white' :
+                    'bg-gradient-to-br from-blue-400 to-cyan-500 border-blue-200 text-white'
+                  }`}
+                >
+                  <div className="text-xs font-nunito uppercase tracking-widest opacity-80 mb-1">
+                    {drawnCard.rarity === 'legendary' ? '★ LEGENDARY ★' : drawnCard.rarity === 'rare' ? '◆ RARE ◆' : '● COMMON ●'}
+                  </div>
+                  <div className="text-6xl mb-2">{drawnCard.emoji}</div>
+                  <div className="font-fredoka text-2xl mb-2">{drawnCard.name}</div>
+                  <div className="font-nunito text-base">{drawnCard.desc}</div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            <p className="font-nunito text-amber-100/60 text-xs mt-4 text-center">
+              💡 Save legendaries for the closest matches.
+            </p>
+          </div>
+        )}
+
+        {tab === 'science' && (
+          <div className="rounded-3xl p-5 border-4 border-amber-700" style={PANEL_BG}>
+            <h3 className="font-fredoka text-amber-200 text-xl mb-1 text-center">🧪 Idol Training Missions</h3>
+            <p className="font-nunito text-amber-100/80 text-sm mb-4 text-center">
+              Real science experiments — reframed as K-Pop idol training. Pick one for class!
+            </p>
+            <motion.button whileTap={{ scale: 0.95 }} onClick={drawMission}
+              className="w-full py-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-fredoka text-2xl shadow-xl mb-4">
+              🎲 Draw a Mission
+            </motion.button>
+            <AnimatePresence mode="wait">
+              {mission && (
+                <motion.div
+                  key={mission.title}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="bg-amber-50 text-stone-900 rounded-2xl p-5 border-4 border-amber-400 shadow-xl"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="text-xs font-nunito uppercase tracking-wider text-amber-700">Mission Card</div>
+                    <div className="text-xs font-fredoka text-amber-700">⏱️ {mission.minutes} min</div>
+                  </div>
+                  <h4 className="font-fredoka text-2xl text-stone-900 mb-2">🎯 {mission.title}</h4>
+                  <div className="bg-white rounded-xl p-3 mb-3 border-2 border-amber-200">
+                    <div className="font-nunito text-base">{mission.brief}</div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
+                    <div className="bg-stone-100 rounded-xl p-2">
+                      <div className="text-xs uppercase text-stone-500 font-nunito">Equipment</div>
+                      <div className="font-fredoka">{mission.equipment}</div>
+                    </div>
+                    <div className="bg-stone-100 rounded-xl p-2">
+                      <div className="text-xs uppercase text-stone-500 font-nunito">Duration</div>
+                      <div className="font-fredoka">{mission.minutes} minutes</div>
+                    </div>
+                  </div>
+                  <div className="bg-blue-50 border-l-4 border-blue-400 rounded-r-xl p-3">
+                    <div className="text-xs uppercase text-blue-700 font-nunito font-bold mb-1">🔬 The Science</div>
+                    <div className="font-nunito text-sm text-stone-700">{mission.science}</div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
       </div>
