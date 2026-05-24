@@ -41,26 +41,52 @@ const SCIENCE_MISSIONS: Mission[] = [
 interface QuizQ { q: string; options: string[]; correct: number; joke?: string; }
 
 const POP_QUIZ: QuizQ[] = [
+  // UK History & Geography
   { q: "What is the capital city of England?", options: ['Manchester', 'Birmingham', 'London', 'Leeds'], correct: 2, joke: "Home of Big Ben, red buses, and too much rain! ☂️" },
   { q: "Which river flows through London?", options: ['River Severn', 'River Thames', 'River Trent', 'River Avon'], correct: 1, joke: "Not the Avon — that's Shakespeare's turf! 🎭" },
-  { q: "What is the largest organ in the human body?", options: ['Brain', 'Heart', 'Liver', 'Skin'], correct: 3, joke: "You're literally wearing it right now! 🙌" },
-  { q: "In what year did the Great Fire of London start?", options: ['1566', '1666', '1766', '1866'], correct: 1, joke: "Started in a bakery on Pudding Lane. A baker did THAT." },
-  { q: "How many sides does a hexagon have?", options: ['5', '6', '7', '8'], correct: 1, joke: "Bees know this — check a honeycomb! 🐝" },
-  { q: "Which planet is closest to the Sun?", options: ['Venus', 'Earth', 'Mars', 'Mercury'], correct: 3, joke: "Mercury! Very hot, no atmosphere, 0/10 holiday destination 🌡️" },
-  { q: "What is H₂O more commonly known as?", options: ['Oxygen', 'Water', 'Carbon dioxide', 'Salt'], correct: 1, joke: "Two Hydrogens walk into a bar with Oxygen… 💧" },
-  { q: "Who wrote Romeo and Juliet?", options: ['Charles Dickens', 'Jane Austen', 'William Shakespeare', 'Geoffrey Chaucer'], correct: 2, joke: "Born in Stratford-upon-Avon — that IS the Avon! 🎭" },
-  { q: "How many bones are in the adult human body?", options: ['106', '206', '306', '406'], correct: 1, joke: "Babies have around 300 — they fuse over time! 🦴" },
-  { q: "What gas do plants absorb during photosynthesis?", options: ['Oxygen', 'Nitrogen', 'Carbon dioxide', 'Hydrogen'], correct: 2, joke: "Plants breathe in what we breathe out. Teamwork! 🌿" },
+  { q: "In what year did the Great Fire of London start?", options: ['1566', '1666', '1766', '1866'], correct: 1, joke: "Started in a bakery on Pudding Lane. A baker did THAT. 🔥" },
   { q: "Which London landmark is also called Elizabeth Tower?", options: ['The Shard', 'Buckingham Palace', 'Big Ben', 'St Paul\'s Cathedral'], correct: 2, joke: "Big Ben is actually the BELL, not the tower! 🔔" },
-  { q: "What is the chemical symbol for gold?", options: ['Go', 'Gd', 'Gl', 'Au'], correct: 3, joke: "From the Latin 'Aurum' — Romans loved the stuff 🏅" },
-  { q: "How many chambers does a human heart have?", options: ['2', '3', '4', '5'], correct: 2, joke: "Two atria, two ventricles. It works hard for you! ❤️" },
   { q: "What is the longest river in the UK?", options: ['River Thames', 'River Trent', 'River Severn', 'River Clyde'], correct: 2, joke: "The Severn stretches 354 km — longer than the Thames! 🌊" },
-  { q: "Which scientist discovered gravity (inspired by an apple)?", options: ['Charles Darwin', 'Isaac Newton', 'Stephen Hawking', 'Albert Einstein'], correct: 1, joke: "Born in Lincolnshire! UK represent! 🍎" },
-  { q: "What does DNA stand for?", options: ['Digital Network Array', 'Deoxyribonucleic Acid', 'Dynamic Nucleic Agent', 'Direct Nerve Alignment'], correct: 1, joke: "Every cell in your body has 2 metres of it. Impossible but true! 🧬" },
-  { q: "At what temperature does water boil (°C)?", options: ['90°C', '95°C', '100°C', '110°C'], correct: 2, joke: "The kettle in the staffroom knows this answer! ☕" },
   { q: "The Tower of London was originally built by which king?", options: ['King Henry VIII', 'King Richard I', 'King William I', 'King George III'], correct: 2, joke: "William the Conqueror built it in 1066 after a very busy year!" },
+  { q: "Which underground railway system is the oldest in the world?", options: ['Paris Métro', 'New York Subway', 'London Underground', 'Tokyo Metro'], correct: 2, joke: "Opened in 1863 — passengers wore top hats! 🎩" },
+  { q: "What is the name of the Queen's official London residence?", options: ['Windsor Castle', 'Kensington Palace', 'Buckingham Palace', 'Hampton Court'], correct: 2, joke: "Over 775 rooms — still Mr. Jarvis couldn't find the TV remote. 📺" },
+  { q: "In which English city was the Titanic built?", options: ['London', 'Liverpool', 'Southampton', 'Belfast'], correct: 3, joke: "Technically Belfast, which was in the UK at the time! Sneaky! 🚢" },
+  { q: "Which famous clock is found at the Royal Observatory in London?", options: ['The Big Ben Clock', 'The Shepherd Gate Clock', 'The Waterloo Clock', 'The Meridian Clock'], correct: 1, joke: "It marks Greenwich Mean Time — the UK says it's OUR time zone! 🕐" },
+  // Science
+  { q: "What is the largest organ in the human body?", options: ['Brain', 'Heart', 'Liver', 'Skin'], correct: 3, joke: "You're literally wearing it right now! 🙌" },
+  { q: "What gas do plants absorb during photosynthesis?", options: ['Oxygen', 'Nitrogen', 'Carbon dioxide', 'Hydrogen'], correct: 2, joke: "Plants breathe in what we breathe out. Teamwork! 🌿" },
+  { q: "How many bones are in the adult human body?", options: ['106', '206', '306', '406'], correct: 1, joke: "Babies have around 300 — they fuse over time! 🦴" },
+  { q: "At what temperature does water boil (°C)?", options: ['90°C', '95°C', '100°C', '110°C'], correct: 2, joke: "The kettle in the staffroom knows this answer! ☕" },
+  { q: "What does DNA stand for?", options: ['Digital Network Array', 'Deoxyribonucleic Acid', 'Dynamic Nucleic Agent', 'Direct Nerve Alignment'], correct: 1, joke: "Every cell in your body has 2 metres of it. Impossible but true! 🧬" },
   { q: "Which force pulls objects toward the Earth?", options: ['Magnetism', 'Friction', 'Gravity', 'Tension'], correct: 2, joke: "Same one that keeps Mr. Jarvis's feet on the ground! 🌍" },
+  { q: "What is H₂O more commonly known as?", options: ['Oxygen', 'Water', 'Carbon dioxide', 'Salt'], correct: 1, joke: "Two Hydrogens walk into a bar with Oxygen… 💧" },
+  { q: "How many chambers does a human heart have?", options: ['2', '3', '4', '5'], correct: 2, joke: "Two atria, two ventricles. It works hard for you! ❤️" },
+  { q: "What is the chemical symbol for gold?", options: ['Go', 'Gd', 'Gl', 'Au'], correct: 3, joke: "From the Latin 'Aurum' — Romans loved the stuff 🏅" },
+  { q: "What type of energy does the Sun produce?", options: ['Chemical energy', 'Nuclear fusion energy', 'Electrical energy', 'Wind energy'], correct: 1, joke: "Hydrogen smashes into helium and BOOM — sunlight! ☀️" },
+  { q: "How many sides does a hexagon have?", options: ['5', '6', '7', '8'], correct: 1, joke: "Bees know this — check a honeycomb! 🐝" },
   { q: "How many degrees are in a right angle?", options: ['45°', '90°', '180°', '360°'], correct: 1, joke: "Corners of this screen — all 90°! 📐" },
+  // Space
+  { q: "Which planet is closest to the Sun?", options: ['Venus', 'Earth', 'Mars', 'Mercury'], correct: 3, joke: "Mercury! Very hot, no atmosphere, 0/10 holiday destination 🌡️" },
+  { q: "How many planets are in our Solar System?", options: ['7', '8', '9', '10'], correct: 1, joke: "Poor Pluto was downgraded in 2006. Heartbreaking. 💔" },
+  { q: "What is the largest planet in our Solar System?", options: ['Saturn', 'Neptune', 'Jupiter', 'Uranus'], correct: 2, joke: "Jupiter is so big, 1,300 Earths fit inside it! 🌍×1300" },
+  { q: "Which country launched the first human into space?", options: ['USA', 'China', 'UK', 'Soviet Union'], correct: 3, joke: "Yuri Gagarin, 1961 — and no, Mr. Jarvis wasn't there yet." },
+  { q: "What is the name of the first human to walk on the Moon?", options: ['Buzz Aldrin', 'Neil Armstrong', 'Yuri Gagarin', 'Tim Peake'], correct: 1, joke: "\"One small step for man\" — in 1969, on a live TV signal more people watched than anything EVER. 🚀" },
+  { q: "Which British astronaut spent 6 months on the ISS in 2015?", options: ['Helen Sharman', 'Tim Peake', 'Piers Sellers', 'Michael Foale'], correct: 1, joke: "Tim Peake even ran the London Marathon — from SPACE! 🏃" },
+  { q: "How long does light from the Sun take to reach Earth?", options: ['8 seconds', '8 minutes', '8 hours', '8 days'], correct: 1, joke: "8 minutes 20 seconds — so if the Sun vanished you'd enjoy 8 more minutes of sunshine. Cheery! ☀️" },
+  { q: "What is a group of stars forming a pattern called?", options: ['Galaxy', 'Nebula', 'Constellation', 'Cluster'], correct: 2, joke: "Orion, the Great Bear, the Southern Cross — all dot-to-dot for adults! ⭐" },
+  // UK scientists & inventors
+  { q: "Which scientist discovered gravity (inspired by an apple)?", options: ['Charles Darwin', 'Isaac Newton', 'Stephen Hawking', 'Albert Einstein'], correct: 1, joke: "Born in Lincolnshire! UK represent! 🍎" },
+  { q: "Who wrote 'A Brief History of Time' and studied black holes?", options: ['Brian Cox', 'Stephen Hawking', 'Richard Dawkins', 'James Clerk Maxwell'], correct: 1, joke: "Stephen Hawking — Cambridge professor, absolute legend. 🌌" },
+  { q: "Who wrote Romeo and Juliet?", options: ['Charles Dickens', 'Jane Austen', 'William Shakespeare', 'Geoffrey Chaucer'], correct: 2, joke: "Born in Stratford-upon-Avon — that IS the Avon! 🎭" },
+  { q: "Which UK scientist co-discovered the structure of DNA?", options: ['Alexander Fleming', 'Francis Crick', 'Joseph Lister', 'Edward Jenner'], correct: 1, joke: "Francis Crick and James Watson in Cambridge, 1953. Watson's now very famous; Crick wrote a letter to his son about it. 🧬" },
+  { q: "Who invented the telephone?", options: ['Thomas Edison', 'Nikola Tesla', 'Alexander Graham Bell', 'Guglielmo Marconi'], correct: 2, joke: "Bell was Scottish! UK again! 📞" },
+  { q: "Which English doctor created the first smallpox vaccine?", options: ['Alexander Fleming', 'Joseph Lister', 'Edward Jenner', 'John Snow'], correct: 2, joke: "Jenner tested it on an 8-year-old in 1796. Health & safety would have words today. 💉" },
+  // Fun & tricky
+  { q: "How many sides does a 20p coin have?", options: ['5', '6', '7', '8'], correct: 2, joke: "Seven sides — it's an equilateral curve heptagon. Try saying THAT three times fast!" },
+  { q: "What colour is the circle on the Japanese flag?", options: ['White', 'Red', 'Blue', 'Gold'], correct: 1, joke: "Red — called Hinomaru, meaning 'circle of the sun'. Very dramatic. ☀️" },
+  { q: "How many stomachs does a cow have?", options: ['1', '2', '3', '4'], correct: 3, joke: "Four stomachs! The most hardworking digestive system in the field. 🐄" },
+  { q: "What is the speed of light (approximately)?", options: ['30,000 km/s', '300,000 km/s', '3,000,000 km/s', '30 km/s'], correct: 1, joke: "300,000 km per second — fast enough to go around Earth 7½ times in one second! ⚡" },
+  { q: "Which layer of the Earth do we live on?", options: ['Inner core', 'Outer core', 'Mantle', 'Crust'], correct: 3, joke: "The crust! About 30 km thick under land — like the skin on a custard. 🥧" },
 ];
 
 const CHEER_LINES = [
@@ -134,12 +160,13 @@ const JarvisHQ: React.FC = () => {
   const [classWins, setClassWins] = useState<string | null>(null);
 
   // ---- POP QUIZ ----
+  const [shuffled] = useState<QuizQ[]>(() => [...POP_QUIZ].sort(() => Math.random() - 0.5));
   const [qIdx, setQIdx] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [pick, setPick] = useState<number | null>(null);
   const [classScore, setClassScore] = useState(0);
   const [classMisses, setClassMisses] = useState(0);
-  const q = POP_QUIZ[qIdx];
+  const q = shuffled[qIdx];
 
   const answer = (i: number) => {
     if (revealed) return;
@@ -154,7 +181,7 @@ const JarvisHQ: React.FC = () => {
       setTimeout(() => playWin(), 600);
     }
   };
-  const nextQ = () => { playPop(); setRevealed(false); setPick(null); setQIdx(i => (i + 1) % POP_QUIZ.length); };
+  const nextQ = () => { playPop(); setRevealed(false); setPick(null); setQIdx(i => (i + 1) % shuffled.length); };
   const resetQuiz = () => { setClassScore(0); setClassMisses(0); setQIdx(0); setRevealed(false); setPick(null); playClick(); };
 
   // ---- ROSTER ----
