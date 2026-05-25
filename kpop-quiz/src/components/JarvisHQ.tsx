@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
 import { playClick, playPop, playWin, playCorrect, playWrong, playUnlock, playTick, playTimeOut } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
+import { easyQuestions, normalQuestions } from '../quizData';
 
-type Tab = 'quiz' | 'rollcall' | 'stars' | 'battle' | 'reward' | 'timer' | 'noise' | 'power' | 'science';
+type Tab = 'quiz' | 'rollcall' | 'stars' | 'battle' | 'reward' | 'timer' | 'noise' | 'power' | 'science' | 'boss';
 
 interface PowerCard { name: string; emoji: string; desc: string; rarity: 'common' | 'rare' | 'legendary'; }
 const POWER_CARDS: PowerCard[] = [
@@ -309,6 +310,41 @@ const JarvisHQ: React.FC = () => {
   const timerPct = timerSec > 0 ? (timerLeft / timerSec) * 100 : 0;
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
+  // ---- BOSS BATTLE ----
+  const BOSS_HP_MAX = 20;
+  const BOSS_POOL = [...easyQuestions, ...normalQuestions].sort(() => Math.random() - 0.5).slice(0, 40);
+  const [bossActive, setBossActive] = useState(false);
+  const [bossHP, setBossHP] = useState(BOSS_HP_MAX);
+  const [bossQIdx, setBossQIdx] = useState(0);
+  const [bossRevealed, setBossRevealed] = useState(false);
+  const [bossPick, setBossPick] = useState<number | null>(null);
+  const [bossWon, setBossWon] = useState(false);
+  const [bossLost, setBossLost] = useState(false);
+
+  const bossQ = BOSS_POOL[bossQIdx % BOSS_POOL.length];
+  const bossCorrectIdx = bossQ?.answers.findIndex(a => a.isCorrect) ?? 0;
+
+  const answerBoss = (i: number) => {
+    if (bossRevealed) return;
+    playClick();
+    setBossPick(i);
+    setBossRevealed(true);
+    if (i === bossCorrectIdx) {
+      playCorrect();
+      const next = bossHP - 1;
+      setBossHP(next);
+      if (next <= 0) { setBossWon(true); setBossActive(false); setConfetti(true); playUnlock(); setTimeout(() => setConfetti(false), 4000); }
+    } else {
+      playWrong();
+      const next = Math.min(bossHP + 1, BOSS_HP_MAX);
+      setBossHP(next);
+      if (next >= BOSS_HP_MAX && bossQIdx > 3) { setBossLost(true); setBossActive(false); }
+    }
+  };
+  const nextBossQ = () => { setBossRevealed(false); setBossPick(null); setBossQIdx(i => i + 1); playPop(); };
+  const startBoss = () => { setBossHP(BOSS_HP_MAX); setBossQIdx(0); setBossRevealed(false); setBossPick(null); setBossWon(false); setBossLost(false); setBossActive(true); playWin(); };
+  const resetBoss = () => { setBossActive(false); setBossWon(false); setBossLost(false); setBossHP(BOSS_HP_MAX); };
+
   // ---- POWER CARDS ----
   const [drawnCard, setDrawnCard] = useState<PowerCard | null>(null);
   const [drawing, setDrawing] = useState(false);
@@ -361,6 +397,7 @@ const JarvisHQ: React.FC = () => {
     { id: 'noise', emoji: '🔔', label: 'Cheer' },
     { id: 'power', emoji: '🃏', label: 'Power' },
     { id: 'science', emoji: '🧪', label: 'Science' },
+    { id: 'boss', emoji: '👹', label: 'Boss' },
   ];
 
   const PANEL_BG = { background: 'linear-gradient(135deg, #2d3a2e 0%, #1e2a1f 100%)' };
@@ -752,6 +789,105 @@ const JarvisHQ: React.FC = () => {
             <p className="font-nunito text-amber-100/60 text-xs mt-4 text-center">
               💡 Save legendaries for the closest matches.
             </p>
+          </div>
+        )}
+
+        {tab === 'boss' && (
+          <div className="rounded-3xl p-5 border-4 border-red-700" style={PANEL_BG}>
+            <h3 className="font-fredoka text-red-300 text-xl mb-1 text-center">👹 Boss Battle</h3>
+            <p className="font-nunito text-amber-100/80 text-sm mb-4 text-center">
+              Class vs the Anti-Fan Boss! Correct answers deal damage — wrong answers heal the Boss.
+            </p>
+
+            {!bossActive && !bossWon && !bossLost && (
+              <motion.button whileTap={{ scale: 0.95 }} onClick={startBoss}
+                className="w-full py-5 rounded-2xl bg-gradient-to-br from-red-600 to-rose-800 text-white font-fredoka text-2xl shadow-xl">
+                👹 Summon the Anti-Fan Boss!
+              </motion.button>
+            )}
+
+            {(bossActive || bossWon || bossLost) && (
+              <>
+                {/* Boss health bar */}
+                <div className="mb-4">
+                  <div className="flex justify-between font-nunito text-sm text-amber-200 mb-1">
+                    <span>👹 Anti-Fan Boss HP</span>
+                    <span className="font-bold">{bossHP} / {BOSS_HP_MAX}</span>
+                  </div>
+                  <div className="h-6 bg-stone-900 rounded-full overflow-hidden border-2 border-red-700">
+                    <motion.div
+                      animate={{ width: `${(bossHP / BOSS_HP_MAX) * 100}%` }}
+                      transition={{ duration: 0.5 }}
+                      className="h-full rounded-full"
+                      style={{ background: bossHP <= 5 ? 'linear-gradient(90deg,#16a34a,#15803d)' : bossHP <= 10 ? 'linear-gradient(90deg,#f59e0b,#ef4444)' : 'linear-gradient(90deg,#ef4444,#b91c1c)' }}
+                    />
+                  </div>
+                  <div className="flex gap-1 mt-1 justify-center">
+                    {Array.from({ length: BOSS_HP_MAX }).map((_, i) => (
+                      <div key={i} className={`w-2 h-2 rounded-full ${i < bossHP ? 'bg-red-500' : 'bg-stone-700'}`} />
+                    ))}
+                  </div>
+                </div>
+
+                {bossWon && (
+                  <motion.div initial={{ scale: 0.7 }} animate={{ scale: 1 }}
+                    className="text-center py-6">
+                    <div className="text-6xl mb-2">🏆</div>
+                    <div className="font-fredoka text-3xl text-yellow-300 mb-2">CLASS WINS!</div>
+                    <div className="font-nunito text-amber-100 mb-4">The Anti-Fan Boss is defeated! 🎉</div>
+                    <button onClick={resetBoss} className="px-6 py-3 rounded-2xl bg-amber-500 text-stone-900 font-fredoka text-lg">Play Again</button>
+                  </motion.div>
+                )}
+
+                {bossLost && (
+                  <motion.div initial={{ scale: 0.7 }} animate={{ scale: 1 }}
+                    className="text-center py-6">
+                    <div className="text-6xl mb-2">💀</div>
+                    <div className="font-fredoka text-3xl text-red-400 mb-2">BOSS WINS... THIS TIME!</div>
+                    <div className="font-nunito text-amber-100 mb-4">The class needs more training! Try again 💪</div>
+                    <button onClick={resetBoss} className="px-6 py-3 rounded-2xl bg-red-700 text-white font-fredoka text-lg">Rematch!</button>
+                  </motion.div>
+                )}
+
+                {bossActive && bossQ && (
+                  <>
+                    <div className="bg-stone-900 rounded-2xl p-4 mb-3 border border-stone-700">
+                      <div className="font-nunito text-xs text-amber-400 uppercase mb-2">Question {bossQIdx + 1}</div>
+                      <div className="font-fredoka text-amber-100 text-lg leading-snug">{bossQ.questionText}</div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 mb-3">
+                      {bossQ.answers.map((ans, i) => {
+                        const isRight = bossRevealed && i === bossCorrectIdx;
+                        const isWrong = bossRevealed && bossPick === i && i !== bossCorrectIdx;
+                        return (
+                          <motion.button
+                            key={i}
+                            whileTap={{ scale: bossRevealed ? 1 : 0.96 }}
+                            onClick={() => answerBoss(i)}
+                            disabled={bossRevealed}
+                            className={`p-3 rounded-xl font-nunito text-sm text-left border-2 transition-colors ${
+                              isRight ? 'bg-green-800 border-green-400 text-green-100' :
+                              isWrong ? 'bg-red-900 border-red-500 text-red-200' :
+                              'bg-stone-800 border-stone-600 text-amber-100 hover:border-amber-500'
+                            }`}
+                          >
+                            {ans.answerText}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                    {bossRevealed && (
+                      <motion.button
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                        onClick={nextBossQ}
+                        className="w-full py-3 rounded-2xl bg-amber-500 text-stone-900 font-fredoka text-lg">
+                        Next Question →
+                      </motion.button>
+                    )}
+                  </>
+                )}
+              </>
+            )}
           </div>
         )}
 

@@ -54,6 +54,9 @@ import IdolDiary from './components/IdolDiary';
 import JarvisHQ from './components/JarvisHQ';
 import GuessTheIntro from './components/GuessTheIntro';
 import IdolProfileCard from './components/IdolProfileCard';
+import FMRadio from './components/FMRadio';
+import FreezeDance from './components/FreezeDance';
+import ChaoticBackstage from './components/ChaoticBackstage';
 
 function App() {
   const { gameState } = useGameStore();
@@ -166,6 +169,12 @@ function App() {
         return <GuessTheIntro key="guess_intro" />;
       case 'idol_profile':
         return <IdolProfileCard key="idol_profile" />;
+      case 'fm_radio':
+        return <FMRadio key="fm_radio" />;
+      case 'freeze_dance':
+        return <FreezeDance key="freeze_dance" />;
+      case 'chaotic_backstage':
+        return <ChaoticBackstage key="chaotic_backstage" />;
       default:
         return <WelcomeScreen key="welcome" />;
     }
@@ -176,7 +185,7 @@ function App() {
       <AnimatePresence mode="wait">
         {renderCurrentScreen()}
       </AnimatePresence>
-      {gameState !== 'living_mural' && <MusicPlayer />}
+      {gameState !== 'living_mural' && gameState !== 'fm_radio' && <MusicPlayer />}
     </div>
   );
 }

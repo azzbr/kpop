@@ -343,6 +343,33 @@ const GameModeSelection: React.FC = () => {
       borderColor: 'border-pink-400'
     },
     {
+      id: 'fm_radio' as GameMode,
+      title: '📻 HUNTR/X FM Radio',
+      description: 'Tune into the class station — full controls, visualiser, and shoutout button!',
+      icon: '📻',
+      color: 'from-purple-700 to-fuchsia-900',
+      bgColor: 'bg-slate-900',
+      borderColor: 'border-purple-500'
+    },
+    {
+      id: 'freeze_dance' as GameMode,
+      title: '💃 Freeze Dance',
+      description: 'Music plays, everyone dances — freeze when it stops and hold the pose!',
+      icon: '❄️',
+      color: 'from-cyan-400 to-blue-600',
+      bgColor: 'bg-cyan-50',
+      borderColor: 'border-cyan-300'
+    },
+    {
+      id: 'chaotic_backstage' as GameMode,
+      title: '🎭 Chaotic Backstage',
+      description: 'Each student fills one blank — Mr. Jarvis reads the whole story aloud!',
+      icon: '🎭',
+      color: 'from-rose-500 to-fuchsia-600',
+      bgColor: 'bg-rose-50',
+      borderColor: 'border-rose-300'
+    },
+    {
       id: 'guess_intro' as GameMode,
       title: '🎧 Guess the Intro',
       description: 'Hear a 1.5-second snippet — name the HUNTR/X song!',
@@ -447,6 +474,12 @@ const GameModeSelection: React.FC = () => {
       setGameState('guess_intro');
     } else if (mode === 'idol_profile') {
       setGameState('idol_profile');
+    } else if (mode === 'fm_radio') {
+      setGameState('fm_radio');
+    } else if (mode === 'freeze_dance') {
+      setGameState('freeze_dance');
+    } else if (mode === 'chaotic_backstage') {
+      setGameState('chaotic_backstage');
     }
     addXP(5);
   };
@@ -585,10 +618,10 @@ const GameModeSelection: React.FC = () => {
                     {mode.icon}
                   </div>
                   <div className="flex-1">
-                    <h3 className={`text-xl md:text-2xl font-fredoka font-bold mb-2 ${mode.id === 'boys_zone' || mode.id === 'jarvis_hq' ? 'text-white' : 'text-gray-800'}`}>
+                    <h3 className={`text-xl md:text-2xl font-fredoka font-bold mb-2 ${mode.id === 'boys_zone' || mode.id === 'jarvis_hq' || mode.id === 'fm_radio' ? 'text-white' : 'text-gray-800'}`}>
                       {mode.title}
                     </h3>
-                    <p className={`text-sm md:text-base leading-relaxed font-nunito ${mode.id === 'boys_zone' ? 'text-blue-200' : mode.id === 'jarvis_hq' ? 'text-amber-100' : 'text-gray-600'}`}>
+                    <p className={`text-sm md:text-base leading-relaxed font-nunito ${mode.id === 'boys_zone' ? 'text-blue-200' : mode.id === 'jarvis_hq' ? 'text-amber-100' : mode.id === 'fm_radio' ? 'text-purple-200' : 'text-gray-600'}`}>
                       {mode.description}
                     </p>
                   </div>
