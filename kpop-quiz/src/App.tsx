@@ -58,6 +58,7 @@ import FMRadio from './components/FMRadio';
 import FreezeDance from './components/FreezeDance';
 import ChaoticBackstage from './components/ChaoticBackstage';
 import TugOfWar from './components/TugOfWar';
+import OnlineHub from './components/online/OnlineHub';
 
 function App() {
   const { gameState } = useGameStore();
@@ -178,6 +179,8 @@ function App() {
         return <ChaoticBackstage key="chaotic_backstage" />;
       case 'tug_of_war':
         return <TugOfWar key="tug_of_war" />;
+      case 'online_hub':
+        return <OnlineHub key="online_hub" />;
       default:
         return <WelcomeScreen key="welcome" />;
     }

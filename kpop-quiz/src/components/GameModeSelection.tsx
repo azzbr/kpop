@@ -388,6 +388,15 @@ const GameModeSelection: React.FC = () => {
       borderColor: 'border-pink-300'
     },
     {
+      id: 'online_hub' as GameMode,
+      title: '🌐 Friends Arena — ONLINE!',
+      description: 'Create a room, share the 4-letter code, and battle friends on other devices! Duels, teams, board race & class quiz show!',
+      icon: '🌐',
+      color: 'from-emerald-400 to-cyan-600',
+      bgColor: 'bg-emerald-50',
+      borderColor: 'border-emerald-300'
+    },
+    {
       id: 'tug_of_war' as GameMode,
       title: '🪢 Lightstick Tug-of-War',
       description: '2 players! Mash your button and drag the lightstick to your side — best of 3!',
@@ -491,6 +500,8 @@ const GameModeSelection: React.FC = () => {
       setGameState('chaotic_backstage');
     } else if (mode === 'tug_of_war') {
       setGameState('tug_of_war');
+    } else if (mode === 'online_hub') {
+      setGameState('online_hub');
     }
     addXP(5);
   };
