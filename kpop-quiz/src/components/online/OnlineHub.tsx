@@ -8,14 +8,24 @@ import QuizDuelOnline from './QuizDuelOnline';
 import TeamTugOnline from './TeamTugOnline';
 import WorldTourRace from './WorldTourRace';
 import ClassQuizShow from './ClassQuizShow';
+import RocketTapRace from './RocketTapRace';
+import CopyCat from './CopyCat';
+import TimesTableBingo from './TimesTableBingo';
+import DoodleDash from './DoodleDash';
+import PenaltyDuel from './PenaltyDuel';
 
 const EMOJIS = ['🎤', '🎸', '🥁', '🎹', '🎧', '🌟', '💖', '🔥', '🦄', '🐯', '🐰', '🦊'];
 
 const GAMES: { id: GameId; icon: string; title: string; desc: string; min: number; max: number; tag: string }[] = [
-  { id: 'quiz_duel', icon: '⚔️', title: 'Quiz Duel', desc: 'Same question, two screens — fastest correct answer steals the round!', min: 2, max: 2, tag: '1 vs 1' },
+  { id: 'class_show', icon: '🎤', title: 'Class Quiz Show', desc: 'Pick a subject — Maths, Science, English & more. Everyone answers on their device!', min: 2, max: 31, tag: 'whole class!' },
+  { id: 'doodle_dash', icon: '🎨', title: 'Doodle Dash', desc: 'One draws, everyone guesses — the doodle appears live on every screen!', min: 2, max: 30, tag: 'whole class!' },
+  { id: 'tt_bingo', icon: '🔢', title: 'Times-Table Bingo', desc: 'Solve the call, find it on your card — first full line shouts BINGO!', min: 2, max: 30, tag: 'whole class!' },
+  { id: 'rocket_race', icon: '🚀', title: 'Rocket Tap Race', desc: 'Mash to blast off! Every rocket races on screen — first to the moon!', min: 2, max: 30, tag: 'whole class!' },
+  { id: 'copy_cat', icon: '🧠', title: 'Copy Cat', desc: 'Watch the pattern, repeat it perfectly. One slip = out. Last one standing wins!', min: 2, max: 30, tag: 'whole class!' },
+  { id: 'quiz_duel', icon: '⚔️', title: 'Quiz Duel', desc: 'School questions, two screens — fastest correct answer steals the round!', min: 2, max: 2, tag: '1 vs 1' },
+  { id: 'penalty_duel', icon: '⚽', title: 'Penalty Duel', desc: 'Shooter vs keeper — pick your corner and outsmart your rival in 5 penalties!', min: 2, max: 2, tag: '1 vs 1' },
   { id: 'team_tug', icon: '🪢', title: 'Team Tug-of-War', desc: 'Two teams mash to pull the star. Teamwork = power!', min: 2, max: 8, tag: '2v2 up to 4v4' },
-  { id: 'world_tour', icon: '✈️', title: 'K-Pop World Tour', desc: 'Board race Seoul → London! Dice, boosts, traps & pop-quiz tiles.', min: 2, max: 4, tag: '2–4 players' },
-  { id: 'class_show', icon: '🎤', title: 'Class Quiz Show', desc: 'Host runs the show on the big screen, everyone answers on their device!', min: 2, max: 31, tag: 'whole class!' },
+  { id: 'world_tour', icon: '✈️', title: 'World Tour Race', desc: 'Board race Seoul → London! Dice, boosts, traps & school quiz tiles.', min: 2, max: 4, tag: '2–4 players' },
 ];
 
 type HubScreen = 'menu' | 'create' | 'join' | 'lobby';
@@ -114,6 +124,11 @@ const OnlineHub: React.FC = () => {
         {activeGame === 'team_tug' && <TeamTugOnline room={api} />}
         {activeGame === 'world_tour' && <WorldTourRace room={api} />}
         {activeGame === 'class_show' && <ClassQuizShow room={api} />}
+        {activeGame === 'rocket_race' && <RocketTapRace room={api} />}
+        {activeGame === 'copy_cat' && <CopyCat room={api} />}
+        {activeGame === 'tt_bingo' && <TimesTableBingo room={api} />}
+        {activeGame === 'doodle_dash' && <DoodleDash room={api} />}
+        {activeGame === 'penalty_duel' && <PenaltyDuel room={api} />}
         <button
           onClick={leaveToMenu}
           className="fixed top-2 right-2 z-50 bg-black/40 hover:bg-black/60 text-white/80 rounded-full px-3 py-1 font-fredoka text-xs"

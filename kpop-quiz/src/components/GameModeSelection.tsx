@@ -390,7 +390,7 @@ const GameModeSelection: React.FC = () => {
     {
       id: 'online_hub' as GameMode,
       title: '🌐 Friends Arena — ONLINE!',
-      description: 'Create a room, share the 4-letter code, and battle friends on other devices! Duels, teams, board race & class quiz show!',
+      description: 'Create a room, share the 4-letter code, and play on different devices! 9 games: quiz show, doodles, bingo, rockets, penalties & more — whole class welcome!',
       icon: '🌐',
       color: 'from-emerald-400 to-cyan-600',
       bgColor: 'bg-emerald-50',

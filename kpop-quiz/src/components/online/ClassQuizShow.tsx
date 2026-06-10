@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../../store';
 import type { RoomApi } from '../../online/useRoom';
-import { easyQuestions, normalQuestions, hardQuestions } from '../../quizData';
+import { pickQuestions, CATEGORIES } from '../../online/schoolQuestions';
+import type { PreparedQ, SchoolCategory } from '../../online/schoolQuestions';
 import { playClick, playCorrect, playWrong, playWin } from '../../utils/sounds';
 import ConfettiBurst from './../ConfettiBurst';
 
@@ -15,26 +16,6 @@ const ANSWER_STYLES = [
   { shape: '●', bg: 'from-amber-400 to-orange-500' },
   { shape: '■', bg: 'from-emerald-500 to-green-600' },
 ];
-
-interface PreparedQ {
-  text: string;
-  options: string[];
-  correct: number;
-}
-
-function prepareQuestions(): PreparedQ[] {
-  return [...easyQuestions, ...normalQuestions, ...hardQuestions]
-    .sort(() => Math.random() - 0.5)
-    .slice(0, TOTAL_Q)
-    .map((q) => {
-      const answers = [...q.answers].sort(() => Math.random() - 0.5);
-      return {
-        text: q.questionText,
-        options: answers.map((a) => a.answerText),
-        correct: answers.findIndex((a) => a.isCorrect),
-      };
-    });
-}
 
 interface TopEntry {
   id: string;
@@ -58,6 +39,7 @@ const ClassQuizShow: React.FC<{ room: RoomApi }> = ({ room }) => {
   const [answeredIds, setAnsweredIds] = useState<string[]>([]);
   const [reveal, setReveal] = useState<{ correct: number; counts: number[]; gained: Record<string, number>; scores: Record<string, number>; top: TopEntry[] } | null>(null);
   const [podium, setPodium] = useState<TopEntry[] | null>(null);
+  const [subject, setSubject] = useState<SchoolCategory | 'mix'>('mix');
   const xpGiven = useRef(false);
 
   const playersRef = useRef(players);
@@ -79,7 +61,6 @@ const ClassQuizShow: React.FC<{ room: RoomApi }> = ({ room }) => {
 
   useEffect(() => {
     if (!isHost) return;
-    hd.current.qs = prepareQuestions();
     return () => window.clearTimeout(hd.current.timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -230,11 +211,25 @@ const ClassQuizShow: React.FC<{ room: RoomApi }> = ({ room }) => {
             {isHost ? (
               <>
                 <div className="font-fredoka text-2xl mb-2">{students.length} contestant{students.length === 1 ? '' : 's'} ready!</div>
-                <div className="font-nunito text-fuchsia-200 mb-6">{TOTAL_Q} questions · 20 seconds each · fastest correct answers score the most!</div>
+                <div className="font-nunito text-fuchsia-200 mb-4">{TOTAL_Q} questions · 20 seconds each · fastest correct answers score the most!</div>
+                <div className="font-fredoka text-fuchsia-200 mb-2">📖 Pick a subject:</div>
+                <div className="flex flex-wrap justify-center gap-2 mb-6">
+                  {CATEGORIES.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => { playClick(); setSubject(c.id); }}
+                      className={`rounded-full px-4 py-2 font-fredoka text-sm border-2 transition-all ${
+                        subject === c.id ? 'border-amber-400 bg-amber-400/25 shadow-lg' : 'border-white/15 bg-white/5 hover:bg-white/10'
+                      }`}
+                    >
+                      {c.emoji} {c.label}
+                    </button>
+                  ))}
+                </div>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => { playClick(); hostSendQ(1); }}
+                  onClick={() => { playClick(); hd.current.qs = pickQuestions(subject, TOTAL_Q); hostSendQ(1); }}
                   className="px-10 py-4 rounded-full font-fredoka font-bold text-xl bg-gradient-to-r from-amber-400 to-pink-500 shadow-xl"
                 >
                   🎬 Start the Show!

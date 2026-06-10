@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store';
 import type { RoomApi } from '../../online/useRoom';
-import { easyQuestions } from '../../quizData';
+import { pickQuestions } from '../../online/schoolQuestions';
+import type { PreparedQ } from '../../online/schoolQuestions';
 import { playClick, playCorrect, playWrong, playWin, playCoin, playPop } from '../../utils/sounds';
 import ConfettiBurst from './../ConfettiBurst';
 
@@ -52,25 +53,6 @@ const TILE_TINT: Record<TileKind, string> = {
   finish: 'bg-amber-400/40 border-amber-300',
 };
 
-interface PreparedQ {
-  text: string;
-  options: string[];
-  correct: number;
-}
-
-function prepareQuestions(): PreparedQ[] {
-  return [...easyQuestions]
-    .sort(() => Math.random() - 0.5)
-    .map((q) => {
-      const answers = [...q.answers].sort(() => Math.random() - 0.5);
-      return {
-        text: q.questionText,
-        options: answers.map((a) => a.answerText),
-        correct: answers.findIndex((a) => a.isCorrect),
-      };
-    });
-}
-
 const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -116,7 +98,7 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
       h.pos[id] = 0;
       h.coins[id] = 0;
     });
-    h.qs = prepareQuestions();
+    h.qs = pickQuestions('mix', 20);
 
     const sendTurn = () => {
       if (h.finished) return;

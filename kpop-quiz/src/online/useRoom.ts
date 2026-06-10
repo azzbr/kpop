@@ -2,7 +2,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from './supabaseClient';
 
-export type GameId = 'quiz_duel' | 'team_tug' | 'world_tour' | 'class_show';
+export type GameId =
+  | 'quiz_duel'
+  | 'team_tug'
+  | 'world_tour'
+  | 'class_show'
+  | 'rocket_race'
+  | 'copy_cat'
+  | 'tt_bingo'
+  | 'doodle_dash'
+  | 'penalty_duel';
 
 export interface RoomPlayer {
   id: string;

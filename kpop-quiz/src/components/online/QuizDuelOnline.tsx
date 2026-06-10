@@ -2,32 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store';
 import type { RoomApi } from '../../online/useRoom';
-import { easyQuestions, normalQuestions } from '../../quizData';
+import { pickQuestions } from '../../online/schoolQuestions';
+import type { PreparedQ } from '../../online/schoolQuestions';
 import { playClick, playCorrect, playWrong, playWin, playTick } from '../../utils/sounds';
 import ConfettiBurst from './../ConfettiBurst';
 
 const ROUNDS = 7;
 const SECS = 12;
-
-interface PreparedQ {
-  text: string;
-  options: string[];
-  correct: number;
-}
-
-function prepareQuestions(count: number): PreparedQ[] {
-  return [...easyQuestions, ...normalQuestions]
-    .sort(() => Math.random() - 0.5)
-    .slice(0, count)
-    .map((q) => {
-      const answers = [...q.answers].sort(() => Math.random() - 0.5);
-      return {
-        text: q.questionText,
-        options: answers.map((a) => a.answerText),
-        correct: answers.findIndex((a) => a.isCorrect),
-      };
-    });
-}
 
 type Phase = 'intro' | 'q' | 'result' | 'final';
 
@@ -68,7 +49,7 @@ const QuizDuelOnline: React.FC<{ room: RoomApi }> = ({ room }) => {
   useEffect(() => {
     if (!isHost) return;
     const h = hd.current;
-    h.qs = prepareQuestions(ROUNDS);
+    h.qs = pickQuestions('mix', ROUNDS);
     h.playerIds = players.slice(0, 2).map((p) => p.id);
     h.scores = {};
     h.playerIds.forEach((id) => (h.scores[id] = 0));
@@ -191,7 +172,7 @@ const QuizDuelOnline: React.FC<{ room: RoomApi }> = ({ room }) => {
   const hostRematch = () => {
     playClick();
     const h = hd.current;
-    h.qs = prepareQuestions(ROUNDS);
+    h.qs = pickQuestions('mix', ROUNDS);
     h.scores = {};
     h.playerIds.forEach((id) => (h.scores[id] = 0));
     xpGiven.current = false;
