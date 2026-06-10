@@ -387,6 +387,15 @@ const GameModeSelection: React.FC = () => {
       bgColor: 'bg-pink-50',
       borderColor: 'border-pink-300'
     },
+    {
+      id: 'tug_of_war' as GameMode,
+      title: '🪢 Lightstick Tug-of-War',
+      description: '2 players! Mash your button and drag the lightstick to your side — best of 3!',
+      icon: '🪢',
+      color: 'from-amber-400 to-pink-600',
+      bgColor: 'bg-amber-50',
+      borderColor: 'border-amber-300'
+    },
     ...(typeof window !== 'undefined' && localStorage.getItem('jarvis_mode') === '1' ? [{
       id: 'jarvis_hq' as GameMode,
       title: "🍎 Mr. Jarvis's Lounge",
@@ -480,6 +489,8 @@ const GameModeSelection: React.FC = () => {
       setGameState('freeze_dance');
     } else if (mode === 'chaotic_backstage') {
       setGameState('chaotic_backstage');
+    } else if (mode === 'tug_of_war') {
+      setGameState('tug_of_war');
     }
     addXP(5);
   };

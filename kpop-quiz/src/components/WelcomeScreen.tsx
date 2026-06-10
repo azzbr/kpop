@@ -70,10 +70,18 @@ const WelcomeScreen: React.FC = () => {
     }
   };
 
+  // Teacher mode unlocks on any spelling of the teacher's name (John Jarvis):
+  // "Jarvis", "Mr Jarvis", "Mr. Jarvis", "John Jarvis", "J-Jarvis", "Mr J", "John J"...
+  const isJarvisName = (raw: string) => {
+    const letters = raw.toLowerCase().replace(/[^a-z]/g, '');
+    return letters.includes('jarvis') || letters === 'mrj' || letters === 'johnj';
+  };
+
   // Easter egg 1: detect HUNTRX in name input
   const handleNameChange = (val: string) => {
     setInputName(val);
     const upper = val.toUpperCase().trim();
+    const jarvisName = isJarvisName(val);
     if (upper === 'HUNTRX' && !huntrxMode) {
       setHuntrxMode(true);
       setJarvisMode(false);
@@ -81,11 +89,11 @@ const WelcomeScreen: React.FC = () => {
     } else if (upper !== 'HUNTRX') {
       setHuntrxMode(false);
     }
-    if (upper === 'JARVIS' && !jarvisMode) {
+    if (jarvisName && !jarvisMode) {
       setJarvisMode(true);
       localStorage.setItem('jarvis_mode', '1');
       playUnlock();
-    } else if (upper !== 'JARVIS') {
+    } else if (!jarvisName) {
       setJarvisMode(false);
     }
   };

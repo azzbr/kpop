@@ -57,6 +57,7 @@ import IdolProfileCard from './components/IdolProfileCard';
 import FMRadio from './components/FMRadio';
 import FreezeDance from './components/FreezeDance';
 import ChaoticBackstage from './components/ChaoticBackstage';
+import TugOfWar from './components/TugOfWar';
 
 function App() {
   const { gameState } = useGameStore();
@@ -175,6 +176,8 @@ function App() {
         return <FreezeDance key="freeze_dance" />;
       case 'chaotic_backstage':
         return <ChaoticBackstage key="chaotic_backstage" />;
+      case 'tug_of_war':
+        return <TugOfWar key="tug_of_war" />;
       default:
         return <WelcomeScreen key="welcome" />;
     }
