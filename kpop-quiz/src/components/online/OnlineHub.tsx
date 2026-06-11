@@ -13,6 +13,7 @@ import CopyCat from './CopyCat';
 import TimesTableBingo from './TimesTableBingo';
 import DoodleDash from './DoodleDash';
 import PenaltyDuel from './PenaltyDuel';
+import MonopolyDeal from './MonopolyDeal';
 
 const EMOJIS = ['🎤', '🎸', '🥁', '🎹', '🎧', '🌟', '💖', '🔥', '🦄', '🐯', '🐰', '🦊'];
 
@@ -25,7 +26,8 @@ const GAMES: { id: GameId; icon: string; title: string; desc: string; min: numbe
   { id: 'quiz_duel', icon: '⚔️', title: 'Quiz Duel', desc: 'School questions, two screens — fastest correct answer steals the round!', min: 2, max: 2, tag: '1 vs 1' },
   { id: 'penalty_duel', icon: '⚽', title: 'Penalty Duel', desc: 'Shooter vs keeper — pick your corner and outsmart your rival in 5 penalties!', min: 2, max: 2, tag: '1 vs 1' },
   { id: 'team_tug', icon: '🪢', title: 'Team Tug-of-War', desc: 'Two teams mash to pull the star. Teamwork = power!', min: 2, max: 8, tag: '2v2 up to 4v4' },
-  { id: 'world_tour', icon: '✈️', title: 'World Tour Race', desc: 'Board race Seoul → London! Dice, boosts, traps & school quiz tiles.', min: 2, max: 4, tag: '2–4 players' },
+  { id: 'world_tour', icon: '✈️', title: 'World Tour Tycoon', desc: 'Board race Seoul → London — buy venues, charge rent, dodge traps!', min: 2, max: 4, tag: '2–4 players' },
+  { id: 'monopoly_deal', icon: '🃏', title: 'Monopoly Deal', desc: 'The card game! Collect 3 full city sets — rent, sly deals & JUST SAY NO!', min: 2, max: 4, tag: '2–4 players' },
 ];
 
 type HubScreen = 'menu' | 'create' | 'join' | 'lobby';
@@ -129,6 +131,7 @@ const OnlineHub: React.FC = () => {
         {activeGame === 'tt_bingo' && <TimesTableBingo room={api} />}
         {activeGame === 'doodle_dash' && <DoodleDash room={api} />}
         {activeGame === 'penalty_duel' && <PenaltyDuel room={api} />}
+        {activeGame === 'monopoly_deal' && <MonopolyDeal room={api} />}
         <button
           onClick={leaveToMenu}
           className="fixed top-2 right-2 z-50 bg-black/40 hover:bg-black/60 text-white/80 rounded-full px-3 py-1 font-fredoka text-xs"

@@ -11,7 +11,8 @@ export type GameId =
   | 'copy_cat'
   | 'tt_bingo'
   | 'doodle_dash'
-  | 'penalty_duel';
+  | 'penalty_duel'
+  | 'monopoly_deal';
 
 export interface RoomPlayer {
   id: string;

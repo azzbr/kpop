@@ -84,6 +84,7 @@ const RocketTapRace: React.FC<{ room: RoomApi }> = ({ room }) => {
       const h = hd.current;
       switch (m.t) {
         case 'rr_start':
+          xpGiven.current = false;
           setProgress(m.progress);
           setStartsAt(m.startsAt);
           setWinner(null);

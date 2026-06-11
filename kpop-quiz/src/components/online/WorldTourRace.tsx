@@ -43,6 +43,11 @@ const BOARD: { kind: TileKind; label: string; emoji: string }[] = [
 ];
 const FINISH = BOARD.length - 1;
 
+const START_COINS = 150;
+const PRICE = 40;
+const RENT = 25;
+const HOME_BONUS = 10;
+
 const TILE_TINT: Record<TileKind, string> = {
   start: 'bg-sky-500/30 border-sky-300/50',
   plain: 'bg-white/10 border-white/15',
@@ -53,6 +58,8 @@ const TILE_TINT: Record<TileKind, string> = {
   finish: 'bg-amber-400/40 border-amber-300',
 };
 
+const OWNER_BG = ['bg-pink-500', 'bg-blue-500', 'bg-emerald-500', 'bg-amber-500'];
+
 const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -60,10 +67,13 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
   const [order, setOrder] = useState<string[]>([]);
   const [posMap, setPosMap] = useState<Record<string, number>>({});
   const [coinsMap, setCoinsMap] = useState<Record<string, number>>({});
+  const [owners, setOwners] = useState<Record<number, string>>({});
   const [current, setCurrent] = useState<string | null>(null);
   const [canRoll, setCanRoll] = useState(false);
   const [dice, setDice] = useState<{ value: number; rolling: boolean }>({ value: 6, rolling: false });
-  const [feed, setFeed] = useState('✈️ Welcome to the K-Pop World Tour!');
+  const [feed, setFeed] = useState<string[]>(['✈️ Welcome to World Tour Tycoon!']);
+  const [offer, setOffer] = useState<{ tile: number; price: number; endsAt: number } | null>(null);
+  const [offerLeft, setOfferLeft] = useState(10);
   const [miniQ, setMiniQ] = useState<{ forId: string; text: string; options: string[]; endsAt: number } | null>(null);
   const [miniChoice, setMiniChoice] = useState<number | null>(null);
   const [miniLeft, setMiniLeft] = useState(12);
@@ -76,6 +86,9 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
     turn: 0,
     pos: {} as Record<string, number>,
     coins: {} as Record<string, number>,
+    owners: {} as Record<number, string>,
+    offerFor: null as string | null,
+    offerTile: -1,
     busy: false,
     miniFor: null as string | null,
     miniCorrect: -1,
@@ -89,6 +102,8 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
   const byId = (id: string) =>
     players.find((p) => p.id === id) || { id, name: '???', emoji: '👻', isHost: false, joinedAt: 0 };
 
+  const pushFeed = (line: string) => setFeed((f) => [line, ...f].slice(0, 3));
+
   // ---- HOST: game master ----
   useEffect(() => {
     if (!isHost) return;
@@ -96,7 +111,7 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
     h.order = players.slice(0, 4).map((p) => p.id);
     h.order.forEach((id) => {
       h.pos[id] = 0;
-      h.coins[id] = 0;
+      h.coins[id] = START_COINS;
     });
     h.qs = pickQuestions('mix', 20);
 
@@ -104,14 +119,14 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
       if (h.finished) return;
       h.busy = false;
       const pid = h.order[h.turn];
-      send({ t: 'turn', playerId: pid, pos: { ...h.pos }, coins: { ...h.coins } });
+      send({ t: 'turn', playerId: pid, pos: { ...h.pos }, coins: { ...h.coins }, owners: { ...h.owners } });
       h.autoTimer = window.setTimeout(() => doRoll(pid, true), 25000);
     };
 
     const finish = (pid: string) => {
       h.finished = true;
       h.timer = window.setTimeout(
-        () => send({ t: 'final', winnerId: pid, pos: { ...h.pos }, coins: { ...h.coins } }),
+        () => send({ t: 'final', winnerId: pid, pos: { ...h.pos }, coins: { ...h.coins }, owners: { ...h.owners } }),
         2000
       );
     };
@@ -131,6 +146,21 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
       else h.timer = window.setTimeout(nextTurn, 2000);
     };
 
+    const resolveOffer = (pid: string, wantsBuy: boolean) => {
+      if (h.offerFor !== pid) return;
+      h.offerFor = null;
+      window.clearTimeout(h.timer);
+      const bought = wantsBuy && h.coins[pid] >= PRICE;
+      if (bought) {
+        h.coins[pid] -= PRICE;
+        h.owners[h.offerTile] = pid;
+        send({ t: 'bought', playerId: pid, tile: h.offerTile, owners: { ...h.owners }, coins: { ...h.coins } });
+      } else {
+        send({ t: 'skip_buy', playerId: pid, tile: h.offerTile });
+      }
+      h.timer = window.setTimeout(nextTurn, bought ? 1600 : 800);
+    };
+
     const doRoll = (pid: string, auto: boolean) => {
       if (h.busy || h.finished || h.order[h.turn] !== pid) return;
       h.busy = true;
@@ -144,7 +174,31 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
       if (kind === 'trap') final = Math.max(to - 3, 0);
       if (kind === 'coin') h.coins[pid] += 40;
       h.pos[pid] = final;
-      send({ t: 'rolled', playerId: pid, dice: d, to, final, kind, auto, pos: { ...h.pos }, coins: { ...h.coins } });
+
+      // Settle ownership effects on the tile actually landed on
+      const landKind = BOARD[final].kind;
+      let rent: { to: string; amount: number } | null = null;
+      let home = 0;
+      let canBuy = false;
+      if (landKind === 'plain') {
+        const owner = h.owners[final];
+        if (owner && owner !== pid) {
+          const amt = Math.min(RENT, h.coins[pid]);
+          h.coins[pid] -= amt;
+          h.coins[owner] = (h.coins[owner] || 0) + amt;
+          rent = { to: owner, amount: amt };
+        } else if (owner === pid) {
+          home = HOME_BONUS;
+          h.coins[pid] += HOME_BONUS;
+        } else if (h.coins[pid] >= PRICE) {
+          canBuy = true;
+        }
+      }
+
+      send({
+        t: 'rolled', playerId: pid, dice: d, to, final, kind, auto, rent, home,
+        pos: { ...h.pos }, coins: { ...h.coins }, owners: { ...h.owners },
+      });
 
       if (final === FINISH) {
         finish(pid);
@@ -159,19 +213,29 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
           send({ t: 'mini_q', playerId: pid, text: q.text, options: q.options, endsAt: Date.now() + 12000 });
           h.timer = window.setTimeout(() => resolveMini(pid, false), 12400);
         }, 1800);
-      } else {
-        h.timer = window.setTimeout(nextTurn, 2200);
+        return;
       }
+      if (canBuy) {
+        h.timer = window.setTimeout(() => {
+          h.offerFor = pid;
+          h.offerTile = final;
+          send({ t: 'offer', playerId: pid, tile: final, price: PRICE, endsAt: Date.now() + 10000 });
+          h.timer = window.setTimeout(() => resolveOffer(pid, false), 10400);
+        }, 1600);
+        return;
+      }
+      h.timer = window.setTimeout(nextTurn, 2200);
     };
 
     const offMsg = onMessage((raw) => {
       const m = raw as any;
       if (m.t === 'roll_req') doRoll(m.from, false);
       if (m.t === 'mini_ans' && m.from === h.miniFor) resolveMini(m.from, m.choice === h.miniCorrect);
+      if (m.t === 'buy_res') resolveOffer(m.from, !!m.buy);
     });
 
     const t0 = window.setTimeout(() => {
-      send({ t: 'setup', order: h.order, pos: { ...h.pos }, coins: { ...h.coins } });
+      send({ t: 'setup', order: h.order, pos: { ...h.pos }, coins: { ...h.coins }, owners: { ...h.owners } });
       h.timer = window.setTimeout(sendTurn, 1600);
     }, 900);
 
@@ -193,13 +257,15 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
           setOrder(m.order);
           setPosMap(m.pos);
           setCoinsMap(m.coins);
+          setOwners(m.owners);
           break;
         case 'turn':
           setPosMap(m.pos);
           setCoinsMap(m.coins);
+          setOwners(m.owners);
           setCurrent(m.playerId);
           setCanRoll(m.playerId === myId);
-          setFeed(`🎲 ${byId(m.playerId).emoji} ${byId(m.playerId).name}'s turn!`);
+          pushFeed(`🎲 ${byId(m.playerId).emoji} ${byId(m.playerId).name}'s turn!`);
           break;
         case 'rolled': {
           setCanRoll(false);
@@ -207,20 +273,41 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
           window.setTimeout(() => setDice({ value: m.dice, rolling: false }), 700);
           setPosMap(m.pos);
           setCoinsMap(m.coins);
+          setOwners(m.owners);
           const nm = byId(m.playerId).name;
           const tile = BOARD[m.final];
           const label =
-            m.kind === 'boost' ? `🚀 BOOST! Zoomed ahead to ${tile.label}!`
-            : m.kind === 'trap' ? `🕳️ Trap! Sent back to ${tile.label}!`
+            m.kind === 'boost' ? `🚀 BOOST → ${tile.label}!`
+            : m.kind === 'trap' ? `🕳️ Trap! Back to ${tile.label}!`
             : m.kind === 'coin' ? `💰 +40 coins at ${BOARD[m.to].label}!`
             : m.kind === 'quiz' ? `❓ Pop quiz at ${BOARD[m.to].label}!`
-            : m.kind === 'finish' ? `🏟️ Reached the Final Concert!`
+            : m.kind === 'finish' ? '🏟️ Reached the Final Concert!'
             : `→ ${tile.label}`;
-          setFeed(`${m.auto ? '⏰ (auto-roll) ' : ''}${nm} rolled ${m.dice} ${label}`);
+          pushFeed(`${m.auto ? '⏰ ' : ''}${nm} rolled ${m.dice} ${label}`);
+          if (m.rent) pushFeed(`💸 ${nm} paid ${m.rent.amount} rent to ${byId(m.rent.to).name}!`);
+          if (m.home) pushFeed(`🏠 ${nm}'s own venue — +${m.home} coins!`);
           if (m.kind === 'coin') playCoin();
           else playPop();
           break;
         }
+        case 'offer':
+          if (m.playerId === myId) {
+            setOffer({ tile: m.tile, price: m.price, endsAt: m.endsAt });
+          } else {
+            pushFeed(`🤔 ${byId(m.playerId).name} is deciding to buy ${BOARD[m.tile].label}…`);
+          }
+          break;
+        case 'bought':
+          setOwners(m.owners);
+          setCoinsMap(m.coins);
+          setOffer(null);
+          pushFeed(`🏟️ ${byId(m.playerId).emoji} ${byId(m.playerId).name} bought ${BOARD[m.tile].label}!`);
+          playCoin();
+          break;
+        case 'skip_buy':
+          setOffer(null);
+          pushFeed(`💨 ${byId(m.playerId).name} skipped ${BOARD[m.tile].label}`);
+          break;
         case 'mini_q':
           setMiniQ({ forId: m.playerId, text: m.text, options: m.options, endsAt: m.endsAt });
           setMiniChoice(null);
@@ -230,13 +317,14 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
           setPosMap(m.pos);
           setCoinsMap(m.coins);
           const nm2 = byId(m.playerId).name;
-          setFeed(m.ok ? `✅ ${nm2} got it right — +2 tiles!` : `❌ ${nm2} missed it — stays put!`);
+          pushFeed(m.ok ? `✅ ${nm2} got it right — +2 tiles!` : `❌ ${nm2} missed it — stays put!`);
           if (m.playerId === myId) (m.ok ? playCorrect : playWrong)();
           break;
         }
         case 'final':
           setPosMap(m.pos);
           setCoinsMap(m.coins);
+          setOwners(m.owners);
           setWinner(m.winnerId);
           if (!xpGiven.current) {
             xpGiven.current = true;
@@ -249,7 +337,7 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [players]);
 
-  // Mini-quiz countdown
+  // Mini-quiz + offer countdowns
   useEffect(() => {
     if (!miniQ) return;
     const iv = window.setInterval(() => {
@@ -257,6 +345,14 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
     }, 250);
     return () => window.clearInterval(iv);
   }, [miniQ]);
+
+  useEffect(() => {
+    if (!offer) return;
+    const iv = window.setInterval(() => {
+      setOfferLeft(Math.max(0, Math.ceil((offer.endsAt - Date.now()) / 1000)));
+    }, 250);
+    return () => window.clearInterval(iv);
+  }, [offer]);
 
   const rollDice = () => {
     if (!canRoll) return;
@@ -272,6 +368,13 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
     send({ t: 'mini_ans', choice: i });
   };
 
+  const respondOffer = (buy: boolean) => {
+    if (!offer) return;
+    playClick();
+    send({ t: 'buy_res', buy });
+    setOffer(null);
+  };
+
   // Board rows (serpentine path, 6 per row)
   const rows: number[][] = [];
   for (let r = 0; r < BOARD.length / 6; r++) {
@@ -280,15 +383,23 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
   }
 
   const racers = order.length ? order : players.slice(0, 4).map((p) => p.id);
+  const ownerIdx = (id: string) => Math.max(0, racers.indexOf(id)) % OWNER_BG.length;
+  const venuesOf = (id: string) => Object.values(owners).filter((o) => o === id).length;
+
+  const standings = winner
+    ? [winner, ...racers.filter((id) => id !== winner).sort((a, b) => (coinsMap[b] || 0) - (coinsMap[a] || 0))]
+    : [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-950 via-indigo-950 to-purple-950 text-white px-3 py-6">
       <div className="max-w-3xl mx-auto pt-6">
-        <h1 className="text-center font-fredoka font-bold text-2xl md:text-4xl mb-1">✈️ K-Pop World Tour</h1>
-        <p className="text-center font-nunito text-sky-200 text-sm mb-4">Race from Seoul to the Final Concert in London!</p>
+        <h1 className="text-center font-fredoka font-bold text-2xl md:text-4xl mb-1">✈️ World Tour Tycoon</h1>
+        <p className="text-center font-nunito text-sky-200 text-sm mb-3">
+          Race to London — buy venues on the way ({PRICE}💰) and charge rivals {RENT}💰 rent!
+        </p>
 
         {/* Racers strip */}
-        <div className="flex flex-wrap justify-center gap-2 mb-4">
+        <div className="flex flex-wrap justify-center gap-2 mb-3">
           {racers.map((id) => {
             const p = byId(id);
             const isCur = current === id;
@@ -299,16 +410,24 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
                   isCur ? 'border-amber-400 bg-amber-400/20 shadow-lg' : 'border-white/10 bg-white/5'
                 }`}
               >
+                <span className={`w-2.5 h-2.5 rounded-full ${OWNER_BG[ownerIdx(id)]}`} />
                 <span className="text-lg">{p.emoji}</span>
                 <span className={`font-bold ${id === myId ? 'text-amber-300' : ''}`}>{p.name}</span>
-                <span className="text-amber-200">💰{coinsMap[id] || 0}</span>
+                <span className="text-amber-200">💰{coinsMap[id] ?? START_COINS}</span>
+                <span className="text-sky-200">🏟️{venuesOf(id)}</span>
               </div>
             );
           })}
         </div>
 
         {/* Event feed */}
-        <div className="text-center font-fredoka text-amber-300 mb-4 min-h-[1.75rem]">{feed}</div>
+        <div className="mb-3 min-h-[3.6rem] text-center">
+          {feed.map((line, i) => (
+            <div key={`${i}-${line}`} className={`font-fredoka ${i === 0 ? 'text-amber-300' : 'text-white/40 text-sm'}`}>
+              {line}
+            </div>
+          ))}
+        </div>
 
         {/* Board */}
         <div className="space-y-1.5 mb-5">
@@ -318,6 +437,7 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
                 const tile = BOARD[ti];
                 const here = racers.filter((id) => (posMap[id] ?? 0) === ti);
                 const curHere = current && here.includes(current);
+                const owner = owners[ti];
                 return (
                   <div
                     key={ti}
@@ -329,6 +449,14 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
                     <div className="text-[8px] md:text-[10px] font-nunito text-white/80 text-center leading-tight mt-0.5">
                       {tile.label}
                     </div>
+                    {owner && (
+                      <span
+                        className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] border border-white/70 shadow ${OWNER_BG[ownerIdx(owner)]}`}
+                        title={`Owned by ${byId(owner).name}`}
+                      >
+                        {byId(owner).emoji}
+                      </span>
+                    )}
                     {here.length > 0 && (
                       <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 flex">
                         {here.map((id) => (
@@ -375,8 +503,46 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
         </div>
       </div>
 
-      {/* Mini pop-quiz overlay */}
       <AnimatePresence>
+        {/* Buy offer (current player only) */}
+        {offer && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40 flex items-center justify-center bg-black/75 px-4">
+            <motion.div
+              initial={{ scale: 0.7, y: 30 }}
+              animate={{ scale: 1, y: 0 }}
+              className="bg-gradient-to-br from-sky-800 to-indigo-900 border-4 border-amber-400 rounded-3xl p-6 max-w-sm w-full text-center"
+            >
+              <div className="text-5xl mb-2">{BOARD[offer.tile].emoji}</div>
+              <h2 className="font-fredoka font-bold text-2xl text-amber-300 mb-1">
+                Buy a venue in {BOARD[offer.tile].label}?
+              </h2>
+              <p className="font-nunito text-sky-200 mb-1">
+                Price: <span className="font-bold text-amber-300">{offer.price}💰</span> · Rivals landing here pay you <span className="font-bold text-amber-300">{RENT}💰</span>
+              </p>
+              <p className="font-fredoka text-sky-300 text-sm mb-4">⏱️ {offerLeft}s to decide</p>
+              <div className="flex gap-3 justify-center">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => respondOffer(true)}
+                  className="px-7 py-3 rounded-full font-fredoka font-bold bg-gradient-to-r from-emerald-400 to-green-500 shadow-xl"
+                >
+                  🏟️ Buy it!
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => respondOffer(false)}
+                  className="px-7 py-3 rounded-full font-fredoka font-bold bg-white/15 border border-white/30"
+                >
+                  💨 Skip
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Mini pop-quiz overlay */}
         {miniQ && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40 flex items-center justify-center bg-black/75 px-4">
             <motion.div
@@ -413,6 +579,7 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
           </motion.div>
         )}
 
+        {/* Winner */}
         {winner && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-40 flex items-center justify-center bg-black/75 px-4">
             <ConfettiBurst count={90} durationMs={4500} />
@@ -420,7 +587,7 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
               initial={{ scale: 0.6, rotate: -4 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: 'spring', stiffness: 200 }}
-              className="bg-gradient-to-br from-indigo-800 to-purple-900 border-4 border-amber-400 rounded-3xl p-8 text-center max-w-sm w-full"
+              className="bg-gradient-to-br from-indigo-800 to-purple-900 border-4 border-amber-400 rounded-3xl p-7 text-center max-w-sm w-full"
             >
               <motion.div
                 animate={{ y: [0, -10, 0] }}
@@ -429,13 +596,18 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
               >
                 🏟️
               </motion.div>
-              <h2 className="font-fredoka font-bold text-2xl md:text-3xl text-amber-300 mb-2">
+              <h2 className="font-fredoka font-bold text-2xl md:text-3xl text-amber-300 mb-3">
                 {byId(winner).emoji} {byId(winner).name} headlines the Final Concert!
               </h2>
-              <p className="font-nunito text-purple-200 mb-2">
-                💰 Coins: {racers.map((id) => `${byId(id).emoji} ${coinsMap[id] || 0}`).join(' · ')}
-              </p>
-              <p className="font-fredoka text-green-300 mb-6">+{winner === myId ? 50 : 15} XP</p>
+              <div className="bg-black/25 rounded-2xl p-3 mb-4 text-left">
+                {standings.map((id, i) => (
+                  <div key={id} className="flex justify-between font-nunito text-sm py-1 border-b border-white/5 last:border-0">
+                    <span>{['🥇', '🥈', '🥉', '4️⃣'][i]} {byId(id).emoji} {byId(id).name}</span>
+                    <span className="text-amber-200">💰{coinsMap[id] || 0} · 🏟️{venuesOf(id)}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="font-fredoka text-green-300 mb-5">+{winner === myId ? 50 : 15} XP</p>
               {isHost ? (
                 <button
                   onClick={() => { playClick(); send({ t: 'to_lobby' }); }}

@@ -29,6 +29,7 @@ const QuizDuelOnline: React.FC<{ room: RoomApi }> = ({ room }) => {
   const [scores, setScores] = useState<Record<string, number>>({});
   const [finalWinner, setFinalWinner] = useState<string | null>(null);
   const xpGiven = useRef(false);
+  const lastTick = useRef(-1);
 
   // Host-side authoritative state
   const hd = useRef({
@@ -98,6 +99,7 @@ const QuizDuelOnline: React.FC<{ room: RoomApi }> = ({ room }) => {
       const h = hd.current;
       switch (m.t) {
         case 'q':
+          if (m.round === 1) xpGiven.current = false;
           setPhase('q');
           setRound(m.round);
           setQ({ text: m.text, options: m.options });
@@ -157,7 +159,10 @@ const QuizDuelOnline: React.FC<{ room: RoomApi }> = ({ room }) => {
     const iv = window.setInterval(() => {
       const left = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
       setTimeLeft(left);
-      if (left <= 3 && left > 0) playTick();
+      if (left <= 3 && left > 0 && lastTick.current !== left) {
+        lastTick.current = left;
+        playTick();
+      }
     }, 250);
     return () => window.clearInterval(iv);
   }, [phase, endsAt]);

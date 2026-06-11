@@ -81,6 +81,9 @@ const ClassQuizShow: React.FC<{ room: RoomApi }> = ({ room }) => {
     if (h.revealed) return;
     h.revealed = true;
     window.clearTimeout(h.timer);
+    playersRef.current.filter((p) => !p.isHost).forEach((p) => {
+      h.scores[p.id] = h.scores[p.id] || 0;
+    });
     const counts = [0, 0, 0, 0];
     const gained: Record<string, number> = {};
     Object.entries(h.answers).forEach(([id, a]) => {
@@ -369,7 +372,7 @@ const ClassQuizShow: React.FC<{ room: RoomApi }> = ({ room }) => {
                   </>
                 )}
                 <div className="font-nunito text-fuchsia-200">
-                  Total: <span className="font-bold text-amber-300">{myScore}</span> · Rank: <span className="font-bold text-amber-300">#{myRank}</span>
+                  Total: <span className="font-bold text-amber-300">{myScore}</span> · Rank: <span className="font-bold text-amber-300">{myRank > 0 ? `#${myRank}` : '—'}</span>
                 </div>
               </div>
             )}

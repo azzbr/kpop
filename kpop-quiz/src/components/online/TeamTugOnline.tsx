@@ -133,6 +133,10 @@ const TeamTugOnline: React.FC<{ room: RoomApi }> = ({ room }) => {
       const h = hd.current;
       switch (m.t) {
         case 'round_start':
+          if (m.round === 1 && m.scores[0] === 0 && m.scores[1] === 0) {
+            xpGiven.current = false;
+            setMatchWinner(null);
+          }
           setTeams(m.teams);
           setRound(m.round);
           setScores(m.scores);
