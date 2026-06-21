@@ -12,7 +12,11 @@ export type GameId =
   | 'tt_bingo'
   | 'doodle_dash'
   | 'penalty_duel'
-  | 'monopoly_deal';
+  | 'monopoly_deal'
+  | 'emoji_detective'
+  | 'word_scramble'
+  | 'riddle_rush'
+  | 'picture_phone';
 
 export interface RoomPlayer {
   id: string;

@@ -14,6 +14,10 @@ import TimesTableBingo from './TimesTableBingo';
 import DoodleDash from './DoodleDash';
 import PenaltyDuel from './PenaltyDuel';
 import MonopolyDeal from './MonopolyDeal';
+import EmojiDetective from './EmojiDetective';
+import WordScramble from './WordScramble';
+import RiddleRush from './RiddleRush';
+import PictureTelephone from './PictureTelephone';
 
 const EMOJIS = ['🎤', '🎸', '🥁', '🎹', '🎧', '🌟', '💖', '🔥', '🦄', '🐯', '🐰', '🦊'];
 
@@ -23,6 +27,10 @@ const GAMES: { id: GameId; icon: string; title: string; desc: string; min: numbe
   { id: 'tt_bingo', icon: '🔢', title: 'Times-Table Bingo', desc: 'Solve the call, find it on your card — first full line shouts BINGO!', min: 2, max: 30, tag: 'whole class!' },
   { id: 'rocket_race', icon: '🚀', title: 'Rocket Tap Race', desc: 'Mash to blast off! Every rocket races on screen — first to the moon!', min: 2, max: 30, tag: 'whole class!' },
   { id: 'copy_cat', icon: '🧠', title: 'Copy Cat', desc: 'Watch the pattern, repeat it perfectly. One slip = out. Last one standing wins!', min: 2, max: 30, tag: 'whole class!' },
+  { id: 'emoji_detective', icon: '🕵️', title: 'Emoji Detective', desc: 'Crack the emoji puzzle — 🦁👑, 🌧️🏹 — and race to type the answer first!', min: 2, max: 30, tag: 'whole class!' },
+  { id: 'word_scramble', icon: '🔤', title: 'Word Scramble', desc: 'The letters are jumbled — unscramble the word fastest to win the round!', min: 2, max: 30, tag: 'whole class!' },
+  { id: 'riddle_rush', icon: '🧩', title: 'Riddle Rush', desc: 'Solve the brain-teasing riddle and type your answer before your friends!', min: 2, max: 30, tag: 'whole class!' },
+  { id: 'picture_phone', icon: '✏️', title: 'Picture Telephone', desc: 'Draw → guess → draw! Your word travels the room, then the silly reveal!', min: 3, max: 12, tag: 'pass it on!' },
   { id: 'quiz_duel', icon: '⚔️', title: 'Quiz Duel', desc: 'School questions, two screens — fastest correct answer steals the round!', min: 2, max: 2, tag: '1 vs 1' },
   { id: 'penalty_duel', icon: '⚽', title: 'Penalty Duel', desc: 'Shooter vs keeper — pick your corner and outsmart your rival in 5 penalties!', min: 2, max: 2, tag: '1 vs 1' },
   { id: 'team_tug', icon: '🪢', title: 'Team Tug-of-War', desc: 'Two teams mash to pull the star. Teamwork = power!', min: 2, max: 8, tag: '2v2 up to 4v4' },
@@ -132,6 +140,10 @@ const OnlineHub: React.FC = () => {
         {activeGame === 'doodle_dash' && <DoodleDash room={api} />}
         {activeGame === 'penalty_duel' && <PenaltyDuel room={api} />}
         {activeGame === 'monopoly_deal' && <MonopolyDeal room={api} />}
+        {activeGame === 'emoji_detective' && <EmojiDetective room={api} />}
+        {activeGame === 'word_scramble' && <WordScramble room={api} />}
+        {activeGame === 'riddle_rush' && <RiddleRush room={api} />}
+        {activeGame === 'picture_phone' && <PictureTelephone room={api} />}
         <button
           onClick={leaveToMenu}
           className="fixed top-2 right-2 z-50 bg-black/40 hover:bg-black/60 text-white/80 rounded-full px-3 py-1 font-fredoka text-xs"

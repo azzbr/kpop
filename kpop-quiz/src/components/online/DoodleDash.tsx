@@ -4,21 +4,11 @@ import { useGameStore } from '../../store';
 import type { RoomApi } from '../../online/useRoom';
 import { playClick, playCorrect, playWin } from '../../utils/sounds';
 import ConfettiBurst from './../ConfettiBurst';
+import { DOODLE_WORDS } from '../../online/doodleWords';
 
 const ROUND_MS = 75000;
 const CW = 640;
 const CH = 480;
-
-const WORDS = [
-  'cat', 'dog', 'fish', 'house', 'tree', 'sun', 'moon', 'star', 'car', 'bus',
-  'train', 'plane', 'boat', 'apple', 'banana', 'pizza', 'cake', 'ice cream', 'book', 'pencil',
-  'school', 'teacher', 'football', 'rainbow', 'cloud', 'rain', 'snowman', 'spider', 'snake', 'elephant',
-  'giraffe', 'lion', 'monkey', 'penguin', 'butterfly', 'bee', 'flower', 'clock', 'chair', 'table',
-  'door', 'window', 'key', 'crown', 'king', 'queen', 'castle', 'dragon', 'robot', 'rocket',
-  'alien', 'ghost', 'pirate', 'treasure', 'map', 'island', 'beach', 'mountain', 'river', 'bridge',
-  'guitar', 'drum', 'glasses', 'hat', 'shoe', 'sock', 'umbrella', 'ladder', 'balloon', 'kite',
-  'candle', 'present', 'tooth', 'eye', 'hand', 'banana split', 'volcano', 'shark', 'octopus', 'crab',
-];
 
 const COLORS = ['#1f2937', '#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#a855f7'];
 const ERASER = '#ffffff';
@@ -139,7 +129,7 @@ const DoodleDash: React.FC<{ room: RoomApi }> = ({ room }) => {
     const h = hd.current;
     const ids = players.map((p) => p.id).sort(() => Math.random() - 0.5);
     h.drawOrder = ids.slice(0, Math.min(6, ids.length));
-    h.words = [...WORDS].sort(() => Math.random() - 0.5);
+    h.words = [...DOODLE_WORDS].sort(() => Math.random() - 0.5);
     players.forEach((p) => (h.scores[p.id] = 0));
 
     const startRound = (r: number) => {
