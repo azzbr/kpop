@@ -35,6 +35,17 @@ function makeProblem(difficulty: string): { prompt: string; answer: string } {
     else if (op === '÷') { b = randInt(6, 15); ans = randInt(6, 20); a = b * ans; }
     else if (op === '+') { a = randInt(100, 1500); b = randInt(100, 1500); ans = a + b; }
     else { a = randInt(300, 2000); b = randInt(50, a); ans = a - b; }
+  } else if (difficulty === 'master') {
+    const kind = randInt(0, 4);
+    if (kind === 4) {
+      const x = randInt(2, 12);
+      return { prompt: `${x}³`, answer: String(x * x * x) };
+    }
+    op = ['+', '−', '×', '÷'][kind];
+    if (op === '×') { a = randInt(13, 40); b = randInt(11, 25); ans = a * b; }
+    else if (op === '÷') { b = randInt(7, 15); ans = randInt(8, 25); a = b * ans; }
+    else if (op === '+') { a = randInt(500, 5000); b = randInt(500, 5000); ans = a + b; }
+    else { a = randInt(1000, 5000); b = randInt(100, a); ans = a - b; }
   } else {
     // medium
     op = ['+', '−', '×', '÷'][randInt(0, 3)];

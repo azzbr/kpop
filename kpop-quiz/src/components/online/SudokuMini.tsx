@@ -27,6 +27,7 @@ const DIFF: Record<string, Spec> = {
   medium: { n: 4, boxR: 2, boxC: 2, remove: 9, ms: 180000 },
   hard: { n: 6, boxR: 2, boxC: 3, remove: 16, ms: 300000 },
   expert: { n: 6, boxR: 2, boxC: 3, remove: 22, ms: 360000 },
+  master: { n: 6, boxR: 2, boxC: 3, remove: 26, ms: 420000 },
 };
 
 function genFull(n: number, boxR: number, boxC: number): number[] {

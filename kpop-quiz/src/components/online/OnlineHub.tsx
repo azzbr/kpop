@@ -26,6 +26,10 @@ import PatternQuest from './PatternQuest';
 import ConnectFour from './ConnectFour';
 import MemoryDigits from './MemoryDigits';
 import SudokuMini from './SudokuMini';
+import Battleship from './Battleship';
+import Make24 from './Make24';
+import Hangman from './Hangman';
+import BrainBuzzer from './BrainBuzzer';
 
 const EMOJIS = ['🎤', '🎸', '🥁', '🎹', '🎧', '🌟', '💖', '🔥', '🦄', '🐯', '🐰', '🦊'];
 
@@ -46,7 +50,11 @@ const GAMES: { id: GameId; icon: string; title: string; desc: string; min: numbe
   { id: 'pattern_quest', icon: '🔢', title: 'Pattern Quest', desc: 'What comes next? Spot the number pattern and type the next one. Logic power!', min: 2, max: 30, tag: 'brain game!' },
   { id: 'memory_digits', icon: '🧠', title: 'Memory Digits', desc: 'A number flashes up — memorise it and type it back. It grows every round!', min: 2, max: 30, tag: 'brain game!' },
   { id: 'sudoku_mini', icon: '🔳', title: 'Sudoku Mini', desc: 'Fill the grid with logic — no repeats in a row, column or box. First to solve wins!', min: 2, max: 30, tag: 'brain game!' },
+  { id: 'make_24', icon: '🔢', title: 'Make 24', desc: 'Combine the numbers with + − × ÷ to hit the target. Mega number puzzle!', min: 2, max: 30, tag: 'brain game!' },
+  { id: 'hangman', icon: '🔡', title: 'Hangman', desc: 'Guess the hidden word letter by letter before your lives run out. Race to reveal it!', min: 2, max: 30, tag: 'brain game!' },
+  { id: 'brain_buzzer', icon: '🎯', title: 'Brain Buzzer', desc: 'TRUE or FALSE? Tap fast on maths & trivia before the buzzer. Sharp minds win!', min: 2, max: 30, tag: 'brain game!' },
   { id: 'connect_four', icon: '♟️', title: 'Connect 4', desc: 'Line up four in a row before your rival blocks you. Classic strategy duel!', min: 2, max: 2, tag: '1 vs 1' },
+  { id: 'battleship', icon: '🚢', title: 'Battleship', desc: 'Hide your fleet, then fire on the grid to sink your rival’s ships first. Deduction duel!', min: 2, max: 2, tag: '1 vs 1' },
   { id: 'quiz_duel', icon: '⚔️', title: 'Quiz Duel', desc: 'School questions, two screens — fastest correct answer steals the round!', min: 2, max: 2, tag: '1 vs 1' },
   { id: 'penalty_duel', icon: '⚽', title: 'Penalty Duel', desc: 'Shooter vs keeper — pick your corner and outsmart your rival in 5 penalties!', min: 2, max: 2, tag: '1 vs 1' },
   { id: 'team_tug', icon: '🪢', title: 'Team Tug-of-War', desc: 'Two teams mash to pull the star. Teamwork = power!', min: 2, max: 8, tag: '2v2 up to 4v4' },
@@ -60,27 +68,29 @@ interface OptionGroup {
   label: string;
   choices: { value: string; label: string }[];
 }
+const FIVE = [
+  { value: 'easy', label: '😀 Easy' }, { value: 'medium', label: '🙂 Medium' }, { value: 'hard', label: '🤓 Hard' }, { value: 'expert', label: '🧠 Expert' }, { value: 'master', label: '🔥 Master' },
+];
 const GAME_OPTIONS: Partial<Record<GameId, OptionGroup[]>> = {
-  math_sprint: [{ key: 'difficulty', label: 'Difficulty', choices: [
-    { value: 'easy', label: '😀 Easy' }, { value: 'medium', label: '🙂 Medium' }, { value: 'hard', label: '🤓 Hard' }, { value: 'expert', label: '🧠 Expert' },
-  ] }],
+  math_sprint: [{ key: 'difficulty', label: 'Difficulty', choices: FIVE }],
+  pattern_quest: [{ key: 'difficulty', label: 'Difficulty', choices: FIVE }],
+  make_24: [{ key: 'difficulty', label: 'Difficulty', choices: FIVE }],
+  hangman: [{ key: 'difficulty', label: 'Difficulty', choices: FIVE }],
+  brain_buzzer: [{ key: 'difficulty', label: 'Difficulty', choices: FIVE }],
   code_breaker: [{ key: 'difficulty', label: 'Difficulty', choices: [
-    { value: 'easy', label: '😀 Easy · 3' }, { value: 'normal', label: '🙂 Normal · 4' }, { value: 'hard', label: '🤓 Hard · 4+' }, { value: 'expert', label: '🧠 Expert · 5' },
+    { value: 'easy', label: '😀 Easy · 3' }, { value: 'normal', label: '🙂 Normal · 4' }, { value: 'hard', label: '🤓 Hard · 4+' }, { value: 'expert', label: '🧠 Expert · 5' }, { value: 'master', label: '🔥 Master · 5/8' },
   ] }],
   odd_one_out: [{ key: 'difficulty', label: 'Difficulty', choices: [
-    { value: 'easy', label: '😀 Easy' }, { value: 'hard', label: '🤓 Tricky' }, { value: 'expert', label: '🧠 Genius' },
+    { value: 'easy', label: '😀 Easy' }, { value: 'hard', label: '🤓 Tricky' }, { value: 'expert', label: '🧠 Genius' }, { value: 'master', label: '🔥 Master' },
   ] }],
   whats_missing: [{ key: 'difficulty', label: 'Difficulty', choices: [
-    { value: 'easy', label: '😀 Easy · 5' }, { value: 'medium', label: '🙂 Medium · 7' }, { value: 'hard', label: '🤓 Hard · 9' }, { value: 'expert', label: '🧠 Expert · 11' },
-  ] }],
-  pattern_quest: [{ key: 'difficulty', label: 'Difficulty', choices: [
-    { value: 'easy', label: '😀 Easy' }, { value: 'medium', label: '🙂 Medium' }, { value: 'hard', label: '🤓 Hard' }, { value: 'expert', label: '🧠 Expert' },
+    { value: 'easy', label: '😀 Easy · 5' }, { value: 'medium', label: '🙂 Medium · 7' }, { value: 'hard', label: '🤓 Hard · 9' }, { value: 'expert', label: '🧠 Expert · 11' }, { value: 'master', label: '🔥 Master · 13' },
   ] }],
   memory_digits: [{ key: 'difficulty', label: 'Difficulty', choices: [
-    { value: 'easy', label: '😀 Easy · 3' }, { value: 'medium', label: '🙂 Medium · 4' }, { value: 'hard', label: '🤓 Hard · 5' }, { value: 'expert', label: '🧠 Expert · 6' },
+    { value: 'easy', label: '😀 Easy · 3' }, { value: 'medium', label: '🙂 Medium · 4' }, { value: 'hard', label: '🤓 Hard · 5' }, { value: 'expert', label: '🧠 Expert · 6' }, { value: 'master', label: '🔥 Master · 7' },
   ] }],
   sudoku_mini: [{ key: 'difficulty', label: 'Difficulty', choices: [
-    { value: 'easy', label: '😀 Easy · 4×4' }, { value: 'medium', label: '🙂 Medium · 4×4' }, { value: 'hard', label: '🤓 Hard · 6×6' }, { value: 'expert', label: '🧠 Expert · 6×6' },
+    { value: 'easy', label: '😀 Easy · 4×4' }, { value: 'medium', label: '🙂 Medium · 4×4' }, { value: 'hard', label: '🤓 Hard · 6×6' }, { value: 'expert', label: '🧠 Expert · 6×6' }, { value: 'master', label: '🔥 Master · 6×6' },
   ] }],
 };
 
@@ -213,6 +223,10 @@ const OnlineHub: React.FC = () => {
         {activeGame === 'memory_digits' && <MemoryDigits room={api} config={gameConfig} />}
         {activeGame === 'sudoku_mini' && <SudokuMini room={api} config={gameConfig} />}
         {activeGame === 'connect_four' && <ConnectFour room={api} />}
+        {activeGame === 'make_24' && <Make24 room={api} config={gameConfig} />}
+        {activeGame === 'hangman' && <Hangman room={api} config={gameConfig} />}
+        {activeGame === 'brain_buzzer' && <BrainBuzzer room={api} config={gameConfig} />}
+        {activeGame === 'battleship' && <Battleship room={api} />}
         <button
           onClick={leaveToMenu}
           className="fixed top-2 right-2 z-50 bg-black/40 hover:bg-black/60 text-white/80 rounded-full px-3 py-1 font-fredoka text-xs"

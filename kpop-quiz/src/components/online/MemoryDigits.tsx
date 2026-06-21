@@ -21,6 +21,7 @@ const DIFF: Record<string, { start: number; perMs: number }> = {
   medium: { start: 4, perMs: 800 },
   hard: { start: 5, perMs: 650 },
   expert: { start: 6, perMs: 520 },
+  master: { start: 7, perMs: 430 },
 };
 const TOTAL = 6;
 

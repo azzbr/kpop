@@ -81,6 +81,14 @@ const TIERS: Record<string, Gen[]> = {
     () => twoStep(2, -1, randInt(3, 6)),
     () => geometric(2, 3, 3),
   ],
+  master: [
+    cubes,
+    interleave,
+    () => twoStep(3, randInt(1, 4), randInt(1, 3)),
+    () => twoStep(2, randInt(2, 5), randInt(2, 5)),
+    () => geometric(2, 4, 3),
+    () => fib(randInt(4, 8), randInt(7, 12)),
+  ],
 };
 
 function makeRounds(difficulty: string, n: number): GuessRound[] {

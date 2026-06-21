@@ -6,7 +6,7 @@ export interface OddItem {
   label: string;
 }
 export interface OddSet {
-  level: 'easy' | 'hard' | 'expert';
+  level: 'easy' | 'hard' | 'expert' | 'master';
   theme: string; // why the three belong together (shown on reveal)
   sames: OddItem[]; // exactly 3
   odd: OddItem;
@@ -68,9 +68,17 @@ export const ODD_SETS: OddSet[] = [
   { level: 'expert', theme: 'herbivores (plant eaters)', sames: [{ emoji: '🐰', label: 'rabbit' }, { emoji: '🐮', label: 'cow' }, { emoji: '🐘', label: 'elephant' }], odd: { emoji: '🦁', label: 'lion (meat eater)' } },
   { level: 'expert', theme: 'cold-blooded animals', sames: [{ emoji: '🐍', label: 'snake' }, { emoji: '🐸', label: 'frog' }, { emoji: '🐟', label: 'fish' }], odd: { emoji: '🐶', label: 'dog (warm-blooded)' } },
   { level: 'expert', theme: 'hatch from eggs', sames: [{ emoji: '🐔', label: 'chicken' }, { emoji: '🐢', label: 'turtle' }, { emoji: '🐍', label: 'snake' }], odd: { emoji: '🐬', label: 'dolphin (live birth)' } },
+
+  // ---- MASTER: abstract logic (numbers, colour theory, classification) ----
+  { level: 'master', theme: 'primary colours', sames: [{ emoji: '🔴', label: 'red' }, { emoji: '🔵', label: 'blue' }, { emoji: '🟡', label: 'yellow' }], odd: { emoji: '🟢', label: 'green (secondary)' } },
+  { level: 'master', theme: 'even numbers', sames: [{ emoji: '2️⃣', label: 'two' }, { emoji: '4️⃣', label: 'four' }, { emoji: '6️⃣', label: 'six' }], odd: { emoji: '7️⃣', label: 'seven (odd)' } },
+  { level: 'master', theme: 'odd numbers', sames: [{ emoji: '1️⃣', label: 'one' }, { emoji: '3️⃣', label: 'three' }, { emoji: '5️⃣', label: 'five' }], odd: { emoji: '8️⃣', label: 'eight (even)' } },
+  { level: 'master', theme: 'sink in water', sames: [{ emoji: '🪨', label: 'rock' }, { emoji: '🔩', label: 'bolt' }, { emoji: '⚓', label: 'anchor' }], odd: { emoji: '🍎', label: 'apple (floats)' } },
+  { level: 'master', theme: 'predators', sames: [{ emoji: '🦁', label: 'lion' }, { emoji: '🦈', label: 'shark' }, { emoji: '🐊', label: 'crocodile' }], odd: { emoji: '🐑', label: 'sheep (prey)' } },
+  { level: 'master', theme: 'can sting or bite', sames: [{ emoji: '🐍', label: 'snake' }, { emoji: '🦂', label: 'scorpion' }, { emoji: '🐝', label: 'bee' }], odd: { emoji: '🐞', label: 'ladybird (harmless)' } },
 ];
 
-export function pickOddSets(level: 'easy' | 'hard' | 'expert', n: number): OddSet[] {
+export function pickOddSets(level: 'easy' | 'hard' | 'expert' | 'master', n: number): OddSet[] {
   let pool = ODD_SETS.filter((s) => s.level === level);
   if (pool.length < n) pool = ODD_SETS; // fall back to all if a level runs short
   return [...pool].sort(() => Math.random() - 0.5).slice(0, n);

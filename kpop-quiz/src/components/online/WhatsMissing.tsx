@@ -50,6 +50,7 @@ const DIFF: Record<string, { count: number; viewMs: number }> = {
   medium: { count: 7, viewMs: 6000 },
   hard: { count: 9, viewMs: 7500 },
   expert: { count: 11, viewMs: 8000 },
+  master: { count: 13, viewMs: 8500 },
 };
 const ROUND_MS = 13000;
 const TOTAL = 6;

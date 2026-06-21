@@ -17,6 +17,8 @@ const COLORS = [
   { hex: '#eab308', name: 'yellow' },
   { hex: '#a855f7', name: 'purple' },
   { hex: '#f97316', name: 'orange' },
+  { hex: '#06b6d4', name: 'cyan' },
+  { hex: '#ec4899', name: 'pink' },
 ];
 
 const ROUND_MS = 150000; // 2.5 minutes to crack it
@@ -25,6 +27,7 @@ function params(difficulty: string): { length: number; palette: number; repeats:
   if (difficulty === 'easy') return { length: 3, palette: 5, repeats: false };
   if (difficulty === 'hard') return { length: 4, palette: 6, repeats: true };
   if (difficulty === 'expert') return { length: 5, palette: 6, repeats: true };
+  if (difficulty === 'master') return { length: 5, palette: 8, repeats: true };
   return { length: 4, palette: 6, repeats: false }; // normal
 }
 

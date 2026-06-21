@@ -4,7 +4,8 @@ import TapRace, { type TapRound } from './TapRace';
 import { pickOddSets } from '../../online/oddOneOut';
 
 const OddOneOut: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, config }) => {
-  const level = config?.difficulty === 'expert' ? 'expert' : config?.difficulty === 'hard' ? 'hard' : 'easy';
+  const level =
+    config?.difficulty === 'master' ? 'master' : config?.difficulty === 'expert' ? 'expert' : config?.difficulty === 'hard' ? 'hard' : 'easy';
   return (
     <TapRace
       room={room}

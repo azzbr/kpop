@@ -24,7 +24,11 @@ export type GameId =
   | 'pattern_quest'
   | 'connect_four'
   | 'memory_digits'
-  | 'sudoku_mini';
+  | 'sudoku_mini'
+  | 'battleship'
+  | 'make_24'
+  | 'hangman'
+  | 'brain_buzzer';
 
 // Optional per-game setup chosen by the host in the lobby (difficulty, etc.),
 // broadcast to everyone in the `start` message.
