@@ -20,7 +20,11 @@ export type GameId =
   | 'math_sprint'
   | 'code_breaker'
   | 'odd_one_out'
-  | 'whats_missing';
+  | 'whats_missing'
+  | 'pattern_quest'
+  | 'connect_four'
+  | 'memory_digits'
+  | 'sudoku_mini';
 
 // Optional per-game setup chosen by the host in the lobby (difficulty, etc.),
 // broadcast to everyone in the `start` message.

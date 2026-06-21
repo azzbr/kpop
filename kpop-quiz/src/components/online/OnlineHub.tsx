@@ -22,6 +22,10 @@ import MathSprint from './MathSprint';
 import CodeBreaker from './CodeBreaker';
 import OddOneOut from './OddOneOut';
 import WhatsMissing from './WhatsMissing';
+import PatternQuest from './PatternQuest';
+import ConnectFour from './ConnectFour';
+import MemoryDigits from './MemoryDigits';
+import SudokuMini from './SudokuMini';
 
 const EMOJIS = ['🎤', '🎸', '🥁', '🎹', '🎧', '🌟', '💖', '🔥', '🦄', '🐯', '🐰', '🦊'];
 
@@ -39,6 +43,10 @@ const GAMES: { id: GameId; icon: string; title: string; desc: string; min: numbe
   { id: 'code_breaker', icon: '🔢', title: 'Code Breaker', desc: 'Crack the secret colour code with logic clues — everyone races!', min: 2, max: 30, tag: 'brain game!' },
   { id: 'odd_one_out', icon: '🔎', title: 'Odd One Out', desc: 'Four things appear — tap the one that doesn’t belong. Think fast!', min: 2, max: 30, tag: 'brain game!' },
   { id: 'whats_missing', icon: '🧠', title: 'What’s Missing?', desc: 'Memorise the tray, then spot which object vanished. Sharp eyes win!', min: 2, max: 30, tag: 'brain game!' },
+  { id: 'pattern_quest', icon: '🔢', title: 'Pattern Quest', desc: 'What comes next? Spot the number pattern and type the next one. Logic power!', min: 2, max: 30, tag: 'brain game!' },
+  { id: 'memory_digits', icon: '🧠', title: 'Memory Digits', desc: 'A number flashes up — memorise it and type it back. It grows every round!', min: 2, max: 30, tag: 'brain game!' },
+  { id: 'sudoku_mini', icon: '🔳', title: 'Sudoku Mini', desc: 'Fill the grid with logic — no repeats in a row, column or box. First to solve wins!', min: 2, max: 30, tag: 'brain game!' },
+  { id: 'connect_four', icon: '♟️', title: 'Connect 4', desc: 'Line up four in a row before your rival blocks you. Classic strategy duel!', min: 2, max: 2, tag: '1 vs 1' },
   { id: 'quiz_duel', icon: '⚔️', title: 'Quiz Duel', desc: 'School questions, two screens — fastest correct answer steals the round!', min: 2, max: 2, tag: '1 vs 1' },
   { id: 'penalty_duel', icon: '⚽', title: 'Penalty Duel', desc: 'Shooter vs keeper — pick your corner and outsmart your rival in 5 penalties!', min: 2, max: 2, tag: '1 vs 1' },
   { id: 'team_tug', icon: '🪢', title: 'Team Tug-of-War', desc: 'Two teams mash to pull the star. Teamwork = power!', min: 2, max: 8, tag: '2v2 up to 4v4' },
@@ -54,16 +62,25 @@ interface OptionGroup {
 }
 const GAME_OPTIONS: Partial<Record<GameId, OptionGroup[]>> = {
   math_sprint: [{ key: 'difficulty', label: 'Difficulty', choices: [
-    { value: 'easy', label: '😀 Easy' }, { value: 'medium', label: '🙂 Medium' }, { value: 'hard', label: '🤓 Hard' },
+    { value: 'easy', label: '😀 Easy' }, { value: 'medium', label: '🙂 Medium' }, { value: 'hard', label: '🤓 Hard' }, { value: 'expert', label: '🧠 Expert' },
   ] }],
   code_breaker: [{ key: 'difficulty', label: 'Difficulty', choices: [
-    { value: 'easy', label: '😀 Easy · 3' }, { value: 'normal', label: '🙂 Normal · 4' }, { value: 'hard', label: '🤓 Hard · 4+repeats' },
+    { value: 'easy', label: '😀 Easy · 3' }, { value: 'normal', label: '🙂 Normal · 4' }, { value: 'hard', label: '🤓 Hard · 4+' }, { value: 'expert', label: '🧠 Expert · 5' },
   ] }],
   odd_one_out: [{ key: 'difficulty', label: 'Difficulty', choices: [
-    { value: 'easy', label: '😀 Easy' }, { value: 'hard', label: '🤓 Tricky' },
+    { value: 'easy', label: '😀 Easy' }, { value: 'hard', label: '🤓 Tricky' }, { value: 'expert', label: '🧠 Genius' },
   ] }],
   whats_missing: [{ key: 'difficulty', label: 'Difficulty', choices: [
-    { value: 'easy', label: '😀 Easy · 5' }, { value: 'medium', label: '🙂 Medium · 7' }, { value: 'hard', label: '🤓 Hard · 9' },
+    { value: 'easy', label: '😀 Easy · 5' }, { value: 'medium', label: '🙂 Medium · 7' }, { value: 'hard', label: '🤓 Hard · 9' }, { value: 'expert', label: '🧠 Expert · 11' },
+  ] }],
+  pattern_quest: [{ key: 'difficulty', label: 'Difficulty', choices: [
+    { value: 'easy', label: '😀 Easy' }, { value: 'medium', label: '🙂 Medium' }, { value: 'hard', label: '🤓 Hard' }, { value: 'expert', label: '🧠 Expert' },
+  ] }],
+  memory_digits: [{ key: 'difficulty', label: 'Difficulty', choices: [
+    { value: 'easy', label: '😀 Easy · 3' }, { value: 'medium', label: '🙂 Medium · 4' }, { value: 'hard', label: '🤓 Hard · 5' }, { value: 'expert', label: '🧠 Expert · 6' },
+  ] }],
+  sudoku_mini: [{ key: 'difficulty', label: 'Difficulty', choices: [
+    { value: 'easy', label: '😀 Easy · 4×4' }, { value: 'medium', label: '🙂 Medium · 4×4' }, { value: 'hard', label: '🤓 Hard · 6×6' }, { value: 'expert', label: '🧠 Expert · 6×6' },
   ] }],
 };
 
@@ -192,6 +209,10 @@ const OnlineHub: React.FC = () => {
         {activeGame === 'code_breaker' && <CodeBreaker room={api} config={gameConfig} />}
         {activeGame === 'odd_one_out' && <OddOneOut room={api} config={gameConfig} />}
         {activeGame === 'whats_missing' && <WhatsMissing room={api} config={gameConfig} />}
+        {activeGame === 'pattern_quest' && <PatternQuest room={api} config={gameConfig} />}
+        {activeGame === 'memory_digits' && <MemoryDigits room={api} config={gameConfig} />}
+        {activeGame === 'sudoku_mini' && <SudokuMini room={api} config={gameConfig} />}
+        {activeGame === 'connect_four' && <ConnectFour room={api} />}
         <button
           onClick={leaveToMenu}
           className="fixed top-2 right-2 z-50 bg-black/40 hover:bg-black/60 text-white/80 rounded-full px-3 py-1 font-fredoka text-xs"

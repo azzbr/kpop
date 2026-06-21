@@ -24,6 +24,7 @@ const ROUND_MS = 150000; // 2.5 minutes to crack it
 function params(difficulty: string): { length: number; palette: number; repeats: boolean } {
   if (difficulty === 'easy') return { length: 3, palette: 5, repeats: false };
   if (difficulty === 'hard') return { length: 4, palette: 6, repeats: true };
+  if (difficulty === 'expert') return { length: 5, palette: 6, repeats: true };
   return { length: 4, palette: 6, repeats: false }; // normal
 }
 

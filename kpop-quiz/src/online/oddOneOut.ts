@@ -6,7 +6,7 @@ export interface OddItem {
   label: string;
 }
 export interface OddSet {
-  level: 'easy' | 'hard';
+  level: 'easy' | 'hard' | 'expert';
   theme: string; // why the three belong together (shown on reveal)
   sames: OddItem[]; // exactly 3
   odd: OddItem;
@@ -56,9 +56,21 @@ export const ODD_SETS: OddSet[] = [
   { level: 'hard', theme: 'liquids', sames: [{ emoji: '💧', label: 'water' }, { emoji: '🥛', label: 'milk' }, { emoji: '🧃', label: 'juice' }], odd: { emoji: '🧊', label: 'ice cube' } },
   { level: 'hard', theme: 'has a shell', sames: [{ emoji: '🐢', label: 'turtle' }, { emoji: '🐌', label: 'snail' }, { emoji: '🦀', label: 'crab' }], odd: { emoji: '🐙', label: 'octopus' } },
   { level: 'hard', theme: 'frozen / cold', sames: [{ emoji: '❄️', label: 'snow' }, { emoji: '⛄', label: 'snowman' }, { emoji: '🧊', label: 'ice' }], odd: { emoji: '🌋', label: 'volcano' } },
+
+  // ---- EXPERT: needs real knowledge (animal classes, materials, music…) ----
+  { level: 'expert', theme: 'reptiles', sames: [{ emoji: '🐍', label: 'snake' }, { emoji: '🦎', label: 'lizard' }, { emoji: '🐊', label: 'crocodile' }], odd: { emoji: '🐸', label: 'frog (amphibian)' } },
+  { level: 'expert', theme: 'insects (6 legs)', sames: [{ emoji: '🐜', label: 'ant' }, { emoji: '🐝', label: 'bee' }, { emoji: '🦗', label: 'cricket' }], odd: { emoji: '🕷️', label: 'spider (8 legs)' } },
+  { level: 'expert', theme: 'mammals', sames: [{ emoji: '🐬', label: 'dolphin' }, { emoji: '🦇', label: 'bat' }, { emoji: '🐘', label: 'elephant' }], odd: { emoji: '🦅', label: 'eagle (bird)' } },
+  { level: 'expert', theme: 'root vegetables', sames: [{ emoji: '🥕', label: 'carrot' }, { emoji: '🥔', label: 'potato' }, { emoji: '🧅', label: 'onion' }], odd: { emoji: '🥦', label: 'broccoli' } },
+  { level: 'expert', theme: 'nocturnal animals', sames: [{ emoji: '🦉', label: 'owl' }, { emoji: '🦇', label: 'bat' }, { emoji: '🦝', label: 'raccoon' }], odd: { emoji: '🐓', label: 'rooster (daytime)' } },
+  { level: 'expert', theme: 'string instruments', sames: [{ emoji: '🎻', label: 'violin' }, { emoji: '🎸', label: 'guitar' }, { emoji: '🪕', label: 'banjo' }], odd: { emoji: '🎺', label: 'trumpet (brass)' } },
+  { level: 'expert', theme: 'made of metal', sames: [{ emoji: '🔑', label: 'key' }, { emoji: '🔧', label: 'spanner' }, { emoji: '🔩', label: 'bolt' }], odd: { emoji: '🪵', label: 'log (wood)' } },
+  { level: 'expert', theme: 'herbivores (plant eaters)', sames: [{ emoji: '🐰', label: 'rabbit' }, { emoji: '🐮', label: 'cow' }, { emoji: '🐘', label: 'elephant' }], odd: { emoji: '🦁', label: 'lion (meat eater)' } },
+  { level: 'expert', theme: 'cold-blooded animals', sames: [{ emoji: '🐍', label: 'snake' }, { emoji: '🐸', label: 'frog' }, { emoji: '🐟', label: 'fish' }], odd: { emoji: '🐶', label: 'dog (warm-blooded)' } },
+  { level: 'expert', theme: 'hatch from eggs', sames: [{ emoji: '🐔', label: 'chicken' }, { emoji: '🐢', label: 'turtle' }, { emoji: '🐍', label: 'snake' }], odd: { emoji: '🐬', label: 'dolphin (live birth)' } },
 ];
 
-export function pickOddSets(level: 'easy' | 'hard', n: number): OddSet[] {
+export function pickOddSets(level: 'easy' | 'hard' | 'expert', n: number): OddSet[] {
   let pool = ODD_SETS.filter((s) => s.level === level);
   if (pool.length < n) pool = ODD_SETS; // fall back to all if a level runs short
   return [...pool].sort(() => Math.random() - 0.5).slice(0, n);

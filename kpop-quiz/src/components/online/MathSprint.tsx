@@ -24,6 +24,17 @@ function makeProblem(difficulty: string): { prompt: string; answer: string } {
     else if (op === '÷') { b = randInt(3, 12); ans = randInt(3, 12); a = b * ans; }
     else if (op === '+') { a = randInt(25, 500); b = randInt(25, 500); ans = a + b; }
     else { a = randInt(50, 500); b = randInt(10, a); ans = a - b; }
+  } else if (difficulty === 'expert') {
+    const kind = randInt(0, 4);
+    if (kind === 4) {
+      const x = randInt(10, 25);
+      return { prompt: `${x}²`, answer: String(x * x) };
+    }
+    op = ['+', '−', '×', '÷'][kind];
+    if (op === '×') { a = randInt(11, 25); b = randInt(6, 15); ans = a * b; }
+    else if (op === '÷') { b = randInt(6, 15); ans = randInt(6, 20); a = b * ans; }
+    else if (op === '+') { a = randInt(100, 1500); b = randInt(100, 1500); ans = a + b; }
+    else { a = randInt(300, 2000); b = randInt(50, a); ans = a - b; }
   } else {
     // medium
     op = ['+', '−', '×', '÷'][randInt(0, 3)];
