@@ -28,6 +28,7 @@ function params(difficulty: string): { length: number; palette: number; repeats:
   if (difficulty === 'hard') return { length: 4, palette: 6, repeats: true };
   if (difficulty === 'expert') return { length: 5, palette: 6, repeats: true };
   if (difficulty === 'master') return { length: 5, palette: 8, repeats: true };
+  if (difficulty === 'legend') return { length: 6, palette: 8, repeats: true };
   return { length: 4, palette: 6, repeats: false }; // normal
 }
 

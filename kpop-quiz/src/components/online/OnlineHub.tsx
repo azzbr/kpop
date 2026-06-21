@@ -30,6 +30,10 @@ import Battleship from './Battleship';
 import Make24 from './Make24';
 import Hangman from './Hangman';
 import BrainBuzzer from './BrainBuzzer';
+import Minesweeper from './Minesweeper';
+import DotsBoxes from './DotsBoxes';
+import ColourClash from './ColourClash';
+import SlidingPuzzle from './SlidingPuzzle';
 
 const EMOJIS = ['🎤', '🎸', '🥁', '🎹', '🎧', '🌟', '💖', '🔥', '🦄', '🐯', '🐰', '🦊'];
 
@@ -53,8 +57,12 @@ const GAMES: { id: GameId; icon: string; title: string; desc: string; min: numbe
   { id: 'make_24', icon: '🔢', title: 'Make 24', desc: 'Combine the numbers with + − × ÷ to hit the target. Mega number puzzle!', min: 2, max: 30, tag: 'brain game!' },
   { id: 'hangman', icon: '🔡', title: 'Hangman', desc: 'Guess the hidden word letter by letter before your lives run out. Race to reveal it!', min: 2, max: 30, tag: 'brain game!' },
   { id: 'brain_buzzer', icon: '🎯', title: 'Brain Buzzer', desc: 'TRUE or FALSE? Tap fast on maths & trivia before the buzzer. Sharp minds win!', min: 2, max: 30, tag: 'brain game!' },
+  { id: 'minesweeper', icon: '💣', title: 'Minesweeper', desc: 'Use the number clues to dodge the hidden mines and clear the field first!', min: 2, max: 30, tag: 'brain game!' },
+  { id: 'sliding_puzzle', icon: '🧩', title: 'Sliding Puzzle', desc: 'Slide the jumbled tiles back into order. First to solve the puzzle wins!', min: 2, max: 30, tag: 'brain game!' },
+  { id: 'colour_clash', icon: '🌈', title: 'Colour Clash', desc: 'Tap the COLOUR of the word, not the word itself! Brain-bending and fast.', min: 2, max: 30, tag: 'brain game!' },
   { id: 'connect_four', icon: '♟️', title: 'Connect 4', desc: 'Line up four in a row before your rival blocks you. Classic strategy duel!', min: 2, max: 2, tag: '1 vs 1' },
   { id: 'battleship', icon: '🚢', title: 'Battleship', desc: 'Hide your fleet, then fire on the grid to sink your rival’s ships first. Deduction duel!', min: 2, max: 2, tag: '1 vs 1' },
+  { id: 'dots_boxes', icon: '◻️', title: 'Dots & Boxes', desc: 'Draw lines, complete boxes to claim them and go again. Sneaky strategy!', min: 2, max: 2, tag: '1 vs 1' },
   { id: 'quiz_duel', icon: '⚔️', title: 'Quiz Duel', desc: 'School questions, two screens — fastest correct answer steals the round!', min: 2, max: 2, tag: '1 vs 1' },
   { id: 'penalty_duel', icon: '⚽', title: 'Penalty Duel', desc: 'Shooter vs keeper — pick your corner and outsmart your rival in 5 penalties!', min: 2, max: 2, tag: '1 vs 1' },
   { id: 'team_tug', icon: '🪢', title: 'Team Tug-of-War', desc: 'Two teams mash to pull the star. Teamwork = power!', min: 2, max: 8, tag: '2v2 up to 4v4' },
@@ -68,29 +76,35 @@ interface OptionGroup {
   label: string;
   choices: { value: string; label: string }[];
 }
-const FIVE = [
-  { value: 'easy', label: '😀 Easy' }, { value: 'medium', label: '🙂 Medium' }, { value: 'hard', label: '🤓 Hard' }, { value: 'expert', label: '🧠 Expert' }, { value: 'master', label: '🔥 Master' },
+const STD = [
+  { value: 'easy', label: '😀 Easy' }, { value: 'medium', label: '🙂 Medium' }, { value: 'hard', label: '🤓 Hard' }, { value: 'expert', label: '🧠 Expert' }, { value: 'master', label: '🔥 Master' }, { value: 'legend', label: '💀 Legend' },
 ];
 const GAME_OPTIONS: Partial<Record<GameId, OptionGroup[]>> = {
-  math_sprint: [{ key: 'difficulty', label: 'Difficulty', choices: FIVE }],
-  pattern_quest: [{ key: 'difficulty', label: 'Difficulty', choices: FIVE }],
-  make_24: [{ key: 'difficulty', label: 'Difficulty', choices: FIVE }],
-  hangman: [{ key: 'difficulty', label: 'Difficulty', choices: FIVE }],
-  brain_buzzer: [{ key: 'difficulty', label: 'Difficulty', choices: FIVE }],
+  math_sprint: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
+  pattern_quest: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
+  make_24: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
+  hangman: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
+  brain_buzzer: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
+  minesweeper: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
+  sliding_puzzle: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
+  colour_clash: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
+  dots_boxes: [{ key: 'difficulty', label: 'Board size', choices: [
+    { value: 'small', label: '▫️ Small · 3×3' }, { value: 'medium', label: '◻️ Medium · 4×4' }, { value: 'large', label: '⬜ Large · 5×5' },
+  ] }],
   code_breaker: [{ key: 'difficulty', label: 'Difficulty', choices: [
-    { value: 'easy', label: '😀 Easy · 3' }, { value: 'normal', label: '🙂 Normal · 4' }, { value: 'hard', label: '🤓 Hard · 4+' }, { value: 'expert', label: '🧠 Expert · 5' }, { value: 'master', label: '🔥 Master · 5/8' },
+    { value: 'easy', label: '😀 Easy · 3' }, { value: 'normal', label: '🙂 Normal · 4' }, { value: 'hard', label: '🤓 Hard · 4+' }, { value: 'expert', label: '🧠 Expert · 5' }, { value: 'master', label: '🔥 Master · 5/8' }, { value: 'legend', label: '💀 Legend · 6/8' },
   ] }],
   odd_one_out: [{ key: 'difficulty', label: 'Difficulty', choices: [
-    { value: 'easy', label: '😀 Easy' }, { value: 'hard', label: '🤓 Tricky' }, { value: 'expert', label: '🧠 Genius' }, { value: 'master', label: '🔥 Master' },
+    { value: 'easy', label: '😀 Easy' }, { value: 'hard', label: '🤓 Tricky' }, { value: 'expert', label: '🧠 Genius' }, { value: 'master', label: '🔥 Master' }, { value: 'legend', label: '💀 Legend' },
   ] }],
   whats_missing: [{ key: 'difficulty', label: 'Difficulty', choices: [
-    { value: 'easy', label: '😀 Easy · 5' }, { value: 'medium', label: '🙂 Medium · 7' }, { value: 'hard', label: '🤓 Hard · 9' }, { value: 'expert', label: '🧠 Expert · 11' }, { value: 'master', label: '🔥 Master · 13' },
+    { value: 'easy', label: '😀 Easy · 5' }, { value: 'medium', label: '🙂 Medium · 7' }, { value: 'hard', label: '🤓 Hard · 9' }, { value: 'expert', label: '🧠 Expert · 11' }, { value: 'master', label: '🔥 Master · 13' }, { value: 'legend', label: '💀 Legend · 15' },
   ] }],
   memory_digits: [{ key: 'difficulty', label: 'Difficulty', choices: [
-    { value: 'easy', label: '😀 Easy · 3' }, { value: 'medium', label: '🙂 Medium · 4' }, { value: 'hard', label: '🤓 Hard · 5' }, { value: 'expert', label: '🧠 Expert · 6' }, { value: 'master', label: '🔥 Master · 7' },
+    { value: 'easy', label: '😀 Easy · 3' }, { value: 'medium', label: '🙂 Medium · 4' }, { value: 'hard', label: '🤓 Hard · 5' }, { value: 'expert', label: '🧠 Expert · 6' }, { value: 'master', label: '🔥 Master · 7' }, { value: 'legend', label: '💀 Legend · 8' },
   ] }],
   sudoku_mini: [{ key: 'difficulty', label: 'Difficulty', choices: [
-    { value: 'easy', label: '😀 Easy · 4×4' }, { value: 'medium', label: '🙂 Medium · 4×4' }, { value: 'hard', label: '🤓 Hard · 6×6' }, { value: 'expert', label: '🧠 Expert · 6×6' }, { value: 'master', label: '🔥 Master · 6×6' },
+    { value: 'easy', label: '😀 Easy · 4×4' }, { value: 'medium', label: '🙂 Medium · 4×4' }, { value: 'hard', label: '🤓 Hard · 6×6' }, { value: 'expert', label: '🧠 Expert · 6×6' }, { value: 'master', label: '🔥 Master · 6×6' }, { value: 'legend', label: '💀 Legend · 6×6' },
   ] }],
 };
 
@@ -227,6 +241,10 @@ const OnlineHub: React.FC = () => {
         {activeGame === 'hangman' && <Hangman room={api} config={gameConfig} />}
         {activeGame === 'brain_buzzer' && <BrainBuzzer room={api} config={gameConfig} />}
         {activeGame === 'battleship' && <Battleship room={api} />}
+        {activeGame === 'minesweeper' && <Minesweeper room={api} config={gameConfig} />}
+        {activeGame === 'sliding_puzzle' && <SlidingPuzzle room={api} config={gameConfig} />}
+        {activeGame === 'colour_clash' && <ColourClash room={api} config={gameConfig} />}
+        {activeGame === 'dots_boxes' && <DotsBoxes room={api} config={gameConfig} />}
         <button
           onClick={leaveToMenu}
           className="fixed top-2 right-2 z-50 bg-black/40 hover:bg-black/60 text-white/80 rounded-full px-3 py-1 font-fredoka text-xs"

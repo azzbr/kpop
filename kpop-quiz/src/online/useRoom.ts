@@ -28,7 +28,11 @@ export type GameId =
   | 'battleship'
   | 'make_24'
   | 'hangman'
-  | 'brain_buzzer';
+  | 'brain_buzzer'
+  | 'minesweeper'
+  | 'dots_boxes'
+  | 'colour_clash'
+  | 'sliding_puzzle';
 
 // Optional per-game setup chosen by the host in the lobby (difficulty, etc.),
 // broadcast to everyone in the `start` message.

@@ -21,6 +21,7 @@ const HM_LEN: Record<string, [number, number]> = {
   hard: [6, 8],
   expert: [8, 10],
   master: [9, 12],
+  legend: [10, 14],
 };
 
 function pickWords(difficulty: string, n: number): string[] {

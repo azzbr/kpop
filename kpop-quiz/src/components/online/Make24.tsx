@@ -33,12 +33,18 @@ const DIFF: Record<string, { count: number; maxNum: number; tlo: number; thi: nu
   hard: { count: 4, maxNum: 12, tlo: 20, thi: 30 },
   expert: { count: 4, maxNum: 13, tlo: 24, thi: 50 },
   master: { count: 4, maxNum: 15, tlo: 35, thi: 99 },
+  legend: { count: 5, maxNum: 13, tlo: 40, thi: 120 },
 };
 
 // All single values reachable by combining the numbers two-at-a-time
-// (integers only — division must be exact).
+// (integers only — division must be exact). Memoised by sorted multiset so the
+// 5-number (Legend) search stays fast.
+const reachMemo = new Map<string, Set<number>>();
 function reach(nums: number[]): Set<number> {
   if (nums.length === 1) return new Set([nums[0]]);
+  const key = [...nums].sort((a, b) => a - b).join(',');
+  const cached = reachMemo.get(key);
+  if (cached) return cached;
   const out = new Set<number>();
   for (let i = 0; i < nums.length; i++) {
     for (let j = 0; j < nums.length; j++) {
@@ -51,6 +57,7 @@ function reach(nums: number[]): Set<number> {
       for (const res of results) for (const v of reach([...rest, res])) out.add(v);
     }
   }
+  reachMemo.set(key, out);
   return out;
 }
 

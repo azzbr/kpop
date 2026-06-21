@@ -46,6 +46,17 @@ function makeProblem(difficulty: string): { prompt: string; answer: string } {
     else if (op === '÷') { b = randInt(7, 15); ans = randInt(8, 25); a = b * ans; }
     else if (op === '+') { a = randInt(500, 5000); b = randInt(500, 5000); ans = a + b; }
     else { a = randInt(1000, 5000); b = randInt(100, a); ans = a - b; }
+  } else if (difficulty === 'legend') {
+    const kind = randInt(0, 4);
+    if (kind === 4) {
+      const x = randInt(13, 30);
+      return { prompt: `${x}²`, answer: String(x * x) };
+    }
+    op = ['+', '−', '×', '÷'][kind];
+    if (op === '×') { a = randInt(100, 300); b = randInt(11, 30); ans = a * b; }
+    else if (op === '÷') { b = randInt(11, 25); ans = randInt(10, 40); a = b * ans; }
+    else if (op === '+') { a = randInt(1000, 9000); b = randInt(1000, 9000); ans = a + b; }
+    else { a = randInt(2000, 9000); b = randInt(500, a); ans = a - b; }
   } else {
     // medium
     op = ['+', '−', '×', '÷'][randInt(0, 3)];

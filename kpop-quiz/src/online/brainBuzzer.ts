@@ -19,7 +19,7 @@ function mathBuzz(difficulty: string): Buzz {
     if (op === '×') { a = randInt(2, 5); b = randInt(2, 5); ans = a * b; }
     else if (op === '+') { a = randInt(2, 20); b = randInt(2, 20); ans = a + b; }
     else { a = randInt(5, 20); b = randInt(1, a); ans = a - b; }
-  } else if (difficulty === 'master' || difficulty === 'expert') {
+  } else if (difficulty === 'master' || difficulty === 'expert' || difficulty === 'legend') {
     op = pick(['+', '−', '×', '÷']);
     if (op === '×') { a = randInt(8, 20); b = randInt(6, 15); ans = a * b; }
     else if (op === '÷') { b = randInt(4, 12); ans = randInt(4, 15); a = b * ans; }
@@ -97,7 +97,7 @@ const FACTS: Buzz[] = [
 
 export function makeBuzzerRounds(difficulty: string, n: number): Buzz[] {
   // Roughly half maths, half facts; harder tiers lean more on maths.
-  const mathChance = difficulty === 'easy' ? 0.4 : difficulty === 'master' ? 0.6 : 0.5;
+  const mathChance = difficulty === 'easy' ? 0.4 : difficulty === 'master' || difficulty === 'legend' ? 0.6 : 0.5;
   const facts = [...FACTS].sort(() => Math.random() - 0.5);
   const rounds: Buzz[] = [];
   const seen = new Set<string>();
