@@ -16,7 +16,15 @@ export type GameId =
   | 'emoji_detective'
   | 'word_scramble'
   | 'riddle_rush'
-  | 'picture_phone';
+  | 'picture_phone'
+  | 'math_sprint'
+  | 'code_breaker'
+  | 'odd_one_out'
+  | 'whats_missing';
+
+// Optional per-game setup chosen by the host in the lobby (difficulty, etc.),
+// broadcast to everyone in the `start` message.
+export type GameConfig = Record<string, string>;
 
 export interface RoomPlayer {
   id: string;

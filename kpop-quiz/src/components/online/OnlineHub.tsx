@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store';
 import { useRoom } from '../../online/useRoom';
-import type { GameId, RoomApi } from '../../online/useRoom';
+import type { GameId, GameConfig, RoomApi } from '../../online/useRoom';
 import { playClick, playUnlock, playWin } from '../../utils/sounds';
 import QuizDuelOnline from './QuizDuelOnline';
 import TeamTugOnline from './TeamTugOnline';
@@ -18,6 +18,10 @@ import EmojiDetective from './EmojiDetective';
 import WordScramble from './WordScramble';
 import RiddleRush from './RiddleRush';
 import PictureTelephone from './PictureTelephone';
+import MathSprint from './MathSprint';
+import CodeBreaker from './CodeBreaker';
+import OddOneOut from './OddOneOut';
+import WhatsMissing from './WhatsMissing';
 
 const EMOJIS = ['🎤', '🎸', '🥁', '🎹', '🎧', '🌟', '💖', '🔥', '🦄', '🐯', '🐰', '🦊'];
 
@@ -31,12 +35,37 @@ const GAMES: { id: GameId; icon: string; title: string; desc: string; min: numbe
   { id: 'word_scramble', icon: '🔤', title: 'Word Scramble', desc: 'The letters are jumbled — unscramble the word fastest to win the round!', min: 2, max: 30, tag: 'whole class!' },
   { id: 'riddle_rush', icon: '🧩', title: 'Riddle Rush', desc: 'Solve the brain-teasing riddle and type your answer before your friends!', min: 2, max: 30, tag: 'whole class!' },
   { id: 'picture_phone', icon: '✏️', title: 'Picture Telephone', desc: 'Draw → guess → draw! Your word travels the room, then the silly reveal!', min: 3, max: 12, tag: 'pass it on!' },
+  { id: 'math_sprint', icon: '➗', title: 'Math Sprint', desc: 'First to solve the sum wins the round! Pick Easy, Medium or Hard.', min: 2, max: 30, tag: 'brain game!' },
+  { id: 'code_breaker', icon: '🔢', title: 'Code Breaker', desc: 'Crack the secret colour code with logic clues — everyone races!', min: 2, max: 30, tag: 'brain game!' },
+  { id: 'odd_one_out', icon: '🔎', title: 'Odd One Out', desc: 'Four things appear — tap the one that doesn’t belong. Think fast!', min: 2, max: 30, tag: 'brain game!' },
+  { id: 'whats_missing', icon: '🧠', title: 'What’s Missing?', desc: 'Memorise the tray, then spot which object vanished. Sharp eyes win!', min: 2, max: 30, tag: 'brain game!' },
   { id: 'quiz_duel', icon: '⚔️', title: 'Quiz Duel', desc: 'School questions, two screens — fastest correct answer steals the round!', min: 2, max: 2, tag: '1 vs 1' },
   { id: 'penalty_duel', icon: '⚽', title: 'Penalty Duel', desc: 'Shooter vs keeper — pick your corner and outsmart your rival in 5 penalties!', min: 2, max: 2, tag: '1 vs 1' },
   { id: 'team_tug', icon: '🪢', title: 'Team Tug-of-War', desc: 'Two teams mash to pull the star. Teamwork = power!', min: 2, max: 8, tag: '2v2 up to 4v4' },
   { id: 'world_tour', icon: '✈️', title: 'World Tour Tycoon', desc: 'Board race Seoul → London — buy venues, charge rent, dodge traps!', min: 2, max: 4, tag: '2–4 players' },
   { id: 'monopoly_deal', icon: '🃏', title: 'Monopoly Deal', desc: 'The card game! Collect 3 full city sets — rent, sly deals & JUST SAY NO!', min: 2, max: 4, tag: '2–4 players' },
 ];
+
+// Host-chosen setup for games that support it. Sent inside the `start` message.
+interface OptionGroup {
+  key: string;
+  label: string;
+  choices: { value: string; label: string }[];
+}
+const GAME_OPTIONS: Partial<Record<GameId, OptionGroup[]>> = {
+  math_sprint: [{ key: 'difficulty', label: 'Difficulty', choices: [
+    { value: 'easy', label: '😀 Easy' }, { value: 'medium', label: '🙂 Medium' }, { value: 'hard', label: '🤓 Hard' },
+  ] }],
+  code_breaker: [{ key: 'difficulty', label: 'Difficulty', choices: [
+    { value: 'easy', label: '😀 Easy · 3' }, { value: 'normal', label: '🙂 Normal · 4' }, { value: 'hard', label: '🤓 Hard · 4+repeats' },
+  ] }],
+  odd_one_out: [{ key: 'difficulty', label: 'Difficulty', choices: [
+    { value: 'easy', label: '😀 Easy' }, { value: 'hard', label: '🤓 Tricky' },
+  ] }],
+  whats_missing: [{ key: 'difficulty', label: 'Difficulty', choices: [
+    { value: 'easy', label: '😀 Easy · 5' }, { value: 'medium', label: '🙂 Medium · 7' }, { value: 'hard', label: '🤓 Hard · 9' },
+  ] }],
+};
 
 type HubScreen = 'menu' | 'create' | 'join' | 'lobby';
 
@@ -51,18 +80,33 @@ const OnlineHub: React.FC = () => {
   const [joinError, setJoinError] = useState('');
   const [activeGame, setActiveGame] = useState<GameId | null>(null);
   const [selGame, setSelGame] = useState<GameId>('class_show');
+  const [opts, setOpts] = useState<Record<string, string>>({});
+  const [gameConfig, setGameConfig] = useState<GameConfig>({});
 
   // Route lobby-level messages (game start / return to lobby)
   useEffect(() => {
     return room.onMessage((m) => {
       if (m.t === 'start') {
         setActiveGame(m.game as GameId);
+        setGameConfig((m.config as GameConfig) || {});
         playUnlock();
       } else if (m.t === 'to_lobby') {
         setActiveGame(null);
       }
     });
   }, [room.onMessage]);
+
+  const selectGame = (g: GameId) => {
+    playClick();
+    setSelGame(g);
+    setOpts({});
+  };
+
+  const buildConfig = (g: GameId): GameConfig => {
+    const cfg: GameConfig = {};
+    for (const grp of GAME_OPTIONS[g] || []) cfg[grp.key] = opts[grp.key] ?? grp.choices[0].value;
+    return cfg;
+  };
 
   const exitHub = () => {
     playClick();
@@ -108,7 +152,7 @@ const OnlineHub: React.FC = () => {
 
   const startGame = () => {
     playClick();
-    room.send({ t: 'start', game: selGame });
+    room.send({ t: 'start', game: selGame, config: buildConfig(selGame) });
   };
 
   const playerCount = room.players.length;
@@ -144,6 +188,10 @@ const OnlineHub: React.FC = () => {
         {activeGame === 'word_scramble' && <WordScramble room={api} />}
         {activeGame === 'riddle_rush' && <RiddleRush room={api} />}
         {activeGame === 'picture_phone' && <PictureTelephone room={api} />}
+        {activeGame === 'math_sprint' && <MathSprint room={api} config={gameConfig} />}
+        {activeGame === 'code_breaker' && <CodeBreaker room={api} config={gameConfig} />}
+        {activeGame === 'odd_one_out' && <OddOneOut room={api} config={gameConfig} />}
+        {activeGame === 'whats_missing' && <WhatsMissing room={api} config={gameConfig} />}
         <button
           onClick={leaveToMenu}
           className="fixed top-2 right-2 z-50 bg-black/40 hover:bg-black/60 text-white/80 rounded-full px-3 py-1 font-fredoka text-xs"
@@ -304,7 +352,7 @@ const OnlineHub: React.FC = () => {
                     return (
                       <button
                         key={g.id}
-                        onClick={() => { playClick(); setSelGame(g.id); }}
+                        onClick={() => selectGame(g.id)}
                         className={`text-left rounded-3xl p-4 border-2 transition-all ${
                           selGame === g.id ? 'border-amber-400 bg-amber-400/15 shadow-lg' : 'border-white/15 bg-white/5 hover:bg-white/10'
                         }`}
@@ -325,6 +373,29 @@ const OnlineHub: React.FC = () => {
                     );
                   })}
                 </div>
+
+                {(GAME_OPTIONS[selGame] || []).map((grp) => (
+                  <div key={grp.key} className="mb-5">
+                    <div className="font-fredoka text-sm text-teal-200 mb-2">⚙️ {grp.label}:</div>
+                    <div className="flex flex-wrap gap-2">
+                      {grp.choices.map((ch) => {
+                        const active = (opts[grp.key] ?? grp.choices[0].value) === ch.value;
+                        return (
+                          <button
+                            key={ch.value}
+                            onClick={() => { playClick(); setOpts((o) => ({ ...o, [grp.key]: ch.value })); }}
+                            className={`px-4 py-2 rounded-full font-fredoka text-sm border-2 transition-all ${
+                              active ? 'bg-amber-400/25 border-amber-400 text-amber-100' : 'bg-white/5 border-white/15 text-teal-100 hover:bg-white/10'
+                            }`}
+                          >
+                            {ch.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+
                 <motion.button
                   whileHover={{ scale: canStart(selGame) ? 1.04 : 1 }}
                   whileTap={{ scale: canStart(selGame) ? 0.96 : 1 }}
