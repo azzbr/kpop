@@ -143,9 +143,9 @@ const StyleStudio: React.FC = () => {
       {confetti && <ConfettiBurst count={80} durationMs={2800} />}
 
       <div className="max-w-md w-full mx-auto">
-        <button onClick={() => { playClick(); setGameState('girls_zone'); }}
+        <button onClick={() => { playClick(); setGameState('game_mode'); }}
           className="mb-3 px-4 py-2 bg-white/70 hover:bg-white text-pink-700 rounded-full font-fredoka text-sm border-2 border-pink-200">
-          ← Girls Zone
+          ← Back
         </button>
 
         <div className="text-center mb-3">

@@ -188,7 +188,7 @@ const TruthOrDare: React.FC = () => {
         <div className="text-center mb-6">
           <div className="text-5xl mb-2">🎯</div>
           <h1 className="text-4xl font-fredoka font-bold text-purple-600 text-kid-glow">Truth or Dare!</h1>
-          <p className="font-nunito text-gray-500 text-sm mt-1">K-pop edition • {MAX_ROUNDS} rounds</p>
+          <p className="font-nunito text-gray-500 text-sm mt-1">Party edition • {MAX_ROUNDS} rounds</p>
         </div>
 
         <AnimatePresence mode="wait">

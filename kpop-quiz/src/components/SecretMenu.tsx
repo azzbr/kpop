@@ -2,384 +2,93 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
 import DrawingCanvas from './DrawingCanvas';
-import StickerGallery from './StickerGallery';
-import FaceGenerator from './FaceGenerator';
-import SoundBoard from './SoundBoard';
 import PatternMaker from './PatternMaker';
 import AppStatsDashboard from './AppStatsDashboard';
-import JokeMachine from './JokeMachine';
 import ThemeSwitcher from './ThemeSwitcher';
+
+type Tab = 'create' | 'hidden' | 'settings';
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'create', label: '🎨 Create' },
+  { id: 'hidden', label: '🕵️ Hidden Places' },
+  { id: 'settings', label: '⚙️ Themes & Stats' },
+];
 
 const SecretMenu: React.FC = () => {
   const { setGameState } = useGameStore();
-  const [activeTab, setActiveTab] = useState<'creative' | 'games' | 'fun' | 'behind'>('creative');
-  const [activeGame, setActiveGame] = useState<'rush' | 'face'>('rush');
-  const [placedStickers, setPlacedStickers] = useState<Array<{
-    id: string;
-    sticker: any;
-    x: number;
-    y: number;
-    scale: number;
-  }>>([]);
-
-  const handleStickerSelect = (sticker: any) => {
-    // Add sticker to placed stickers in center of screen initially
-    const newSticker = {
-      id: `placed-${Date.now()}`,
-      sticker,
-      x: Math.random() * 200 + 100, // Random position
-      y: Math.random() * 150 + 100,
-      scale: 1,
-    };
-    setPlacedStickers(prev => [...prev, newSticker]);
-  };
-
-  const removePlacedSticker = (stickerId: string) => {
-    setPlacedStickers(prev => prev.filter(s => s.id !== stickerId));
-  };
-
-  const updatePlacedSticker = (stickerId: string, updates: Partial<{x: number, y: number, scale: number}>) => {
-    setPlacedStickers(prev => prev.map(s =>
-      s.id === stickerId ? { ...s, ...updates } : s
-    ));
-  };
-
-  const tabs = [
-    { id: 'creative', label: '🎨 Creative Corner', color: 'bg-pink-100 border-pink-300' },
-    { id: 'games', label: '🎮 Game Paradise', color: 'bg-purple-100 border-purple-300' },
-    { id: 'fun', label: '🌟 Fun Zone', color: 'bg-blue-100 border-blue-300' },
-    { id: 'behind', label: '🔍 Behind Scenes', color: 'bg-green-100 border-green-300' },
-  ];
+  const [tab, setTab] = useState<Tab>('create');
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.5 }}
-      className="flex flex-col items-center justify-center min-h-screen px-4 text-center bg-gradient-to-br from-purple-400 via-pink-400 to-blue-400 relative overflow-hidden"
+      className="arcade-bg min-h-screen-d px-4 py-6"
     >
-      {/* Floating background elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        {Array.from({ length: 20 }).map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute text-2xl"
-            initial={{
-              x: Math.random() * window.innerWidth,
-              y: window.innerHeight + 100,
-              rotate: Math.random() * 360,
-            }}
-            animate={{
-              y: -100,
-              rotate: 360,
-            }}
-            transition={{
-              duration: Math.random() * 10 + 5,
-              repeat: Infinity,
-              ease: 'linear',
-              delay: Math.random() * 5,
-            }}
-          >
-            {['🎈', '⭐', '✨', '🌈', '🎵'][Math.floor(Math.random() * 5)]}
-          </motion.div>
-        ))}
-      </div>
+      <div className="max-w-5xl mx-auto bg-white rounded-3xl shadow-2xl p-5 md:p-8 border-4 border-yellow-400 text-center">
+        <h1 className="text-4xl md:text-5xl font-fredoka text-purple-600 mb-1">🔓 Secret Zone</h1>
+        <p className="text-lg font-nunito text-gray-600 mb-6">You found the hidden menu. Don't tell anyone. 🤫</p>
 
-      <div className="max-w-6xl mx-auto relative z-10 bg-white rounded-3xl shadow-2xl p-8 border-4 border-yellow-400">
-        {/* Header */}
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          className="mb-8"
-        >
-          <h1 className="text-4xl md:text-5xl font-fredoka font-bold text-purple-600 mb-4 text-kid-glow">
-            🎉 Secret Fun Zone! 🌈
-          </h1>
-          <p className="text-xl font-fredoka text-gray-700">
-            You found the magical secret place! 🎊
-          </p>
-        </motion.div>
-
-        {/* Tab Navigation */}
-        <div className="flex flex-wrap justify-center gap-3 mb-8">
-          {tabs.map((tab, index) => (
-            <motion.button
-              key={tab.id}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3 + index * 0.1, duration: 0.3 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-6 py-3 rounded-full border-3 font-fredoka font-semibold text-lg transition-all duration-300 ${
-                activeTab === tab.id
-                  ? `${tab.color} text-gray-800 shadow-lg transform scale-105`
-                  : 'bg-gray-100 border-gray-300 text-gray-600 hover:bg-gray-200'
+        <div className="flex flex-wrap justify-center gap-3 mb-6">
+          {TABS.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`px-5 py-3 rounded-full font-fredoka text-lg min-h-[48px] ${
+                tab === t.id ? 'bg-purple-600 text-white shadow-lg' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              {tab.label}
-            </motion.button>
+              {t.label}
+            </button>
           ))}
         </div>
 
-        {/* Content Area */}
         <AnimatePresence mode="wait">
           <motion.div
-            key={activeTab}
+            key={tab}
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-[400px] flex flex-col items-center justify-center"
+            transition={{ duration: 0.2 }}
+            className="space-y-6"
           >
-            {activeTab === 'creative' && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="w-full space-y-6"
-              >
-                <div className="text-center">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ duration: 0.5, type: "spring" }}
-                    className="text-4xl mb-2"
-                  >
-                    🎨
-                  </motion.div>
-                  <h3 className="text-2xl font-fredoka font-bold text-pink-600 mb-2">
-                    Creative Corner
-                  </h3>
-                  <p className="text-sm font-nunito text-gray-600">
-                    Draw, decorate, and create amazing artwork! 🎨✨🖼️
-                  </p>
-                </div>
-
-                {/* Drawing Canvas */}
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="relative"
-                >
-                  <DrawingCanvas />
-
-                  {/* Placed Stickers Overlay */}
-                  {placedStickers.length > 0 && (
-                    <div className="absolute inset-0 pointer-events-none">
-                      {placedStickers.map((placedSticker, index) => (
-                        <motion.div
-                          key={placedSticker.id}
-                          initial={{
-                            x: placedSticker.x,
-                            y: placedSticker.y,
-                            scale: 0.5,
-                            rotate: -180
-                          }}
-                          animate={{
-                            x: placedSticker.x,
-                            y: placedSticker.y,
-                            scale: placedSticker.scale,
-                            rotate: 0
-                          }}
-                          exit={{ scale: 0, opacity: 0 }}
-                          drag
-                          dragMomentum={false}
-                          dragConstraints={{ left: 0, right: 400, top: 0, bottom: 300 }}
-                          onDragEnd={(_event, info) => {
-                            updatePlacedSticker(placedSticker.id, {
-                              x: placedSticker.x + info.offset.x,
-                              y: placedSticker.y + info.offset.y,
-                            });
-                          }}
-                          onDoubleClick={() => removePlacedSticker(placedSticker.id)}
-                          className="absolute pointer-events-auto cursor-move select-none"
-                          whileHover={{ scale: placedSticker.scale * 1.1 }}
-                          whileTap={{ scale: placedSticker.scale * 0.9 }}
-                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                          style={{
-                            zIndex: 10 + index,
-                          }}
-                          title={`Double-click to remove • ${placedSticker.sticker.name}`}
-                        >
-                          <motion.div
-                            className="text-3xl md:text-4xl drop-shadow-lg"
-                            animate={
-                              placedSticker.sticker.wiggleEffect
-                                ? { rotate: [0, -3, 3, 0], scale: [1, 1.05, 1] }
-                                : placedSticker.sticker.sparkleEffect
-                                ? { scale: [1, 1.1, 1], opacity: [1, 0.8, 1] }
-                                : {}
-                            }
-                            transition={{
-                              duration: placedSticker.sticker.wiggleEffect ? 1.5 : placedSticker.sticker.sparkleEffect ? 1 : 0,
-                              repeat: Infinity,
-                              ease: "easeInOut"
-                            }}
-                          >
-                            {placedSticker.sticker.emoji}
-                          </motion.div>
-
-                          {/* Remove hint */}
-                          <motion.div
-                            className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs text-white bg-black bg-opacity-50 px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            Double-click to remove
-                          </motion.div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Placed Stickers Counter */}
-                  {placedStickers.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="absolute top-2 right-2 bg-purple-500 text-white px-2 py-1 rounded-full text-xs font-fredoka"
-                    >
-                      🖼️ {placedStickers.length}
-                    </motion.div>
-                  )}
-                </motion.div>
-
-                {/* Pattern Maker */}
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.4 }}
-                  className="border-t-4 border-pink-200 pt-6"
-                >
-                  <PatternMaker />
-                </motion.div>
-
-                {/* Sticker Gallery */}
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.6 }}
-                  className="border-t-4 border-pink-200 pt-6"
-                >
-                  <div className="text-center mb-4">
-                    <h4 className="text-xl font-fredoka font-bold text-pink-600">
-                      🖼️ Sticker Collection
-                    </h4>
-                    <p className="text-xs font-nunito text-gray-600">
-                      Decorate your drawings with magical stickers!
-                    </p>
-                  </div>
-                  <StickerGallery onStickerSelect={handleStickerSelect} />
-                </motion.div>
-              </motion.div>
+            {tab === 'create' && (
+              <>
+                <DrawingCanvas />
+                <div className="border-t-4 border-pink-200 pt-6"><PatternMaker /></div>
+              </>
             )}
-
-            {activeTab === 'games' && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="w-full space-y-4"
-              >
-                {/* Game Sub-Navigation */}
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex justify-center gap-2"
-                >
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setGameState('kpop_rush')}
-                    className="px-4 py-2 rounded-lg font-fredoka font-semibold bg-gradient-to-r from-purple-400 to-pink-500 text-white shadow-lg hover:from-purple-500 hover:to-pink-600"
+            {tab === 'hidden' && (
+              <div className="grid sm:grid-cols-3 gap-4">
+                {[
+                  { id: 'living_mural' as const, icon: '🖼️', title: 'Living Mural', desc: 'A giant canvas to draw on together.' },
+                  { id: 'agent_hq' as const, icon: '🕵️', title: 'Agent HQ', desc: 'Crack ciphers and run secret missions.' },
+                  { id: 'shop' as const, icon: '🛍️', title: 'Secret Shop', desc: 'Spend your coins on cool stuff.' },
+                ].map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => setGameState(p.id)}
+                    className="rounded-2xl p-5 bg-purple-50 border-2 border-purple-200 hover:border-purple-400 text-left"
                   >
-                    🏃‍♀️ K-Pop Rush
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setActiveGame('face')}
-                    className={`px-4 py-2 rounded-lg font-fredoka font-semibold transition-all duration-300 ${
-                      activeGame === 'face'
-                        ? 'bg-gradient-to-r from-green-400 to-blue-500 text-white shadow-lg'
-                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                    }`}
-                  >
-                    🎭 Face Factory
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setGameState('animal_sound_quiz')}
-                    className="px-4 py-2 rounded-lg font-fredoka font-semibold bg-gradient-to-r from-green-500 to-teal-500 text-white shadow-lg hover:from-green-600 hover:to-teal-600"
-                  >
-                    🐾 Animal Sound Quiz
-                  </motion.button>
-                </motion.div>
-
-                {/* Game Content */}
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={activeGame}
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.98 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    {activeGame === 'rush' && (
-                        <div className="text-center p-8 bg-purple-50 rounded-xl">
-                            <h3 className="text-2xl font-bold text-purple-600 mb-4">Select a Game Above! 👆</h3>
-                            <p>Get ready to run and jump with your K-Pop Idol!</p>
-                        </div>
-                    )}
-                    {activeGame === 'face' && <FaceGenerator />}
-                  </motion.div>
-                </AnimatePresence>
-              </motion.div>
+                    <div className="text-4xl mb-2">{p.icon}</div>
+                    <div className="font-fredoka text-xl text-purple-700">{p.title}</div>
+                    <div className="font-nunito text-base text-gray-600">{p.desc}</div>
+                  </button>
+                ))}
+              </div>
             )}
-
-            {activeTab === 'fun' && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="w-full space-y-8"
-              >
-                <SoundBoard />
-                <div className="border-t-4 border-yellow-200 pt-6">
-                  <JokeMachine />
-                </div>
-              </motion.div>
-            )}
-
-            {activeTab === 'behind' && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="w-full space-y-8"
-              >
+            {tab === 'settings' && (
+              <>
                 <ThemeSwitcher />
-                <div className="border-t-4 border-green-200 pt-6">
-                  <AppStatsDashboard />
-                </div>
-              </motion.div>
+                <div className="border-t-4 border-green-200 pt-6"><AppStatsDashboard /></div>
+              </>
             )}
           </motion.div>
         </AnimatePresence>
 
-        {/* Back Button */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1, duration: 0.5 }}
-          className="mt-8 text-center"
-        >
-          <button
-            onClick={() => setGameState('welcome')}
-            className="btn-kid-secondary font-fredoka text-lg"
-          >
-            ← Back to Main Menu
-          </button>
-        </motion.div>
+        <button onClick={() => setGameState('welcome')} className="btn-kid-secondary font-fredoka text-lg mt-8">
+          ← Back
+        </button>
       </div>
     </motion.div>
   );

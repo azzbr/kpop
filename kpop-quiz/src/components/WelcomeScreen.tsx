@@ -1,25 +1,24 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
-import DailyChallenge from './DailyChallenge';
 import { playUnlock, playClick, playWin } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
-const KPOP_FACTS = [
-  "🎵 The word 'K-pop' stands for Korean Popular music!",
-  "⭐ BTS holds the record for the most sold album in South Korean history!",
-  "💜 K-pop fans are called 'fandoms' and each has a unique official colour!",
-  "🌍 K-pop is enjoyed by millions of fans in over 100 countries!",
-  "🎤 Idols train for years — sometimes 5+ years — before debuting!",
-  "💿 K-pop albums often include photocards, postcards, and posters!",
-  "🕺 K-pop choreography is so precise that groups practice 8+ hours daily!",
-  "🇰🇷 Seoul, South Korea is the K-pop capital of the world!",
-  "🎧 Streaming parties by fans can push K-pop songs to #1 worldwide!",
-  "✨ HUNTR/X is the coolest K-pop group in the universe — fact!",
-];
+const FUN_FACTS = [
+  "🐙 An octopus has three hearts and blue blood!",
+  "🍯 Honey never goes off — archaeologists found 3,000-year-old honey that was still edible!",
+  "🦈 Sharks were around before trees existed!",
+  "🍌 Bananas are berries, but strawberries aren't!",
+  "🐌 Some snails can sleep for up to three years!",
+  "⚡ A bolt of lightning is about five times hotter than the surface of the Sun!",
+  "🦒 A giraffe's tongue can be around 50 cm long!",
+  "🌕 You'd weigh about six times less on the Moon!",
+  "🐝 Bees can recognise human faces!",
+  "🧠 Your brain uses about 20% of your body's energy!",
+]
 
 const WelcomeScreen: React.FC = () => {
-  const [inputName, setInputName] = useState('');
+  const [inputName, setInputName] = useState(() => useGameStore.getState().userName);
   const [pAnimationState, setPAnimationState] = useState<'idle' | 'discovering' | 'unlocked'>('idle');
   const [fAnimationState, setFAnimationState] = useState<'idle' | 'discovering' | 'unlocked'>('idle');
 
@@ -117,7 +116,7 @@ const WelcomeScreen: React.FC = () => {
     const next = qClicks + 1;
     setQClicks(next);
     playClick();
-    const fact = KPOP_FACTS[Math.floor(Math.random() * KPOP_FACTS.length)];
+    const fact = FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)];
     setFactBubble(fact);
     setTimeout(() => setFactBubble(null), 4000);
   };
@@ -171,7 +170,7 @@ const WelcomeScreen: React.FC = () => {
       }
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: djMode ? 5 : fAnimationState === 'discovering' ? 1.5 : 0.5, repeat: djMode ? Infinity : 0 }}
-      className="flex flex-col items-center justify-center min-h-screen px-4 text-center bg-kid-pattern"
+      className="flex flex-col items-center justify-center min-h-screen-d px-4 text-center arcade-bg text-white"
     >
       {huntrxMode && <ConfettiBurst count={50} durationMs={3000} />}
 
@@ -206,7 +205,7 @@ const WelcomeScreen: React.FC = () => {
               <div className="bg-yellow-900/40 border border-yellow-500 rounded-2xl p-3 mb-4">
                 <p className="font-fredoka text-yellow-200 text-sm leading-relaxed">
                   🍎 <span className="font-bold">OFFICIAL NOTICE:</span><br />
-                  Class is now K-Pop. 📋<br />
+                  Class is now Fun Quest. 📋<br />
                   Students will be graded on how much fun they have.<br />
                   Homework = Play more games. 🎮<br />
                   <span className="text-yellow-400 text-xs">(Attendance taken by confetti cannon)</span>
@@ -254,10 +253,10 @@ const WelcomeScreen: React.FC = () => {
             className="text-6xl md:text-8xl cursor-pointer select-none inline-block"
             title={noteClicks > 0 ? `${5 - noteClicks} more taps...` : '🎵'}
           >
-            {djMode ? '🎧' : '🎵'}
+            {djMode ? '🎧' : '🕹️'}
           </motion.span>
           {noteClicks > 0 && noteClicks < 5 && (
-            <div className="text-purple-400 text-sm font-fredoka mt-1">{5 - noteClicks} more…</div>
+            <div className="text-violet-300 text-sm font-fredoka mt-1">{5 - noteClicks} more…</div>
           )}
           {djMode && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -271,37 +270,19 @@ const WelcomeScreen: React.FC = () => {
           initial={{ scale: 0.8 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.3, duration: 0.5 }}
-          className="text-4xl md:text-6xl font-fredoka font-bold text-purple-600 mb-4 text-kid-glow"
+          className="text-5xl md:text-7xl font-fredoka font-bold text-white mb-4 drop-shadow-[0_0_18px_rgba(217,70,239,0.8)]"
         >
-          <span>K-</span>
-          <motion.span
-            animate={pAnimationState === 'discovering' ? {
-              scale: [1, 1.2, 1],
-              rotate: [0, -5, 5, 0],
-              color: ['#9333ea', '#ff00ff', '#00ffff', '#9333ea']
-            } : {}}
-            transition={{ duration: 0.3, repeat: 3 }}
-            onClick={handlePClick}
-            className={`cursor-pointer hover:scale-110 inline-block transition-transform duration-200 ${
-              pAnimationState === 'discovering' ? 'animate-pulse' : ''
-            }`}
-            title="Click me for a surprise! ✨"
-          >
-            P
-          </motion.span>
-          <span>op </span>
           <motion.span
             animate={fAnimationState === 'discovering' ? {
               scale: [1, 1.2, 1],
               rotate: [0, 5, -5, 0],
-              color: ['#9333ea', '#ff00ff', '#00ffff', '#9333ea']
+              color: ['#a855f7', '#ff00ff', '#00ffff', '#a855f7']
             } : {}}
             transition={{ duration: 0.3, repeat: 3 }}
             onClick={handleFClick}
             className={`cursor-pointer hover:scale-110 inline-block transition-transform duration-200 ${
               fAnimationState === 'discovering' ? 'animate-pulse' : ''
             }`}
-            title="Click me for a creative surprise! 🎨"
           >
             F
           </motion.span>
@@ -311,40 +292,44 @@ const WelcomeScreen: React.FC = () => {
             whileHover={{ scale: 1.15, color: '#f59e0b' }}
             whileTap={{ scale: 0.85 }}
             className="cursor-pointer hover:text-yellow-500 inline-block transition-colors duration-200"
-            title="Did you know? 💡"
           >
             Q
           </motion.span>
-          <span>uest</span>
+          <span>uest </span>
+          <motion.span
+            animate={pAnimationState === 'discovering' ? {
+              scale: [1, 1.2, 1],
+              rotate: [0, -5, 5, 0],
+              color: ['#a855f7', '#ff00ff', '#00ffff', '#a855f7']
+            } : {}}
+            transition={{ duration: 0.3, repeat: 3 }}
+            onClick={handlePClick}
+            className={`cursor-pointer hover:scale-110 inline-block transition-transform duration-200 ${
+              pAnimationState === 'discovering' ? 'animate-pulse' : ''
+            }`}
+          >
+            A
+          </motion.span>
+          <span>rcade</span>
         </motion.h1>
 
         <motion.h2
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5, duration: 0.5 }}
-          className="text-2xl md:text-3xl font-fredoka font-semibold text-pink-500 mb-8"
+          className="text-2xl md:text-3xl font-fredoka font-semibold text-fuchsia-300 mb-6"
         >
-          Adventure Quiz! 🌟
+          Games, puzzles &amp; party chaos 🕹️
         </motion.h2>
 
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.7, duration: 0.5 }}
-          className="text-lg md:text-xl text-gray-700 mb-8 max-w-lg mx-auto leading-relaxed font-nunito"
+          className="text-lg md:text-xl text-violet-200 mb-8 max-w-lg mx-auto leading-relaxed font-nunito"
         >
-          Ready for an amazing K-pop adventure? Test your knowledge and become a K-pop superstar!
-          Answer questions about your favorite artists and earn cool rewards! 🎉
+          Arcade battles, brain-busting puzzles and silly party games. Beat your high scores and level up! 🏆
         </motion.p>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8, duration: 0.5 }}
-          className="mb-8 max-w-lg mx-auto"
-        >
-          <DailyChallenge />
-        </motion.div>
 
         <motion.form
           initial={{ opacity: 0, y: 20 }}
@@ -356,9 +341,9 @@ const WelcomeScreen: React.FC = () => {
           <div className="max-w-md mx-auto">
             <label
               htmlFor="player-name"
-              className={`block text-lg font-bold mb-3 font-fredoka ${huntrxMode ? 'text-yellow-500' : jarvisMode ? 'text-amber-700' : 'text-purple-600'}`}
+              className={`block text-lg font-bold mb-3 font-fredoka ${huntrxMode ? 'text-yellow-300' : jarvisMode ? 'text-amber-300' : 'text-violet-100'}`}
             >
-              {huntrxMode ? '🌟 SUPERSTAR MODE UNLOCKED! 🌟' : jarvisMode ? '🍎 Good morning, Mr. Jarvis! 📋' : "What's your name, superstar? ✨"}
+              {huntrxMode ? '🌟 SUPERSTAR MODE UNLOCKED! 🌟' : jarvisMode ? '🍎 Good morning, Mr. Jarvis! 📋' : "What's your player name? 🎮"}
             </label>
             <input
               id="player-name"
@@ -373,7 +358,6 @@ const WelcomeScreen: React.FC = () => {
                   ? 'border-amber-400 focus:border-amber-500 focus:ring-amber-200 text-amber-700 font-bold'
                   : 'border-purple-300 focus:border-pink-400 focus:ring-pink-200'
               }`}
-              autoFocus
               required
             />
             <AnimatePresence>
@@ -407,7 +391,7 @@ const WelcomeScreen: React.FC = () => {
                 : 'btn-kid'
             }`}
           >
-            {huntrxMode ? '⭐ Enter Superstar Mode!' : jarvisMode ? '🍎 Begin Class! 📋' : 'Start the Fun! 🚀'}
+            {huntrxMode ? '⭐ Enter Superstar Mode!' : jarvisMode ? '🍎 Begin Class! 📋' : 'Let\'s Play! 🚀'}
           </motion.button>
         </motion.form>
 
@@ -420,7 +404,7 @@ const WelcomeScreen: React.FC = () => {
         >
           <button
             onClick={() => setGameState('agent_hq')}
-            className="flex items-center space-x-2 text-gray-400 hover:text-purple-600 transition-colors font-fredoka text-sm"
+            className="flex items-center space-x-2 text-violet-300/70 hover:text-white transition-colors font-fredoka text-base"
             title="Enter Agent Headquarters"
           >
             <span className="text-lg">🕵️‍♀️</span>

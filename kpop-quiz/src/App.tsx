@@ -1,191 +1,79 @@
+import { lazy, Suspense } from 'react';
+import type { ComponentType, LazyExoticComponent } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from './store';
+import type { GameState } from './store';
 import WelcomeScreen from './components/WelcomeScreen';
 import GameModeSelection from './components/GameModeSelection';
-import DifficultyScreen from './components/DifficultyScreen';
-import QuizView from './components/QuizView';
-import ResultScreen from './components/ResultScreen';
-import MemoryGame from './components/MemoryGame';
-import RhythmGame from './components/RhythmGame';
-import TriviaCards from './components/TriviaCards';
-import InstrumentsTutorial from './components/InstrumentsTutorial';
-import TeamMaker from './components/TeamMaker';
-import FriendsTrivia from './components/FriendsTrivia';
-import MathChallenge from './components/MathChallenge';
-import SpellingBee from './components/SpellingBee';
-import ReadingComprehension from './components/ReadingComprehension';
-import ScienceQuiz from './components/ScienceQuiz';
-import SecretMenu from './components/SecretMenu';
 import MusicPlayer from './components/MusicPlayer';
-import LivingMural from './components/LivingMural';
-import AgentHQ from './components/AgentHQ';
-import Shop from './components/Shop';
-import KPopRushGame from './components/KPopRushGame';
-import WordScramble from './components/WordScramble';
-import LightningQuiz from './components/LightningQuiz';
-import AnimalSoundQuiz from './components/AnimalSoundQuiz';
-import SongTitleGenerator from './components/SongTitleGenerator';
-import IdolPersonalityQuiz from './components/IdolPersonalityQuiz';
-import DanceBattleSimulator from './components/DanceBattleSimulator';
-import DailySpinWheel from './components/DailySpinWheel';
-import BeatMaker from './components/BeatMaker';
-import HuntrxSplash from './components/HuntrxSplash';
-import KoreanWordOfDay from './components/KoreanWordOfDay';
-import TruthOrDare from './components/TruthOrDare';
-import TriviaBattle from './components/TriviaBattle';
-import TalentShow from './components/TalentShow';
-import ZipGame from './components/ZipGame';
-import MiniSudoku from './components/MiniSudoku';
-import CrosswordMini from './components/CrosswordMini';
-import WordLadder from './components/WordLadder';
-import MemorySpeedRound from './components/MemorySpeedRound';
-import ReactionDuel from './components/ReactionDuel';
-import DailyStreakCalendar from './components/DailyStreakCalendar';
-import AchievementShowcase from './components/AchievementShowcase';
-import PatternMemory from './components/PatternMemory';
-import BoysZone from './components/BoysZone';
-import NinjaSlice from './components/NinjaSlice';
-import BattleArena from './components/BattleArena';
-import RocketLaunch from './components/RocketLaunch';
-import GirlsZone from './components/GirlsZone';
-import StyleStudio from './components/StyleStudio';
-import SparkleMatch from './components/SparkleMatch';
-import IdolDiary from './components/IdolDiary';
-import JarvisHQ from './components/JarvisHQ';
-import GuessTheIntro from './components/GuessTheIntro';
-import IdolProfileCard from './components/IdolProfileCard';
-import FMRadio from './components/FMRadio';
-import FreezeDance from './components/FreezeDance';
-import ChaoticBackstage from './components/ChaoticBackstage';
+
+// Every screen except the first two loads on demand, so the iPad downloads only what she opens.
+const SCREENS: Partial<Record<GameState, LazyExoticComponent<ComponentType>>> = {
+  difficulty: lazy(() => import('./components/DifficultyScreen')),
+  quiz: lazy(() => import('./components/QuizView')),
+  result: lazy(() => import('./components/ResultScreen')),
+  team_maker: lazy(() => import('./components/TeamMaker')),
+  secret_menu: lazy(() => import('./components/SecretMenu')),
+  living_mural: lazy(() => import('./components/LivingMural')),
+  agent_hq: lazy(() => import('./components/AgentHQ')),
+  shop: lazy(() => import('./components/Shop')),
+  kpop_rush: lazy(() => import('./components/KPopRushGame')),
+  word_scramble: lazy(() => import('./components/WordScramble')),
+  lightning_quiz: lazy(() => import('./components/LightningQuiz')),
+  idol_personality_quiz: lazy(() => import('./components/IdolPersonalityQuiz')),
+  dance_battle: lazy(() => import('./components/DanceBattleSimulator')),
+  beat_maker: lazy(() => import('./components/BeatMaker')),
+  huntrx_splash: lazy(() => import('./components/HuntrxSplash')),
+  truth_or_dare: lazy(() => import('./components/TruthOrDare')),
+  trivia_battle: lazy(() => import('./components/TriviaBattle')),
+  talent_show: lazy(() => import('./components/TalentShow')),
+  zip_game: lazy(() => import('./components/ZipGame')),
+  mini_sudoku: lazy(() => import('./components/MiniSudoku')),
+  crossword_mini: lazy(() => import('./components/CrosswordMini')),
+  word_ladder: lazy(() => import('./components/WordLadder')),
+  memory_speed: lazy(() => import('./components/MemorySpeedRound')),
+  reaction_duel: lazy(() => import('./components/ReactionDuel')),
+  streak_calendar: lazy(() => import('./components/DailyStreakCalendar')),
+  achievement_showcase: lazy(() => import('./components/AchievementShowcase')),
+  pattern_memory: lazy(() => import('./components/PatternMemory')),
+  ninja_slice: lazy(() => import('./components/NinjaSlice')),
+  battle_arena: lazy(() => import('./components/BattleArena')),
+  rocket_launch: lazy(() => import('./components/RocketLaunch')),
+  style_studio: lazy(() => import('./components/StyleStudio')),
+  sparkle_match: lazy(() => import('./components/SparkleMatch')),
+  idol_diary: lazy(() => import('./components/IdolDiary')),
+  jarvis_hq: lazy(() => import('./components/JarvisHQ')),
+  guess_intro: lazy(() => import('./components/GuessTheIntro')),
+  idol_profile: lazy(() => import('./components/IdolProfileCard')),
+  fm_radio: lazy(() => import('./components/FMRadio')),
+  freeze_dance: lazy(() => import('./components/FreezeDance')),
+  chaotic_backstage: lazy(() => import('./components/ChaoticBackstage')),
+};
+
+const Loading = () => (
+  <div className="arcade-bg min-h-screen-d flex items-center justify-center text-white font-fredoka text-2xl">
+    Loading… 🎮
+  </div>
+);
 
 function App() {
-  const { gameState } = useGameStore();
+  const gameState = useGameStore(s => s.gameState);
 
   const renderCurrentScreen = () => {
-    switch (gameState) {
-      case 'welcome':
-        return <WelcomeScreen key="welcome" />;
-      case 'game_mode':
-        return <GameModeSelection key="game_mode" />;
-      case 'difficulty':
-        return <DifficultyScreen key="difficulty" />;
-      case 'quiz':
-        return <QuizView key="quiz" />;
-      case 'result':
-        return <ResultScreen key="result" />;
-      case 'memory_game':
-        return <MemoryGame key="memory_game" />;
-      case 'rhythm_game':
-        return <RhythmGame key="rhythm_game" />;
-      case 'trivia_cards':
-        return <TriviaCards key="trivia_cards" />;
-      case 'instruments_tutorial':
-        return <InstrumentsTutorial key="instruments_tutorial" />;
-      case 'team_maker':
-        return <TeamMaker key="team_maker" />;
-      case 'friends_trivia':
-        return <FriendsTrivia key="friends_trivia" />;
-      case 'math_challenge':
-        return <MathChallenge key="math_challenge" />;
-      case 'spelling_bee':
-        return <SpellingBee key="spelling_bee" />;
-      case 'reading_comprehension':
-        return <ReadingComprehension key="reading_comprehension" />;
-      case 'science_quiz':
-        return <ScienceQuiz key="science_quiz" />;
-      case 'secret_menu':
-        return <SecretMenu key="secret_menu" />;
-      case 'living_mural':
-        return <LivingMural key="living_mural" />;
-      case 'agent_hq':
-        return <AgentHQ key="agent_hq" />;
-      case 'shop':
-        return <Shop key="shop" />;
-      case 'kpop_rush':
-        return <KPopRushGame key="kpop_rush" />;
-      case 'word_scramble':
-        return <WordScramble key="word_scramble" />;
-      case 'lightning_quiz':
-        return <LightningQuiz key="lightning_quiz" />;
-      case 'animal_sound_quiz':
-        return <AnimalSoundQuiz key="animal_sound_quiz" />;
-      case 'song_title_generator':
-        return <SongTitleGenerator key="song_title_generator" />;
-      case 'idol_personality_quiz':
-        return <IdolPersonalityQuiz key="idol_personality_quiz" />;
-      case 'dance_battle':
-        return <DanceBattleSimulator key="dance_battle" />;
-      case 'daily_spin_wheel':
-        return <DailySpinWheel key="daily_spin_wheel" />;
-      case 'beat_maker':
-        return <BeatMaker key="beat_maker" />;
-      case 'huntrx_splash':
-        return <HuntrxSplash key="huntrx_splash" />;
-      case 'korean_word':
-        return <KoreanWordOfDay key="korean_word" />;
-      case 'truth_or_dare':
-        return <TruthOrDare key="truth_or_dare" />;
-      case 'trivia_battle':
-        return <TriviaBattle key="trivia_battle" />;
-      case 'talent_show':
-        return <TalentShow key="talent_show" />;
-      case 'zip_game':
-        return <ZipGame key="zip_game" />;
-      case 'mini_sudoku':
-        return <MiniSudoku key="mini_sudoku" />;
-      case 'crossword_mini':
-        return <CrosswordMini key="crossword_mini" />;
-      case 'word_ladder':
-        return <WordLadder key="word_ladder" />;
-      case 'memory_speed':
-        return <MemorySpeedRound key="memory_speed" />;
-      case 'reaction_duel':
-        return <ReactionDuel key="reaction_duel" />;
-      case 'streak_calendar':
-        return <DailyStreakCalendar key="streak_calendar" />;
-      case 'achievement_showcase':
-        return <AchievementShowcase key="achievement_showcase" />;
-      case 'pattern_memory':
-        return <PatternMemory key="pattern_memory" />;
-      case 'boys_zone':
-        return <BoysZone key="boys_zone" />;
-      case 'ninja_slice':
-        return <NinjaSlice key="ninja_slice" />;
-      case 'battle_arena':
-        return <BattleArena key="battle_arena" />;
-      case 'rocket_launch':
-        return <RocketLaunch key="rocket_launch" />;
-      case 'girls_zone':
-        return <GirlsZone key="girls_zone" />;
-      case 'style_studio':
-        return <StyleStudio key="style_studio" />;
-      case 'sparkle_match':
-        return <SparkleMatch key="sparkle_match" />;
-      case 'idol_diary':
-        return <IdolDiary key="idol_diary" />;
-      case 'jarvis_hq':
-        return <JarvisHQ key="jarvis_hq" />;
-      case 'guess_intro':
-        return <GuessTheIntro key="guess_intro" />;
-      case 'idol_profile':
-        return <IdolProfileCard key="idol_profile" />;
-      case 'fm_radio':
-        return <FMRadio key="fm_radio" />;
-      case 'freeze_dance':
-        return <FreezeDance key="freeze_dance" />;
-      case 'chaotic_backstage':
-        return <ChaoticBackstage key="chaotic_backstage" />;
-      default:
-        return <WelcomeScreen key="welcome" />;
-    }
+    if (gameState === 'welcome') return <WelcomeScreen key="welcome" />;
+    if (gameState === 'game_mode') return <GameModeSelection key="game_mode" />;
+    const Screen = SCREENS[gameState];
+    return Screen ? <Screen key={gameState} /> : <WelcomeScreen key="welcome" />;
   };
 
   return (
     <div className="App">
-      <AnimatePresence mode="wait">
-        {renderCurrentScreen()}
-      </AnimatePresence>
-      {gameState !== 'living_mural' && gameState !== 'fm_radio' && <MusicPlayer />}
+      <Suspense fallback={<Loading />}>
+        <AnimatePresence mode="wait">
+          {renderCurrentScreen()}
+        </AnimatePresence>
+      </Suspense>
+      <MusicPlayer hidden={gameState === 'living_mural' || gameState === 'fm_radio'} />
     </div>
   );
 }

@@ -111,12 +111,11 @@ const AgentHQ: React.FC = () => {
 
   // Missions tracked from existing localStorage progress
   const missions = useMemo(() => {
-    const arenaWins = parseInt(localStorage.getItem('arena_wins') || '0');
+    const { highScores, datesPlayed: dp } = useGameStore.getState();
+    const arenaWins = highScores.battle_arena ?? 0;
     const styleSaves = parseInt(localStorage.getItem('style_saves') || '0');
-    const ninjaBest = parseInt(localStorage.getItem('ninja_best') || '0');
-    const datesPlayed = (() => {
-      try { return JSON.parse(localStorage.getItem('kpop_dates_played') || '[]').length; } catch { return 0; }
-    })();
+    const ninjaBest = highScores.ninja_slice ?? 0;
+    const datesPlayed = dp.length;
     return [
       { id: 'dec3', emoji: '🔓', label: 'Decode 3 secret ciphers',    done: solvedCount >= 3,   prog: `${Math.min(solvedCount, 3)}/3` },
       { id: 'lvl1', emoji: '⭐', label: `Reach ${LEVEL_NAMES[1]} rank`, done: level >= 1,          prog: `${xp} XP` },

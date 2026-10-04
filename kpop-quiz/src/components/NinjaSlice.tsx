@@ -39,7 +39,7 @@ interface FloatTxt { x: number; y: number; vy: number; life: number; text: strin
 interface SlashSeg { x1: number; y1: number; x2: number; y2: number; life: number; }
 
 const NinjaSlice: React.FC = () => {
-  const { setGameState, addXP } = useGameStore();
+  const { setGameState } = useGameStore();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef({
     items: [] as SliceItem[],
@@ -137,11 +137,7 @@ const NinjaSlice: React.FC = () => {
     function endGame() {
       const s = stateRef.current;
       const finalScore = s.score;
-      const prev = parseInt(localStorage.getItem('ninja_best') || '0');
-      const isHigh = finalScore > prev;
-      if (isHigh) { localStorage.setItem('ninja_best', String(finalScore)); }
-      const xp = Math.floor(finalScore / 10) + s.lives * 5;
-      addXP(xp);
+      const { isBest: isHigh, xp } = useGameStore.getState().finishRound('ninja_slice', finalScore, 10);
       if (isHigh) { playWin(); setConfetti(true); setTimeout(() => setConfetti(false), 2500); }
       else playWrong();
       setOverInfo({ score: finalScore, isHigh, xp });
@@ -404,9 +400,9 @@ const NinjaSlice: React.FC = () => {
       {confetti && <ConfettiBurst count={70} durationMs={2500} />}
 
       <div className="w-full max-w-3xl mx-auto">
-        <button onClick={() => { playClick(); setGameState('boys_zone'); }}
+        <button onClick={() => { playClick(); setGameState('game_mode'); }}
           className="mb-3 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full font-fredoka text-sm border border-white/20">
-          ← Boys Zone
+          ← Back
         </button>
 
         <div className="text-center mb-3">
@@ -441,7 +437,7 @@ const NinjaSlice: React.FC = () => {
                   <p className="font-fredoka text-2xl text-yellow-300 mb-1">⭐ {overInfo.score}</p>
                   <p className="font-nunito text-purple-200 text-sm mb-4">+{overInfo.xp} XP earned!</p>
                   <button onClick={() => controlsRef.current?.start()} className="btn-kid mr-2">🔄 Again</button>
-                  <button onClick={() => setGameState('boys_zone')} className="btn-kid-secondary">← Zone</button>
+                  <button onClick={() => setGameState('game_mode')} className="btn-kid-secondary">← Zone</button>
                 </motion.div>
               </motion.div>
             )}

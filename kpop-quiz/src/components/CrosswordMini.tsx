@@ -184,7 +184,7 @@ const CrosswordMini: React.FC = () => {
         <div className="text-center mb-4">
           <div className="text-5xl mb-1">📰</div>
           <h1 className="text-4xl font-fredoka font-bold text-indigo-600 text-kid-glow">Crossword!</h1>
-          <p className="font-nunito text-gray-500 text-sm">K-Pop themed mini crossword</p>
+          <p className="font-nunito text-gray-500 text-sm">Quick mini crossword</p>
         </div>
 
         <div className="bg-gray-100 rounded-xl p-2 text-center font-nunito text-xs text-gray-500 mb-2">

@@ -130,7 +130,7 @@ export default function IdolProfileCard() {
         </button>
 
         <h1 className="text-kid-glow text-3xl md:text-4xl font-bold text-center text-purple-700 mb-2">
-          🎙️ Idol Profile Card
+          🪪 Superstar Card
         </h1>
         <p className="text-center font-nunito text-gray-600 mb-6">
           Design your own K-Pop debut card!

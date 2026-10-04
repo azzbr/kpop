@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { useGameStore } from '../store';
+import { useGameStore, trackInfo } from '../store';
 import { playClick, playWin, playPop, playTick } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -115,7 +115,7 @@ export default function FreezeDance() {
   };
 
   const activePlayers = roster.filter(n => !eliminated.includes(n));
-  const trackName = playlist[currentTrack]?.replace(/\.flac$/, '').replace(/^\d+\.\s*/, '') ?? 'HUNTR/X Track';
+  const trackName = trackInfo(playlist[currentTrack]).title;
 
   return (
     <motion.div

@@ -119,6 +119,12 @@ const MemorySpeedRound: React.FC = () => {
   }, [cards, selected, started, done, combo, maxCombo, matchCount]);
 
   const xpEarned = done === 'win' ? 50 + maxCombo * 5 : matchCount * 3;
+
+  // Award once when the round ends, so leaving via Back doesn't lose the XP.
+  useEffect(() => {
+    if (done) addXP(xpEarned);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [done]);
   const timerPct = (seconds / TIME_LIMIT) * 100;
   const timerColor = seconds > 30 ? 'bg-green-400' : seconds > 10 ? 'bg-yellow-400' : 'bg-red-400';
 
@@ -219,8 +225,8 @@ const MemorySpeedRound: React.FC = () => {
                 {matchCount}/{PAIR_COUNT} pairs • Best combo x{maxCombo}
               </p>
               <p className="font-nunito text-purple-600 mb-4">+{xpEarned} XP!</p>
-              <button onClick={() => { addXP(xpEarned); startGame(); }} className="btn-kid mr-2">🔄 Play Again</button>
-              <button onClick={() => { addXP(xpEarned); setGameState('game_mode'); }} className="btn-kid-secondary">🏠 Home</button>
+              <button onClick={startGame} className="btn-kid mr-2">🔄 Play Again</button>
+              <button onClick={() => setGameState('game_mode')} className="btn-kid-secondary">🏠 Home</button>
             </motion.div>
           )}
         </AnimatePresence>

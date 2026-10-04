@@ -160,13 +160,13 @@ const IdolDiary: React.FC = () => {
       {confetti && <ConfettiBurst count={70} durationMs={2500} />}
 
       <div className="max-w-md w-full mx-auto">
-        <button onClick={() => { playClick(); setGameState('girls_zone'); }}
+        <button onClick={() => { playClick(); setGameState('game_mode'); }}
           className="mb-3 px-4 py-2 bg-white/70 hover:bg-white text-rose-700 rounded-full font-fredoka text-sm border-2 border-rose-200">
-          ← Girls Zone
+          ← Back
         </button>
 
         <div className="text-center mb-3">
-          <h1 className="text-3xl font-fredoka font-bold text-rose-700">📔 Idol Diary</h1>
+          <h1 className="text-3xl font-fredoka font-bold text-rose-700">📔 Secret Diary</h1>
           <p className="font-nunito text-rose-500 text-sm">Fill in the blanks · Save funny stories!</p>
         </div>
 

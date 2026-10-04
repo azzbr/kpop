@@ -8,15 +8,23 @@ import ConfettiBurst from './ConfettiBurst';
 const SECS = 8;
 const TOTAL_Q = 12;
 
-const ALL_Q = [...easyQuestions, ...normalQuestions]
+// Picked fresh for each game (not once at app load), so rounds don't repeat.
+const pickQuestions = () => [...easyQuestions, ...normalQuestions]
   .sort(() => Math.random() - 0.5)
   .slice(0, TOTAL_Q)
   .map(q => ({ ...q, answers: [...q.answers].sort(() => Math.random() - 0.5) }));
 
 type Phase = 'intro' | 'playing' | 'done';
 
-export default function LightningQuiz() {
+// "Play again" remounts the game with a new key instead of reloading the whole page.
+export default function LightningQuizScreen() {
+  const [game, setGame] = useState(0);
+  return <LightningQuiz key={game} onRestart={() => setGame(g => g + 1)} />;
+}
+
+function LightningQuiz({ onRestart }: { onRestart: () => void }) {
   const { setGameState } = useGameStore();
+  const [ALL_Q] = useState(pickQuestions);
 
   const [phase, setPhase] = useState<Phase>('intro');
   const [qi, setQi] = useState(0);
@@ -141,7 +149,7 @@ export default function LightningQuiz() {
             </div>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => window.location.reload()} className="btn-kid flex-1">⚡ Again!</button>
+            <button onClick={onRestart} className="btn-kid flex-1">⚡ Again!</button>
             <button onClick={() => setGameState('game_mode')} className="btn-kid-secondary flex-1">🏠 Home</button>
           </div>
         </div>

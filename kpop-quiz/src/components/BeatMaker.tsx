@@ -220,7 +220,7 @@ const BeatMaker: React.FC = () => {
         <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="text-center mb-6">
           <div className="text-5xl mb-2">🎛️</div>
           <h1 className="text-4xl font-fredoka font-bold text-purple-600 text-kid-glow mb-1">Beat Maker</h1>
-          <p className="font-nunito text-gray-600">Build your own K-pop beat! Tap the grid to add sounds 🎵</p>
+          <p className="font-nunito text-gray-600">Build your own beat! Tap the grid to add sounds 🎵</p>
         </motion.div>
 
         {/* Controls */}

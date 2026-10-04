@@ -65,7 +65,7 @@ function cpuMove(energy: number, playerLastMove: Move | null): Move {
 interface Fighter { hp: number; maxHp: number; energy: number; guarding: boolean; }
 
 const BattleArena: React.FC = () => {
-  const { setGameState, addXP } = useGameStore();
+  const { setGameState } = useGameStore();
   const [phase, setPhase] = useState<'pick' | 'fight' | 'result'>('pick');
   const [heroIdx, setHeroIdx] = useState(0);
   const [vilIdx] = useState(() => Math.floor(Math.random() * VILLAINS.length));
@@ -80,7 +80,7 @@ const BattleArena: React.FC = () => {
   const [lastMove, setLastMove] = useState<Move | null>(null);
   const [hitAnim, setHitAnim] = useState<'player' | 'cpu' | null>(null);
   const [confetti, setConfetti] = useState(false);
-  const [wins, setWins] = useState(() => parseInt(localStorage.getItem('arena_wins') || '0'));
+  const [wins, setWins] = useState(() => useGameStore.getState().highScores.battle_arena ?? 0);
 
   const startFight = () => {
     setPlayer({ hp: hero.maxHp, maxHp: hero.maxHp, energy: 0, guarding: false });
@@ -140,21 +140,21 @@ const BattleArena: React.FC = () => {
       if (cHp <= 0) {
         const newWins = wins + 1;
         setWins(newWins);
-        localStorage.setItem('arena_wins', String(newWins));
-        addXP(60);
+        // Wins only ever go up, so the "best" score doubles as the lifetime win count.
+        useGameStore.getState().finishRound('battle_arena', newWins, 0.02);
         setConfetti(true);
         setTimeout(() => setConfetti(false), 3000);
         playWin();
         setLog(prev => [...prev, `🏆 ${hero.name} WINS! The arena erupts! 🎊`]);
       } else {
         playWrong();
-        addXP(15);
+        useGameStore.getState().finishRound('battle_arena_losses', 0, 1);
         setLog(prev => [...prev, `💀 ${vil.name} wins this round... but you'll come back stronger! 💪`]);
       }
       setPhase('result');
     }
     setBusy(false);
-  }, [busy, player, cpu, hero, vil, lastMove, wins, addXP]);
+  }, [busy, player, cpu, hero, vil, lastMove, wins]);
 
   const hpBar = (cur: number, max: number, color: string) => (
     <div className="w-full bg-gray-700 rounded-full h-4 overflow-hidden">
@@ -185,9 +185,9 @@ const BattleArena: React.FC = () => {
     >
       {confetti && <ConfettiBurst count={80} durationMs={3000} />}
       <div className="max-w-2xl w-full mx-auto">
-        <button onClick={() => { playClick(); setGameState('boys_zone'); }}
+        <button onClick={() => { playClick(); setGameState('game_mode'); }}
           className="mb-4 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full font-fredoka text-sm border border-white/20">
-          ← Boys Zone
+          ← Back
         </button>
 
         <div className="text-center mb-4">
@@ -328,7 +328,7 @@ const BattleArena: React.FC = () => {
               <p className="font-nunito text-yellow-300 mb-4">Total arena wins: {wins} 🏆</p>
               <div className="flex gap-3 justify-center flex-wrap">
                 <button onClick={() => { setPhase('pick'); playClick(); }} className="btn-kid">🔄 Rematch</button>
-                <button onClick={() => setGameState('boys_zone')} className="btn-kid-secondary">← Zone</button>
+                <button onClick={() => setGameState('game_mode')} className="btn-kid-secondary">← Zone</button>
               </div>
             </motion.div>
           )}

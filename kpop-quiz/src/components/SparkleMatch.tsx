@@ -56,7 +56,7 @@ function freshGrid(): Cell[][] {
 }
 
 const SparkleMatch: React.FC = () => {
-  const { setGameState, addXP } = useGameStore();
+  const { setGameState } = useGameStore();
   const [grid, setGrid] = useState<Cell[][]>(() => freshGrid());
   const [selected, setSelected] = useState<[number, number] | null>(null);
   const [score, setScore] = useState(0);
@@ -64,7 +64,7 @@ const SparkleMatch: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState(TIME);
   const [running, setRunning] = useState(false);
   const [done, setDone] = useState(false);
-  const [highScore, setHighScore] = useState(() => parseInt(localStorage.getItem('sparkle_best') || '0'));
+  const [highScore, setHighScore] = useState(() => useGameStore.getState().highScores.sparkle_match ?? 0);
   const [confetti, setConfetti] = useState(false);
   const [matchedKeys, setMatchedKeys] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
@@ -82,17 +82,15 @@ const SparkleMatch: React.FC = () => {
     if (timeLeft <= 0 && running && !done) {
       setRunning(false);
       setDone(true);
-      const isHigh = score > highScore;
+      const isHigh = useGameStore.getState().finishRound('sparkle_match', score, 8).isBest;
       if (isHigh) {
         setHighScore(score);
-        localStorage.setItem('sparkle_best', String(score));
         setConfetti(true);
         setTimeout(() => setConfetti(false), 2500);
         playWin();
       } else playWrong();
-      addXP(Math.floor(score / 8));
     }
-  }, [timeLeft, running, done, score, highScore, addXP]);
+  }, [timeLeft, running, done, score]);
 
   const addFloat = (r: number, c: number, text: string) => {
     const id = ++floatId.current;
@@ -267,9 +265,9 @@ const SparkleMatch: React.FC = () => {
       {confetti && <ConfettiBurst count={70} durationMs={2500} />}
 
       <div className="max-w-md w-full mx-auto">
-        <button onClick={() => { playClick(); setGameState('girls_zone'); }}
+        <button onClick={() => { playClick(); setGameState('game_mode'); }}
           className="mb-3 px-4 py-2 bg-white/70 hover:bg-white text-purple-700 rounded-full font-fredoka text-sm border-2 border-purple-200">
-          ← Girls Zone
+          ← Back
         </button>
 
         <div className="text-center mb-3">
@@ -388,7 +386,7 @@ const SparkleMatch: React.FC = () => {
               <p className="font-fredoka text-2xl text-pink-500 mb-1">⭐ {score}</p>
               <p className="font-nunito text-purple-500 mb-3">+{Math.floor(score / 8)} XP earned!</p>
               <button onClick={startOver} className="btn-kid mr-2">🔄 Again</button>
-              <button onClick={() => setGameState('girls_zone')} className="btn-kid-secondary">← Zone</button>
+              <button onClick={() => setGameState('game_mode')} className="btn-kid-secondary">← Zone</button>
             </motion.div>
           )}
         </AnimatePresence>

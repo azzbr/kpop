@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
 import { playClick, playWin, playWrong } from '../utils/sounds';
@@ -14,17 +14,27 @@ const COLORS = [
 type Phase = 'idle' | 'showing' | 'input' | 'win' | 'lose';
 
 const PatternMemory: React.FC = () => {
-  const { setGameState, addXP } = useGameStore();
+  const { setGameState } = useGameStore();
   const [phase, setPhase] = useState<Phase>('idle');
-  const [sequence, setSequence] = useState<number[]>([]);
-  const [playerIdx, setPlayerIdx] = useState(0);
   const [lit, setLit] = useState<number | null>(null);
   const [round, setRound] = useState(0);
-  const [best, setBest] = useState<number>(() => {
-    try { return parseInt(localStorage.getItem('simon_best') || '0'); } catch { return 0; }
-  });
+  const [best, setBest] = useState<number>(() => useGameStore.getState().highScores.pattern_memory ?? 0);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [xpEarned, setXpEarned] = useState(0);
+  const [progress, setProgress] = useState(0);
   const audioCtx = useRef<AudioContext | null>(null);
+  // Refs, not state: taps can arrive faster than React re-renders, and each one must be
+  // checked against the step the player is actually on.
+  const seqRef = useRef<number[]>([]);
+  const idxRef = useRef(0);
+  const phaseRef = useRef<Phase>('idle');
+  // Bumped on unmount/restart so an in-flight sequence playback stops.
+  const runRef = useRef(0);
+
+  const go = (p: Phase) => { phaseRef.current = p; setPhase(p); };
+  const wait = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+
+  useEffect(() => () => { runRef.current++; audioCtx.current?.close(); }, []);
 
   const playTone = useCallback((freq: number, duration = 300) => {
     if (!audioCtx.current) audioCtx.current = new AudioContext();
@@ -41,70 +51,73 @@ const PatternMemory: React.FC = () => {
     osc.stop(ctx.currentTime + duration / 1000);
   }, []);
 
-  const flashButton = useCallback((colorId: number, duration = 300) => {
+  const flash = async (colorId: number, duration: number) => {
     playTone(COLORS[colorId].freq, duration);
     setLit(colorId);
-    return new Promise<void>(resolve => setTimeout(() => { setLit(null); resolve(); }, duration));
-  }, [playTone]);
+    await wait(duration);
+    setLit(null);
+  };
 
-  const showSequence = useCallback(async (seq: number[]) => {
-    setPhase('showing');
-    await new Promise(r => setTimeout(r, 500));
+  const showSequence = async (seq: number[]) => {
+    const run = runRef.current;
+    go('showing');
+    await wait(500);
     for (const id of seq) {
-      await flashButton(id, 400);
-      await new Promise(r => setTimeout(r, 200));
+      if (runRef.current !== run) return;
+      await flash(id, 400);
+      await wait(200);
     }
-    setPhase('input');
-    setPlayerIdx(0);
-  }, [flashButton]);
+    if (runRef.current !== run) return;
+    idxRef.current = 0;
+    setProgress(0);
+    go('input');
+  };
+
+  const finish = (phaseName: 'win' | 'lose', reached: number) => {
+    const res = useGameStore.getState().finishRound('pattern_memory', reached, 0.25);
+    setXpEarned(res.xp);
+    if (res.isBest) {
+      setBest(reached);
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 2500);
+    }
+    go(phaseName);
+  };
 
   const startGame = () => {
     playClick();
-    const first = Math.floor(Math.random() * 4);
-    const newSeq = [first];
-    setSequence(newSeq);
+    runRef.current++;
+    seqRef.current = [Math.floor(Math.random() * 4)];
     setRound(1);
-    showSequence(newSeq);
+    showSequence(seqRef.current);
   };
 
-  const handlePress = async (colorId: number) => {
-    if (phase !== 'input') return;
-    await flashButton(colorId, 200);
-
-    if (colorId !== sequence[playerIdx]) {
+  const handlePress = (colorId: number) => {
+    if (phaseRef.current !== 'input') return;
+    flash(colorId, 200);
+    const seq = seqRef.current;
+    if (colorId !== seq[idxRef.current]) {
       playWrong();
-      setPhase('lose');
+      finish('lose', seq.length - 1);
       return;
     }
+    idxRef.current++;
+    setProgress(idxRef.current);
+    if (idxRef.current < seq.length) return;
 
-    const next = playerIdx + 1;
-    if (next === sequence.length) {
-      const newRound = round + 1;
-      setRound(newRound);
-      playTone(880, 150);
-      if (newRound > best) {
-        setBest(newRound);
-        localStorage.setItem('simon_best', String(newRound));
-        setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 2500);
-      }
-      if (newRound > 20) {
-        playWin();
-        addXP(100);
-        setPhase('win');
-        return;
-      }
-      const next4 = Math.floor(Math.random() * 4);
-      const newSeq = [...sequence, next4];
-      setSequence(newSeq);
-      await new Promise(r => setTimeout(r, 600));
-      showSequence(newSeq);
-    } else {
-      setPlayerIdx(next);
+    // Round complete
+    phaseRef.current = 'showing';
+    playTone(880, 150);
+    if (seq.length >= 20) {
+      playWin();
+      finish('win', 20);
+      return;
     }
+    seqRef.current = [...seq, Math.floor(Math.random() * 4)];
+    setRound(seqRef.current.length);
+    const run = runRef.current;
+    setTimeout(() => { if (runRef.current === run) showSequence(seqRef.current); }, 600);
   };
-
-  const xpEarned = Math.max(0, (round - 1) * 5);
 
   return (
     <motion.div
@@ -134,7 +147,7 @@ const PatternMemory: React.FC = () => {
         <div className="text-center mb-4 h-8">
           {phase === 'idle' && <p className="font-nunito text-gray-600">Press Start to play!</p>}
           {phase === 'showing' && <p className="font-nunito text-blue-600 font-bold">👀 Watch carefully...</p>}
-          {phase === 'input' && <p className="font-nunito text-green-600 font-bold">🎮 Your turn! ({playerIdx}/{sequence.length})</p>}
+          {phase === 'input' && <p className="font-nunito text-green-600 font-bold">🎮 Your turn! ({progress}/{round})</p>}
         </div>
 
         {/* 2×2 Button Grid */}
@@ -171,8 +184,8 @@ const PatternMemory: React.FC = () => {
               <h2 className="text-3xl font-fredoka font-bold text-red-500 mb-1">Oops!</h2>
               <p className="font-nunito text-gray-600 mb-1">You made it to round {round}!</p>
               {xpEarned > 0 && <p className="font-nunito text-purple-600 mb-3">+{xpEarned} XP earned!</p>}
-              <button onClick={() => { addXP(xpEarned); startGame(); }} className="btn-kid mr-2">🔄 Try Again</button>
-              <button onClick={() => { addXP(xpEarned); setPhase('idle'); setSequence([]); setRound(0); }} className="btn-kid-secondary">🏠 Menu</button>
+              <button onClick={startGame} className="btn-kid mr-2">🔄 Try Again</button>
+              <button onClick={() => { go('idle'); setRound(0); }} className="btn-kid-secondary">🏠 Menu</button>
             </motion.div>
           )}
         </AnimatePresence>
@@ -187,7 +200,7 @@ const PatternMemory: React.FC = () => {
             >
               <div className="text-6xl mb-2">🏆</div>
               <h2 className="text-3xl font-fredoka font-bold text-purple-600 mb-1">Master!</h2>
-              <p className="font-nunito text-gray-600 mb-1">You completed 20 rounds! +100 XP!</p>
+              <p className="font-nunito text-gray-600 mb-1">You completed 20 rounds! +{xpEarned} XP!</p>
               <button onClick={startGame} className="btn-kid mr-2">🔄 Play Again</button>
             </motion.div>
           )}

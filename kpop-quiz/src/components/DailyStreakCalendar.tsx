@@ -1,61 +1,21 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../store';
+import { getStreak, localDateKey } from '../utils/dates';
 import { playClick } from '../utils/sounds';
-
-function getDatesPlayed(): Set<string> {
-  try {
-    const raw = localStorage.getItem('kpop_dates_played');
-    return new Set<string>(raw ? JSON.parse(raw) : []);
-  } catch { return new Set<string>(); }
-}
-
-function recordToday() {
-  const today = new Date().toISOString().slice(0, 10);
-  const dates = getDatesPlayed();
-  dates.add(today);
-  localStorage.setItem('kpop_dates_played', JSON.stringify([...dates]));
-}
-
-function getStreak(dates: Set<string>): { current: number; longest: number } {
-  if (dates.size === 0) return { current: 0, longest: 0 };
-  const sorted = [...dates].sort();
-  let longest = 1, run = 1;
-  for (let i = 1; i < sorted.length; i++) {
-    const prev = new Date(sorted[i - 1]);
-    const curr = new Date(sorted[i]);
-    const diff = (curr.getTime() - prev.getTime()) / 86400000;
-    if (diff === 1) { run++; longest = Math.max(longest, run); }
-    else if (diff > 1) { run = 1; }
-  }
-  const today = new Date().toISOString().slice(0, 10);
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-  let current = 0;
-  if (dates.has(today) || dates.has(yesterday)) {
-    let check = dates.has(today) ? today : yesterday;
-    while (dates.has(check)) {
-      current++;
-      check = new Date(new Date(check).getTime() - 86400000).toISOString().slice(0, 10);
-    }
-  }
-  return { current, longest };
-}
 
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const DailyStreakCalendar: React.FC = () => {
-  const { setGameState } = useGameStore();
-
-  useMemo(() => recordToday(), []);
-
-  const dates = useMemo(() => getDatesPlayed(), []);
-  const { current, longest } = useMemo(() => getStreak(dates), [dates]);
+  const { setGameState, datesPlayed } = useGameStore();
+  const dates = useMemo(() => new Set(datesPlayed), [datesPlayed]);
+  const { current, longest } = useMemo(() => getStreak(datesPlayed), [datesPlayed]);
 
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth();
-  const today = now.toISOString().slice(0, 10);
+  const today = localDateKey(now);
 
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -153,7 +113,7 @@ const DailyStreakCalendar: React.FC = () => {
           {current === 1 && <p className="font-nunito text-orange-600">Great start! Come back tomorrow! 🔥</p>}
           {current >= 2 && current < 7 && <p className="font-nunito text-orange-600 font-bold">{current} days in a row! Keep it up! 🔥🔥</p>}
           {current >= 7 && current < 14 && <p className="font-nunito text-yellow-700 font-bold">AMAZING! {current}-day streak! You're on fire! 🔥🏆</p>}
-          {current >= 14 && <p className="font-nunito text-yellow-700 font-bold">LEGENDARY! {current} DAYS! You're a true K-Pop master! 👑🔥</p>}
+          {current >= 14 && <p className="font-nunito text-yellow-700 font-bold">LEGENDARY! {current} DAYS! You're a true Fun Quest legend! 👑🔥</p>}
         </div>
       </div>
     </motion.div>
