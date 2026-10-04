@@ -74,13 +74,16 @@ The old scattered localStorage keys (`kpop_xp`, `ninja_best`, …) are imported 
 ### Game engine (`src/games/engine/`)
 - `useGameLoop({ tickHz, update, draw, running, onHidden })` — logic runs on a **fixed tick** (so 120 Hz iPads aren't double speed), drawing runs on requestAnimationFrame with an interpolation `alpha`, and it calls `onHidden` when she switches apps (pause there).
 - `useCanvasSize(ref)` — keeps a canvas sharp at the device pixel ratio and resizes on rotation.
-- `useSwipeInput(ref, onDir)` — Pointer-Events swipe steering (turns can be chained without lifting the finger) plus arrow keys/WASD.
+- `useSwipeInput(ref, onDir)` — Pointer-Events 4-way swipe steering (2048, Classic Paper Clash) plus arrow keys/WASD.
+- `useSteerInput(ref, onAngle, onDir)` — free-angle floating-joystick steering (Paper Clash).
 - `GameShell` — full-screen frame: Back, Pause, ready / paused / game-over cards, best score, confetti, rewards.
 - `rng.ts` — seeded random (`createRng(seed)`), for tests and debug runs.
 
 **Pattern for a new real-time game:** put the rules in a pure `xxxLogic.ts` (no React, no canvas) with a vitest `xxxLogic.test.ts`; the component only handles input, drawing and the HUD. See `components/games/PaperClash.tsx` + `paperClashLogic.ts`.
 
-**Debug hook:** with `?debug` in the URL, Paper Clash exposes `window.__game` (`start`, `hold`, `step`, `steer`, `world`, `percent`); `?seed=42` makes a run repeatable. Use this for Playwright tests instead of real-time play.
+**Paper Clash** (`paperClashLogic.ts`): a fine grid (250×250, round arena) for ownership and capture, with free-angle movement (position + heading, turn-rate limit, 20 Hz). Each tick's head segment is rasterised 4-connected (`supercover`), so crossing a trail always hits it and loops never leak in the flood fill. Steering: `steerAngle(p, rad)` (finger, via `useSteerInput`) and `steerDir(p, 0–3)` (keys, arrow pad). Land is drawn from `paperClashOutline.ts` (traced cell edges, smoothed, cached `Path2D` per player, rebuilt only for players whose land changed). Score is still peak % × 10, tuned with `scripts/paperClashSim.ts` (`npx tsx scripts/paperClashSim.ts`) so it means about what it did on the old grid — re-run it after changing speed, arena or bots. The old 4-way game is kept as "🟦 Classic squares" (`paperClashClassicLogic.ts`, `PaperClashClassic.tsx`, switch on the start card, saved as `paperClash.style`); remove it once the new one has been approved on her iPad.
+
+**Debug hook:** with `?debug` in the URL, Paper Clash exposes `window.__game` (`start`, `hold`, `step`, `steerAngle`, `steerDir`, `world`, `percent`, `status`; Classic has `steer(0–3)` instead); `?seed=42` makes a run repeatable. Use this for Playwright tests instead of real-time play.
 
 ### Drawing (`components/draw/`)
 `DoodleCanvas` is the only drawing surface: a fixed 1200×900 board (survives rotation), Pointer Events, pen/marker/rainbow/eraser/fill/stickers (+ owned Locker stickers), undo capped at 20 (older ops are flattened). Rules in `doodleLogic.ts` (+ test). `DoodlePad` screen (`doodle_pad`, gallery in IndexedDB via `doodleStore.ts`, max 30) and the sticker board (`sticker_board`, autosaves one picture). Truth or Dare's "Draw it" dares use `<DoodleCanvas compact>`. tldraw was removed (the old Living Mural needed a licence key on the live site).
