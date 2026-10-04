@@ -50,6 +50,10 @@ const SCREENS: Partial<Record<GameState, LazyExoticComponent<ComponentType>>> = 
   game_2048: lazy(() => import('./components/games/Game2048')),
   block_blast: lazy(() => import('./components/games/BlockBlast')),
   quiz_arena: lazy(() => import('./components/games/QuizArena')),
+  word_guess: lazy(() => import('./components/games/WordGuess')),
+  would_you_rather: lazy(() => import('./components/games/WouldYouRather')),
+  real_or_fake: lazy(() => import('./components/games/RealOrFake')),
+  emoji_guess: lazy(() => import('./components/games/EmojiGuess')),
   quiz_maker: lazy(() => import('./components/QuizMaker')),
   locker: lazy(() => import('./components/Locker')),
 };

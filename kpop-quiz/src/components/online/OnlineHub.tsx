@@ -130,9 +130,11 @@ const OnlineHub: React.FC = () => {
   useEffect(() => {
     return room.onMessage((m) => {
       if (m.t === 'start') {
-        setActiveGame(m.game as GameId);
+        setActiveGame(prev => {
+          if (prev !== m.game) playUnlock();
+          return m.game as GameId;
+        });
         setGameConfig((m.config as GameConfig) || {});
-        playUnlock();
       } else if (m.t === 'to_lobby') {
         setActiveGame(null);
       } else if (m.t === SESSION_RESULT) {
@@ -148,6 +150,17 @@ const OnlineHub: React.FC = () => {
       }
     });
   }, [room.onMessage]);
+
+  // Late joiners: games that can sync mid-game (Quiz Party) get the start message re-sent
+  // when someone new arrives, so their device opens the game too.
+  const LATE_JOIN_GAMES: GameId[] = ['quiz_party'];
+  const playerIds = room.players.map(p => p.id).join(',');
+  useEffect(() => {
+    if (room.isHost && activeGame && LATE_JOIN_GAMES.includes(activeGame)) {
+      room.send({ t: 'start', game: activeGame, config: gameConfig });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playerIds]);
 
   const selectGame = (g: GameId) => {
     playClick();

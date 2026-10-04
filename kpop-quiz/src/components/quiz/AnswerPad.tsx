@@ -2,16 +2,11 @@ import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import OnScreenKeyboard from '../ui/OnScreenKeyboard';
 import type { PublicQuestion } from '../../online/quiz/quizLogic';
+import { TILE_STYLES } from './tileStyles';
 
 /** What the player submits, in DISPLAY positions (the host maps them back). */
 export interface PadAnswer { choice?: number; order?: number[]; text?: string }
 
-export const TILE_STYLES = [
-  { shape: '▲', bg: 'from-red-500 to-rose-600' },
-  { shape: '◆', bg: 'from-blue-500 to-indigo-600' },
-  { shape: '●', bg: 'from-amber-400 to-orange-500' },
-  { shape: '■', bg: 'from-emerald-500 to-green-600' },
-];
 
 interface AnswerPadProps {
   question: PublicQuestion;

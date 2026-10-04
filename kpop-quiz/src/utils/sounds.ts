@@ -17,7 +17,7 @@ export function initAudio(): void {
     if (_ctx.state === 'suspended') {
       _ctx.resume().catch(() => {});
     }
-  } catch (_) {
+  } catch {
     // silently ignore — audio is not critical
   }
 }

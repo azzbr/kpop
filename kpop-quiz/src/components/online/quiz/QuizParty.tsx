@@ -11,11 +11,12 @@ import {
 } from '../../../online/quiz/quizLogic';
 import type { QuizMode, QPlayer, UpgradeKind } from '../../../online/quiz/quizLogic';
 import { createRng } from '../../../games/engine/rng';
-import AnswerPad, { TILE_STYLES } from '../../quiz/AnswerPad';
+import AnswerPad from '../../quiz/AnswerPad';
+import { TILE_STYLES } from '../../quiz/tileStyles';
 import ConfettiBurst from '../../ConfettiBurst';
 import { playClick, playCorrect, playWrong, playWin, playTick, playCoin, startQuizMusic } from '../../../utils/sounds';
 
-export const MODES: { id: QuizMode; name: string; emoji: string; blurb: string }[] = [
+const MODES: { id: QuizMode; name: string; emoji: string; blurb: string }[] = [
   { id: 'classic', name: 'Classic', emoji: '🏆', blurb: 'Fast answers score more. Keep a streak going!' },
   { id: 'gold', name: 'Gold Quest', emoji: '🪙', blurb: 'Right answers open treasure chests — gold, double… or steal!' },
   { id: 'racing', name: 'Racing', emoji: '🏎️', blurb: 'Every right answer moves your car. First to the flag wins!' },
@@ -99,7 +100,7 @@ export default function QuizParty({ room }: { room: RoomApi }) {
             <button onClick={qp.revealNow} className="min-h-[44px] px-5 rounded-full bg-white/15 font-fredoka">⏭ Reveal now (host)</button>
           </div>
         )}
-        {snap.phase === 'podium' && <Podium snap={snap} myId={room.myId} isHost={room.isHost} onAgain={qp.backToSetup} />}
+        {snap.phase === 'podium' && <Podium snap={snap} myId={room.myId} isHost={room.isHost} onAgain={qp.backToSetup} onLobby={() => room.send({ t: 'to_lobby' })} />}
       </div>
     </div>
   );
@@ -131,7 +132,10 @@ function Setup({ onStart, room }: { onStart: (qs: ReturnType<typeof pickFrom>, s
   return (
     <div className="arcade-bg min-h-screen-d text-white px-4 py-6">
       <div className="max-w-3xl mx-auto space-y-5">
-        <h1 className="font-fredoka text-4xl text-center">🎉 Quiz Party</h1>
+        <div className="flex items-center gap-3">
+          <button onClick={() => { playClick(); room.send({ t: 'to_lobby' }); }} className="min-h-[48px] px-4 rounded-full bg-white/15 font-fredoka text-lg">← Lobby</button>
+          <h1 className="font-fredoka text-4xl flex-1 text-center pr-20">🎉 Quiz Party</h1>
+        </div>
 
         <section>
           <h2 className="font-fredoka text-xl mb-2">Who's the host?</h2>
@@ -481,7 +485,7 @@ function Standings({ snap, limit, myId }: { snap: QuizSnapshot; limit: number; m
 
 // ------------------------------------------------------------------ podium + recap
 
-function Podium({ snap, myId, isHost, onAgain }: { snap: QuizSnapshot; myId: string; isHost: boolean; onAgain: () => void }) {
+function Podium({ snap, myId, isHost, onAgain, onLobby }: { snap: QuizSnapshot; myId: string; isHost: boolean; onAgain: () => void; onLobby: () => void }) {
   const mode = snap.settings.mode;
   const ranked = rankPlayers(mode, snap.players);
   const me = snap.players.find(p => p.id === myId);
@@ -538,9 +542,14 @@ function Podium({ snap, myId, isHost, onAgain }: { snap: QuizSnapshot; myId: str
 
       <div className="max-w-md mx-auto"><Standings snap={snap} limit={10} myId={myId} /></div>
       {isHost && (
-        <button onClick={() => { playClick(); onAgain(); }} className="mt-5 min-h-[56px] px-10 rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-400 font-fredoka text-2xl">
-          🔁 Another quiz
-        </button>
+        <div className="flex flex-wrap justify-center gap-3 mt-5">
+          <button onClick={() => { playClick(); onAgain(); }} className="min-h-[56px] px-8 rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-400 font-fredoka text-2xl">
+            🔁 Another quiz
+          </button>
+          <button onClick={() => { playClick(); onLobby(); }} className="min-h-[56px] px-8 rounded-full bg-white/15 font-fredoka text-2xl">
+            🏠 Back to lobby
+          </button>
+        </div>
       )}
     </div>
   );
