@@ -28,48 +28,62 @@ async function clickPastIntroOverlays(page: Page, target: Locator) {
   await target.click();
 }
 
-test('every game tile opens cleanly and Back returns to the grid', async ({ page }) => {
-  test.setTimeout(240_000);
-  const errors = watchErrors(page);
-  // Teacher tiles only show in Jarvis mode, so turn it on to cover them too.
+// One test per grid category, so each gets its own time budget (WebKit is slow to open 47
+// screens in one go) and a failure names the category.
+const CATEGORIES = ['Arcade', 'Puzzles & Brain', 'Quiz', 'Party', 'Create & Music', 'My Stuff', "Mr. Jarvis's Classroom"];
+
+test.describe.configure({ mode: 'parallel' });
+
+for (const category of CATEGORIES) {
+  test(`${category}: every tile opens cleanly and Back returns to the grid`, async ({ page }) => {
+    test.setTimeout(180_000);
+    const errors = watchErrors(page);
+    // Teacher tiles only show in Jarvis mode, so turn it on to cover them too.
+    await openApp(page, '/', { seed: { jarvis_mode: '1' } });
+    await enterName(page, 'Smoke');
+
+    const section = () => page.locator('section').filter({ has: page.locator('h2', { hasText: category }) }).first();
+    const titles = (await section().locator('button h3').allTextContents()).map(t => t.trim());
+    expect(titles.length, `${category} has tiles`).toBeGreaterThan(0);
+
+    const wentElsewhere: string[] = [];
+
+    for (const title of titles) {
+      await test.step(title, async () => {
+        errors.length = 0;
+        const tile = section().locator('button').filter({ has: page.locator('h3', { hasText: new RegExp(`^${escape(title)}$`) }) }).first();
+        await tile.scrollIntoViewIfNeeded();
+        await tile.click();
+        await expect(grid(page)).toBeHidden();
+
+        const back = page.getByRole('button', { name: /←|Back/ }).first();
+        await expect(back, `${title}: Back button`).toBeVisible();
+
+        const { scrollWidth, innerWidth } = await horizontalOverflow(page);
+        expect.soft(scrollWidth, `${title}: no horizontal overflow`).toBeLessThanOrEqual(innerWidth + 2);
+
+        await clickPastIntroOverlays(page, back);
+        try {
+          await expect(grid(page)).toBeVisible({ timeout: 5_000 });
+        } catch {
+          // Back went somewhere other than the grid — record it and get home the long way.
+          wentElsewhere.push(title);
+          await page.reload();
+          await enterName(page, 'Smoke');
+        }
+        expect.soft(errors, `${title}: no page or console errors`).toEqual([]);
+      });
+    }
+
+    expect.soft(wentElsewhere, 'screens whose Back did not return to the grid').toEqual([]);
+  });
+}
+
+test('the grid lists every category, including the teacher tiles in Jarvis mode', async ({ page }) => {
   await openApp(page, '/', { seed: { jarvis_mode: '1' } });
   await enterName(page, 'Smoke');
-
   const titles = (await page.locator('section button h3').allTextContents()).map(t => t.trim());
   expect(titles.length).toBeGreaterThan(30);
   expect(titles).toContain("Mr. Jarvis's Lounge");
-
-  const wentElsewhere: string[] = [];
-
-  for (const title of titles) {
-    await test.step(title, async () => {
-      errors.length = 0;
-      const tile = page.locator('section button').filter({ has: page.locator('h3', { hasText: new RegExp(`^${escape(title)}$`) }) }).first();
-      await tile.scrollIntoViewIfNeeded();
-      await tile.click();
-      await expect(grid(page)).toBeHidden();
-
-      const back = page.getByRole('button', { name: /←|Back/ }).first();
-      await expect(back, `${title}: Back button`).toBeVisible();
-
-      const { scrollWidth, innerWidth } = await horizontalOverflow(page);
-      expect.soft(scrollWidth, `${title}: no horizontal overflow`).toBeLessThanOrEqual(innerWidth + 2);
-
-      await clickPastIntroOverlays(page, back);
-      try {
-        await expect(grid(page)).toBeVisible({ timeout: 5_000 });
-      } catch {
-        // Back went somewhere other than the grid — record it and get home the long way.
-        wentElsewhere.push(title);
-        await page.reload();
-        await enterName(page, 'Smoke');
-      }
-      expect.soft(errors, `${title}: no page or console errors`).toEqual([]);
-    });
-  }
-
-  if (wentElsewhere.length) {
-    test.info().annotations.push({ type: 'back-not-to-grid', description: wentElsewhere.join(', ') });
-  }
-  expect.soft(wentElsewhere, 'screens whose Back did not return to the grid').toEqual([]);
+  for (const c of CATEGORIES) await expect(page.locator('h2', { hasText: c }).first()).toBeVisible();
 });

@@ -3,7 +3,7 @@ name: Tests (unit + iPad Safari e2e)
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, "claude/**"]
 
 concurrency:
   group: e2e-${{ github.ref }}

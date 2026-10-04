@@ -326,7 +326,7 @@ function PlayerQuestion({ snap, me, onAnswer, secs }: { snap: QuizSnapshot; me?:
           <p className="font-nunito text-violet-200 text-lg mt-1">{secs > 0 ? `Waiting for the others… ${secs}s` : 'Time!'}</p>
         </div>
       ) : (
-        <AnswerPad question={snap.question!} picked={picked}
+        <AnswerPad key={snap.n} question={snap.question!} picked={picked}
           onAnswer={a => { playClick(); if (a.choice !== undefined) setPicked(a.choice); onAnswer(a); }} />
       )}
     </div>

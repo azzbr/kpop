@@ -56,8 +56,9 @@ async function setUpRoom(context: BrowserContext, hostPage: Page): Promise<Room>
 async function startQuiz(host: Page, mode: RegExp) {
   await host.locator('section').filter({ hasText: 'Game mode' }).getByRole('button', { name: mode }).click();
   await host.getByRole('button', { name: String(QUESTIONS), exact: true }).click();
-  // "10" is both a question count and a seconds choice; the 2nd one is "Seconds each".
-  await host.getByRole('button', { name: '10', exact: true }).nth(1).click();
+  // "20" is both a question count and a seconds choice; the 2nd one is "Seconds each".
+  // 20 s, not 10: WebKit in CI is slow to tap through a 4-item order question.
+  await host.getByRole('button', { name: '20', exact: true }).nth(1).click();
   await host.getByRole('button', { name: /▶ Start \(2 players\)/ }).click();
 }
 
@@ -79,14 +80,12 @@ async function answer(page: Page, n: number) {
   } else if (await lockIn.isVisible()) {
     const items = page.locator('.grid.gap-2 > button');
     const labels = await items.evaluateAll(bs => bs.map(b => (b.childNodes[1]?.textContent ?? '').trim()));
-    const wanted = q?.options ?? labels;
+    const wanted = [...(q?.options ?? []).filter(l => labels.includes(l)), ...labels];
+    // Tap by label (not position) and only items not yet picked, so a re-render can't misdirect a tap.
     for (const label of wanted) {
-      const i = labels.indexOf(label);
-      await items.nth(i >= 0 ? i : 0).click();
+      const item = items.filter({ hasText: label }).first();
+      if (await item.isEnabled().catch(() => false)) await item.click({ timeout: 5_000 }).catch(() => {});
     }
-    // Fallback if a label wasn't matched: tap whatever is left.
-    const n2 = await items.count();
-    for (let i = 0; i < n2; i++) if (await items.nth(i).isEnabled()) await items.nth(i).click();
     await lockIn.click();
   } else {
     const labels = (await tiles.locator('span.font-fredoka').allInnerTexts()).map(s => s.trim());
