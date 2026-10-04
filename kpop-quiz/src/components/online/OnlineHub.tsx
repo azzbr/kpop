@@ -411,7 +411,6 @@ const OnlineHub: React.FC = () => {
                   onChange={(e) => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, ''))}
                   placeholder="ABCD"
                   className="w-full px-4 py-3 rounded-2xl bg-white/90 text-gray-800 font-fredoka font-bold text-2xl text-center tracking-[0.5em] border-2 border-cyan-400 focus:outline-none focus:ring-4 focus:ring-cyan-300 uppercase"
-                  autoFocus
                 />
               </div>
             )}
@@ -424,7 +423,7 @@ const OnlineHub: React.FC = () => {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Superstar name..."
                 className="w-full px-4 py-3 rounded-2xl bg-white/90 text-gray-800 font-nunito border-2 border-teal-400 focus:outline-none focus:ring-4 focus:ring-teal-300"
-                autoFocus={screen === 'create'}
+               
               />
             </div>
             <div className="mb-6">

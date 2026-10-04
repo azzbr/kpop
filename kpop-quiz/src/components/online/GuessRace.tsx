@@ -263,7 +263,6 @@ const GuessRace = <P,>({
               disabled={iGuessed}
               placeholder={iGuessed ? 'You got it! 🎉' : inputPlaceholder}
               maxLength={30}
-              autoFocus
               className="flex-1 px-4 py-3 rounded-2xl bg-white/90 text-gray-800 font-nunito text-lg border-2 border-white/40 focus:outline-none focus:ring-4 focus:ring-white/40 disabled:opacity-60"
             />
             <button

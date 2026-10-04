@@ -294,7 +294,6 @@ export default function ChaoticBackstage() {
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && input.trim() && submitBlank()}
                 placeholder={`Type the ${currentBlank.label.toLowerCase()}...`}
-                autoFocus
                 className="w-full px-4 py-3 rounded-2xl border-2 border-fuchsia-300 focus:border-fuchsia-500 focus:outline-none font-nunito text-lg bg-white"
               />
               <motion.button

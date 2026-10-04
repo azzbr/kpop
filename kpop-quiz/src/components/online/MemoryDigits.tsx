@@ -251,7 +251,6 @@ const MemoryDigits: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, 
                 onChange={(e) => setEntry(e.target.value.replace(/\D/g, '').slice(0, len))}
                 disabled={locked}
                 placeholder="e.g. 4 7 2 9"
-                autoFocus
                 className="flex-1 px-4 py-3 rounded-2xl bg-white/90 text-gray-800 font-fredoka font-bold text-2xl tracking-[0.3em] text-center border-2 border-white/40 focus:outline-none focus:ring-4 focus:ring-white/40 disabled:opacity-60"
               />
               <button type="submit" disabled={locked} className="px-6 rounded-2xl font-fredoka font-bold bg-gradient-to-r from-amber-400 to-pink-500 disabled:opacity-50">

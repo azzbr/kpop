@@ -289,7 +289,6 @@ const PictureTelephone: React.FC<{ room: RoomApi }> = ({ room }) => {
                 onChange={(e) => setWriteText(e.target.value)}
                 placeholder="It’s a…"
                 maxLength={30}
-                autoFocus
                 className="flex-1 px-4 py-3 rounded-2xl bg-white/90 text-gray-800 font-nunito text-lg border-2 border-white/40 focus:outline-none focus:ring-4 focus:ring-white/40"
               />
               <button type="submit" className="px-6 rounded-2xl font-fredoka font-bold bg-gradient-to-r from-amber-400 to-pink-500">
