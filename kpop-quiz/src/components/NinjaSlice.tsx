@@ -9,6 +9,8 @@ const GRAVITY = 0.32;
 const GAME_TIME = 45;
 const MAX_LIVES = 3;
 
+// Item odds (when the spawn isn't a bomb) — these add up to exactly 1.00.
+// Bombs are rolled separately (16% of spawns) in spawnItem.
 const ITEMS = [
   { emoji: '🎤', pts: 10, prob: 0.24 },
   { emoji: '⭐', pts: 15, prob: 0.20 },
@@ -16,7 +18,7 @@ const ITEMS = [
   { emoji: '🎵', pts: 6,  prob: 0.16 },
   { emoji: '🎁', pts: 30, prob: 0.06 },
   { emoji: '🪩', pts: 20, prob: 0.08 },
-  { emoji: '🎶', pts: 7,  prob: 0.14 },
+  { emoji: '🎶', pts: 7,  prob: 0.04 }, // rare
 ];
 
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
@@ -66,15 +68,17 @@ const NinjaSlice: React.FC = () => {
     const ctx = canvas.getContext('2d')!;
     let raf = 0;
     let tickSec = 0;
+    let confettiTimer = 0;
 
     function spawnItem() {
       const s = stateRef.current;
       const isBomb = Math.random() < 0.16;
       let emoji = '💣', pts = 0;
       if (!isBomb) {
-        let r = Math.random(), cum = 0;
+        const r = Math.random();
+        let cum = 0;
+        emoji = ITEMS[0].emoji; pts = ITEMS[0].pts; // fallback for float rounding
         for (const it of ITEMS) { cum += it.prob; if (r < cum) { emoji = it.emoji; pts = it.pts; break; } }
-        if (!emoji) { emoji = '🎤'; pts = 10; }
       }
       const spawnX = rnd(80, W - 80);
       s.items.push({
@@ -138,7 +142,7 @@ const NinjaSlice: React.FC = () => {
       const s = stateRef.current;
       const finalScore = s.score;
       const { isBest: isHigh, xp } = useGameStore.getState().finishRound('ninja_slice', finalScore, 10);
-      if (isHigh) { playWin(); setConfetti(true); setTimeout(() => setConfetti(false), 2500); }
+      if (isHigh) { playWin(); setConfetti(true); clearTimeout(confettiTimer); confettiTimer = window.setTimeout(() => setConfetti(false), 2500); }
       else playWrong();
       setOverInfo({ score: finalScore, isHigh, xp });
       setStatus('over');
@@ -379,6 +383,7 @@ const NinjaSlice: React.FC = () => {
     loop();
     return () => {
       cancelAnimationFrame(raf);
+      clearTimeout(confettiTimer);
       canvas.removeEventListener('mousedown', onDown);
       canvas.removeEventListener('mousemove', onMove);
       canvas.removeEventListener('mouseup', onUp);

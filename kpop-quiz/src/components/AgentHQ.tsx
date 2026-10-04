@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore, getLevel, LEVEL_NAMES } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playClick, playPop, playWin, playWrong, playUnlock } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -42,6 +43,7 @@ const norm = (s: string) => s.toUpperCase().replace(/[^A-Z]/g, '');
 
 const AgentHQ: React.FC = () => {
   const { userName, setGameState, addXP, xp } = useGameStore();
+  const later = useSafeTimeout();
   const agentName = userName ? `${userName.toUpperCase()}` : 'ROOKIE';
   const agentID = useMemo(() => Math.floor(10000000 + Math.random() * 90000000).toString(), []);
   const level = getLevel(xp);
@@ -93,11 +95,11 @@ const AgentHQ: React.FC = () => {
       const newSolved = [...solvedIds, currentIdx];
       setSolvedIds(newSolved);
       localStorage.setItem('cipher_solved_ids', JSON.stringify(newSolved));
-      setTimeout(() => { setConfetti(false); nextChallenge(currentIdx); }, 1900);
+      later(() => { setConfetti(false); nextChallenge(currentIdx); }, 1900);
     } else {
       playWrong();
       setFeedback('wrong');
-      setTimeout(() => setFeedback(''), 1200);
+      later(() => setFeedback(''), 1200);
     }
   };
 

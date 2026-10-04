@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playClick, playHit, playWrong, playWin, playUnlock } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -66,6 +67,7 @@ interface Fighter { hp: number; maxHp: number; energy: number; guarding: boolean
 
 const BattleArena: React.FC = () => {
   const { setGameState } = useGameStore();
+  const later = useSafeTimeout();
   const [phase, setPhase] = useState<'pick' | 'fight' | 'result'>('pick');
   const [heroIdx, setHeroIdx] = useState(0);
   const [vilIdx] = useState(() => Math.floor(Math.random() * VILLAINS.length));
@@ -117,7 +119,7 @@ const BattleArena: React.FC = () => {
     } else { lines.push(`🛡️ ${hero.name} braces for impact!`); }
 
     // cpu attacks player (slight delay)
-    await new Promise(r => setTimeout(r, 320));
+    await new Promise<void>(r => later(() => r(), 320));
     if (cMove !== 'guard') {
       const { dmg, miss } = calcDamage(vil.atk, hero.def, cMove, pGuard);
       if (miss) { lines.push(`${MOVE_INFO[cMove].emoji} ${vil.name} missed! Lucky break! 😅`); playClick(); }
@@ -132,18 +134,18 @@ const BattleArena: React.FC = () => {
     setLog(prev => [...prev, ...lines].slice(-12));
     setRound(r => r + 1);
 
-    await new Promise(r => setTimeout(r, 180));
+    await new Promise<void>(r => later(() => r(), 180));
     setHitAnim(null);
 
     if (pHp <= 0 || cHp <= 0) {
-      await new Promise(r => setTimeout(r, 400));
+      await new Promise<void>(r => later(() => r(), 400));
       if (cHp <= 0) {
         const newWins = wins + 1;
         setWins(newWins);
         // Wins only ever go up, so the "best" score doubles as the lifetime win count.
         useGameStore.getState().finishRound('battle_arena', newWins, 0.02);
         setConfetti(true);
-        setTimeout(() => setConfetti(false), 3000);
+        later(() => setConfetti(false), 3000);
         playWin();
         setLog(prev => [...prev, `🏆 ${hero.name} WINS! The arena erupts! 🎊`]);
       } else {
@@ -154,7 +156,7 @@ const BattleArena: React.FC = () => {
       setPhase('result');
     }
     setBusy(false);
-  }, [busy, player, cpu, hero, vil, lastMove, wins]);
+  }, [busy, player, cpu, hero, vil, lastMove, wins, later]);
 
   const hpBar = (cur: number, max: number, color: string) => (
     <div className="w-full bg-gray-700 rounded-full h-4 overflow-hidden">

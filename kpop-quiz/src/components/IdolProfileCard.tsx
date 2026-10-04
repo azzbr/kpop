@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
 import { playClick, playWin, playPop } from '../utils/sounds';
@@ -51,7 +51,11 @@ interface Card {
   vocal: number;
   dance: number;
   charm: number;
+  cardNumber: number;
 }
+
+// XP for making a card is only given once per app session (stops XP farming by re-generating).
+let xpAwardedThisSession = false;
 
 export default function IdolProfileCard() {
   const { setGameState, addXP } = useGameStore();
@@ -61,12 +65,19 @@ export default function IdolProfileCard() {
   const [card, setCard] = useState<Card | null>(null);
   const [confetti, setConfetti] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => () => { timeoutsRef.current.forEach(clearTimeout); }, []);
+
+  const later = (fn: () => void, ms: number) => {
+    timeoutsRef.current.push(setTimeout(fn, ms));
+  };
 
   const generate = () => {
     if (!name.trim() || !hometown.trim() || !superpower.trim()) return;
     playClick();
     setGenerating(true);
-    setTimeout(() => {
+    later(() => {
       const c: Card = {
         name: name.trim(),
         hometown: hometown.trim(),
@@ -79,13 +90,17 @@ export default function IdolProfileCard() {
         vocal: 60 + Math.floor(Math.random() * 40),
         dance: 60 + Math.floor(Math.random() * 40),
         charm: 60 + Math.floor(Math.random() * 40),
+        cardNumber: Math.floor(Math.random() * 9000 + 1000),
       };
       setCard(c);
       setGenerating(false);
       setConfetti(true);
       playWin();
-      addXP(15);
-      setTimeout(() => setConfetti(false), 3000);
+      if (!xpAwardedThisSession) {
+        xpAwardedThisSession = true;
+        addXP(15);
+      }
+      later(() => setConfetti(false), 3000);
     }, 1400);
   };
 
@@ -102,6 +117,7 @@ export default function IdolProfileCard() {
       vocal: 60 + Math.floor(Math.random() * 40),
       dance: 60 + Math.floor(Math.random() * 40),
       charm: 60 + Math.floor(Math.random() * 40),
+      cardNumber: Math.floor(Math.random() * 9000 + 1000),
     });
   };
 
@@ -276,7 +292,7 @@ export default function IdolProfileCard() {
                 </div>
 
                 <div className="text-center mt-3 text-xs opacity-70 font-nunito">
-                  ★ Debut card #{Math.floor(Math.random() * 9000 + 1000)} · HUNTR/X Records ★
+                  ★ Debut card #{card.cardNumber} · HUNTR/X Records ★
                 </div>
               </div>
 

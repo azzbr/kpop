@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { easyQuestions, normalQuestions } from '../quizData';
 import { playCorrect, playWrong, playWin, playTick, playTimeOut, playCoin } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
@@ -24,6 +25,7 @@ export default function LightningQuizScreen() {
 
 function LightningQuiz({ onRestart }: { onRestart: () => void }) {
   const { setGameState } = useGameStore();
+  const later = useSafeTimeout();
   const [ALL_Q] = useState(pickQuestions);
 
   const [phase, setPhase] = useState<Phase>('intro');
@@ -45,13 +47,13 @@ function LightningQuiz({ onRestart }: { onRestart: () => void }) {
       playTimeOut();
       setPicked(-1); // -1 = timed out
       setCombo(0);
-      setTimeout(() => advance(), 1400);
+      later(() => advance(), 1400);
       return;
     }
     if (timeLeft <= 3) playTick();
     const id = setTimeout(() => setTimeLeft(t => t - 1), 1000);
     return () => clearTimeout(id);
-  }, [timeLeft, phase, picked]);
+  }, [timeLeft, phase, picked, later]);
 
   function handleAnswer(idx: number) {
     if (picked !== null) return;
@@ -73,7 +75,7 @@ function LightningQuiz({ onRestart }: { onRestart: () => void }) {
       playWrong();
       setCombo(0);
     }
-    setTimeout(() => advance(), 1300);
+    later(() => advance(), 1300);
   }
 
   function advance() {

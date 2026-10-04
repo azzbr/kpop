@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playCorrect, playWrong, playWin, playClick, playTick, playTimeOut } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -66,6 +67,7 @@ export default function WordScrambleScreen() {
 
 function WordScramble({ onRestart }: { onRestart: () => void }) {
   const { setGameState } = useGameStore();
+  const later = useSafeTimeout();
 
   const [pool] = useState(() => [...WORDS].sort(() => Math.random() - 0.5));
   const [wordIndex, setWordIndex] = useState(0);
@@ -97,13 +99,13 @@ function WordScramble({ onRestart }: { onRestart: () => void }) {
       playTimeOut();
       setFeedback('timeout');
       setStreak(0);
-      setTimeout(() => advance(false), 1500);
+      later(() => advance(false), 1500);
       return;
     }
     if (timeLeft <= 4) playTick();
     const id = setTimeout(() => setTimeLeft(t => t - 1), 1000);
     return () => clearTimeout(id);
-  }, [timeLeft, feedback, gameOver]);
+  }, [timeLeft, feedback, gameOver, later]);
 
   const guessedWord = selected.map(i => scrambled[i]).join('');
 
@@ -117,15 +119,15 @@ function WordScramble({ onRestart }: { onRestart: () => void }) {
       setScore(s => s + pts);
       setStreak(s => s + 1);
       setFeedback('correct');
-      setTimeout(() => advance(true), 1200);
+      later(() => advance(true), 1200);
     } else {
       playWrong();
       setStreak(0);
       setFeedback('wrong');
-      setTimeout(() => setSelected([]), 600);
-      setTimeout(() => setFeedback(null), 600);
+      later(() => setSelected([]), 600);
+      later(() => setFeedback(null), 600);
     }
-  }, [selected]);
+  }, [selected, later]);
 
   function advance(wasCorrect: boolean) {
     const next = wordIndex + 1;

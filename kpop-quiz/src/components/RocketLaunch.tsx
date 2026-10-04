@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playClick, playCoin, playWrong, playWin, playPop } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -28,6 +29,7 @@ const STAGE_NAMES = ['Warm-Up', 'Easy', 'Medium', 'Hard', 'Expert'];
 
 const RocketLaunch: React.FC = () => {
   const { setGameState } = useGameStore();
+  const later = useSafeTimeout();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [angle, setAngle] = useState(45);
   const [power, setPower] = useState(55);
@@ -282,15 +284,15 @@ const RocketLaunch: React.FC = () => {
           setHitMsg(`🎯 HIT! +${earned} pts${bonus > 0 ? ` (accuracy bonus!)` : ''}`);
           const nextStage = stageRef.current + 1;
           if (nextStage >= LEVEL_TARGETS.length) {
-            setTimeout(() => {
+            later(() => {
               setStatus('done');
               useGameStore.getState().finishRound('rocket_launch', nextScore, 12);
               playWin();
               setConfetti(true);
-              setTimeout(() => setConfetti(false), 3000);
+              later(() => setConfetti(false), 3000);
             }, 800);
           } else {
-            setTimeout(() => {
+            later(() => {
               setStage(nextStage);
               stageRef.current = nextStage;
               setTriesLeft(3);
@@ -314,9 +316,9 @@ const RocketLaunch: React.FC = () => {
           // skip to next with 0 pts
           const nextStage = stageRef.current + 1;
           if (nextStage >= LEVEL_TARGETS.length) {
-            setTimeout(() => setStatus('done'), 500);
+            later(() => setStatus('done'), 500);
           } else {
-            setTimeout(() => {
+            later(() => {
               setStage(nextStage);
               stageRef.current = nextStage;
               setTriesLeft(3);
@@ -329,7 +331,7 @@ const RocketLaunch: React.FC = () => {
           setHitMsg(`💨 Missed! ${newTries} ${newTries === 1 ? 'try' : 'tries'} left`);
         }
         setStatus('miss');
-        setTimeout(() => setStatus('aim'), 900);
+        later(() => setStatus('aim'), 900);
       }
     }
 
@@ -374,7 +376,7 @@ const RocketLaunch: React.FC = () => {
     setLaunching(true);
     setStatus('flight');
     playPop();
-    setTimeout(() => setLaunching(false), 400);
+    later(() => setLaunching(false), 400);
   };
 
   const resetGame = () => {

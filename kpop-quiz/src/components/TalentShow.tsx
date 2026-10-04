@@ -50,6 +50,9 @@ const TalentShow: React.FC = () => {
   const [lastPerf, setLastPerf] = useState<Performance | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const timerRef = useRef<number | null>(null);
+  const confettiTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => () => { if (confettiTimeoutRef.current) clearTimeout(confettiTimeoutRef.current); }, []);
 
   const activeJudges = judgeNames.filter(j => j.trim()).length;
 
@@ -110,7 +113,7 @@ const TalentShow: React.FC = () => {
       };
       setLastPerf(perf);
       setPerformances(prev => [...prev, perf].sort((a, b) => b.total - a.total));
-      if (total >= 4) { setShowConfetti(true); playWin(); setTimeout(() => setShowConfetti(false), 2500); }
+      if (total >= 4) { setShowConfetti(true); playWin(); if (confettiTimeoutRef.current) clearTimeout(confettiTimeoutRef.current); confettiTimeoutRef.current = window.setTimeout(() => setShowConfetti(false), 2500); }
       else playCorrect();
       setPhase('result');
     }
@@ -121,7 +124,12 @@ const TalentShow: React.FC = () => {
     setPerformerName('');
     setTalent('');
     setCustomTalent('');
-    setPhase('perform');
+    setJudgeScores([0, 0, 0]);
+    setCurrentJudge(0);
+    setTimer(20);
+    setTimerRunning(false);
+    setLastPerf(null);
+    setPhase('setup');
   };
 
   const randomTalent = () => {

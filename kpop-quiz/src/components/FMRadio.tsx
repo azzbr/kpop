@@ -40,6 +40,8 @@ export default function FMRadio() {
 
   useEffect(() => { setSpinning(isPlaying); }, [isPlaying]);
 
+  useEffect(() => () => { if (shoutTimer.current) clearTimeout(shoutTimer.current); }, []);
+
   const fireShoutout = () => {
     playWin();
     const msg = SHOUTOUTS[shoutIdx % SHOUTOUTS.length];

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playClick, playPop, playWin, playUnlock } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -80,6 +81,7 @@ interface DiaryEntry { id: number; storyId: string; words: string[]; date: strin
 
 const IdolDiary: React.FC = () => {
   const { setGameState, addXP } = useGameStore();
+  const later = useSafeTimeout();
   const [tab, setTab] = useState<'new' | 'shelf'>('new');
   const [storyIdx, setStoryIdx] = useState<number | null>(null);
   const [step, setStep] = useState(0);
@@ -111,7 +113,7 @@ const IdolDiary: React.FC = () => {
       playWin();
       setConfetti(true);
       addXP(15);
-      setTimeout(() => setConfetti(false), 2500);
+      later(() => setConfetti(false), 2500);
     } else {
       setStep(s => s + 1);
     }

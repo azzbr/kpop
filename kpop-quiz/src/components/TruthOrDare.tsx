@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playClick, playCorrect, playWrong, playPop, playUnlock } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -79,6 +80,7 @@ const PLAYER_COLORS = [
 
 const TruthOrDare: React.FC = () => {
   const { setGameState } = useGameStore();
+  const later = useSafeTimeout();
   const [phase, setPhase] = useState<Phase>('setup');
   const [players, setPlayers] = useState<Player[]>([
     { name: '', score: 0 }, { name: '', score: 0 },
@@ -116,7 +118,7 @@ const TruthOrDare: React.FC = () => {
     setSpinning(true);
     const extra = 1440 + Math.random() * 720;
     setSpinAngle(a => a + extra);
-    setTimeout(() => {
+    later(() => {
       setSpinning(false);
       const next = Math.floor(Math.random() * players.length);
       setCurrentPlayerIdx(next);
@@ -150,12 +152,12 @@ const TruthOrDare: React.FC = () => {
         i === currentPlayerIdx ? { ...pl, score: pl.score + 10 } : pl
       ));
       setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 1500);
+      later(() => setShowConfetti(false), 1500);
     } else {
       playWrong();
     }
     if (round >= MAX_ROUNDS) {
-      setTimeout(() => setPhase('scores'), 800);
+      later(() => setPhase('scores'), 800);
     } else {
       setRound(r => r + 1);
       setPhase('spin');

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playUnlock, playClick, playWin } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -36,6 +37,7 @@ const WelcomeScreen: React.FC = () => {
   const [jarvisCountdown, setJarvisCountdown] = useState(3);
 
   const { setUserName, setGameState } = useGameStore();
+  const later = useSafeTimeout();
   const audioContextRef = React.useRef<AudioContext | null>(null);
 
   // Initialize AudioContext lazily to comply with browser autoplay policies
@@ -102,9 +104,9 @@ const WelcomeScreen: React.FC = () => {
         const tick = (n: number) => {
           if (n <= 0) { setJarvisSplash(false); setGameState('game_mode'); return; }
           setJarvisCountdown(n);
-          setTimeout(() => tick(n - 1), 1000);
+          later(() => tick(n - 1), 1000);
         };
-        setTimeout(() => tick(2), 1000);
+        later(() => tick(2), 1000);
       } else {
         setGameState('game_mode');
       }
@@ -118,7 +120,7 @@ const WelcomeScreen: React.FC = () => {
     playClick();
     const fact = FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)];
     setFactBubble(fact);
-    setTimeout(() => setFactBubble(null), 4000);
+    later(() => setFactBubble(null), 4000);
   };
 
   // Easter egg 3: tap 🎵 5 times
@@ -129,7 +131,7 @@ const WelcomeScreen: React.FC = () => {
     if (next >= 5) {
       setDjMode(true);
       playUnlock();
-      setTimeout(() => { setDjMode(false); setNoteClicks(0); }, 5000);
+      later(() => { setDjMode(false); setNoteClicks(0); }, 5000);
     }
   };
 
@@ -137,7 +139,7 @@ const WelcomeScreen: React.FC = () => {
     if (pAnimationState === 'idle') {
       setPAnimationState('discovering');
       // Trigger sparkle effect, screen shake, etc.
-      setTimeout(() => {
+      later(() => {
         setGameState('secret_menu');
         setPAnimationState('unlocked');
       }, 2000);
@@ -149,7 +151,7 @@ const WelcomeScreen: React.FC = () => {
       setFAnimationState('discovering');
       playTransitionSound();
       // Trigger living mural launch
-      setTimeout(() => {
+      later(() => {
         setGameState('living_mural');
         setFAnimationState('unlocked');
       }, 1500); // Slightly faster for better feel

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playClick, playPop, playWin, playCorrect, playWrong, playUnlock, playTick, playTimeOut } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 import { easyQuestions, normalQuestions } from '../quizData';
@@ -151,6 +152,7 @@ interface Student { name: string; stars: number; }
 
 const JarvisHQ: React.FC = () => {
   const { setGameState } = useGameStore();
+  const later = useSafeTimeout();
   const [tab, setTab] = useState<Tab>('quiz');
 
   // ---- INTRO MODAL ----
@@ -179,7 +181,7 @@ const JarvisHQ: React.FC = () => {
       playWrong(); setClassMisses(m => m + 1);
       const reward = REWARDS[Math.floor(Math.random() * REWARDS.length)];
       setClassWins(`${reward.emoji} ${reward.text}`);
-      setTimeout(() => playWin(), 600);
+      later(() => playWin(), 600);
     }
   };
   const nextQ = () => { playPop(); setRevealed(false); setPick(null); setQIdx(i => (i + 1) % shuffled.length); };
@@ -213,8 +215,8 @@ const JarvisHQ: React.FC = () => {
     const tick = () => {
       setChosen(students[Math.floor(Math.random() * students.length)].name);
       playTick(); count++;
-      if (count < total) setTimeout(tick, 80 + count * 12);
-      else { setSpinning(false); playWin(); setConfetti(true); setTimeout(() => setConfetti(false), 2000); }
+      if (count < total) later(tick, 80 + count * 12);
+      else { setSpinning(false); playWin(); setConfetti(true); later(() => setConfetti(false), 2000); }
     };
     tick();
   };
@@ -231,7 +233,7 @@ const JarvisHQ: React.FC = () => {
   // ---- GOLD STARS ----
   const awardStar = (name: string) => {
     setStudents(students.map(s => s.name === name ? { ...s, stars: s.stars + 1 } : s));
-    playCorrect(); setConfetti(true); setTimeout(() => setConfetti(false), 1200);
+    playCorrect(); setConfetti(true); later(() => setConfetti(false), 1200);
   };
   const removeStar = (name: string) => {
     setStudents(students.map(s => s.name === name ? { ...s, stars: Math.max(0, s.stars - 1) } : s));
@@ -257,7 +259,7 @@ const JarvisHQ: React.FC = () => {
     const pool = filterCategory === 'Any' ? CHALLENGES : CHALLENGES.filter(c => c.category === filterCategory);
     setBattleChallenge(pool[Math.floor(Math.random() * pool.length)]);
     setConfetti(true);
-    setTimeout(() => setConfetti(false), 1500);
+    later(() => setConfetti(false), 1500);
   };
 
   // ---- REWARD ROULETTE ----
@@ -271,10 +273,10 @@ const JarvisHQ: React.FC = () => {
     const tick = () => {
       setRewardIdx(Math.floor(Math.random() * REWARDS.length));
       playTick(); count++;
-      if (count < total) setTimeout(tick, 70 + count * 14);
+      if (count < total) later(tick, 70 + count * 14);
       else {
         setRewardSpin(false); playWin(); setConfetti(true);
-        setTimeout(() => setConfetti(false), 2500);
+        later(() => setConfetti(false), 2500);
       }
     };
     tick();
@@ -294,7 +296,7 @@ const JarvisHQ: React.FC = () => {
         if (t <= 1) {
           if (timerRef.current) clearInterval(timerRef.current);
           setTimerRun(false); playTimeOut(); setConfetti(true);
-          setTimeout(() => setConfetti(false), 3000);
+          later(() => setConfetti(false), 3000);
           return 0;
         }
         if (t <= 4) playTick();
@@ -333,7 +335,7 @@ const JarvisHQ: React.FC = () => {
       playCorrect();
       const next = bossHP - 1;
       setBossHP(next);
-      if (next <= 0) { setBossWon(true); setBossActive(false); setConfetti(true); playUnlock(); setTimeout(() => setConfetti(false), 4000); }
+      if (next <= 0) { setBossWon(true); setBossActive(false); setConfetti(true); playUnlock(); later(() => setConfetti(false), 4000); }
     } else {
       playWrong();
       const next = Math.min(bossHP + 1, BOSS_HP_MAX);
@@ -353,7 +355,7 @@ const JarvisHQ: React.FC = () => {
     playClick();
     setDrawing(true);
     setDrawnCard(null);
-    setTimeout(() => {
+    later(() => {
       const r = Math.random();
       const pool = r < 0.1
         ? POWER_CARDS.filter(c => c.rarity === 'legendary')
@@ -363,7 +365,7 @@ const JarvisHQ: React.FC = () => {
       const card = pool[Math.floor(Math.random() * pool.length)];
       setDrawnCard(card);
       setDrawing(false);
-      if (card.rarity === 'legendary') { playUnlock(); setConfetti(true); setTimeout(() => setConfetti(false), 2500); }
+      if (card.rarity === 'legendary') { playUnlock(); setConfetti(true); later(() => setConfetti(false), 2500); }
       else playPop();
     }, 900);
   };
@@ -380,6 +382,7 @@ const JarvisHQ: React.FC = () => {
   // ---- NOISE ----
   const [cheer, setCheer] = useState<string | null>(null);
   const cheerTimer = useRef<number | null>(null);
+  useEffect(() => () => { if (cheerTimer.current) clearTimeout(cheerTimer.current); }, []);
   const fireCheer = () => {
     const line = CHEER_LINES[Math.floor(Math.random() * CHEER_LINES.length)];
     setCheer(line); setConfetti(true); playWin();

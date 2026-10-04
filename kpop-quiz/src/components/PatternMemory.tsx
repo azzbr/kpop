@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playClick, playWin, playWrong } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -15,6 +16,7 @@ type Phase = 'idle' | 'showing' | 'input' | 'win' | 'lose';
 
 const PatternMemory: React.FC = () => {
   const { setGameState } = useGameStore();
+  const later = useSafeTimeout();
   const [phase, setPhase] = useState<Phase>('idle');
   const [lit, setLit] = useState<number | null>(null);
   const [round, setRound] = useState(0);
@@ -32,7 +34,7 @@ const PatternMemory: React.FC = () => {
   const runRef = useRef(0);
 
   const go = (p: Phase) => { phaseRef.current = p; setPhase(p); };
-  const wait = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+  const wait = (ms: number) => new Promise<void>(r => later(r, ms));
 
   useEffect(() => () => { runRef.current++; audioCtx.current?.close(); }, []);
 
@@ -79,7 +81,7 @@ const PatternMemory: React.FC = () => {
     if (res.isBest) {
       setBest(reached);
       setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 2500);
+      later(() => setShowConfetti(false), 2500);
     }
     go(phaseName);
   };
@@ -116,7 +118,7 @@ const PatternMemory: React.FC = () => {
     seqRef.current = [...seq, Math.floor(Math.random() * 4)];
     setRound(seqRef.current.length);
     const run = runRef.current;
-    setTimeout(() => { if (runRef.current === run) showSequence(seqRef.current); }, 600);
+    later(() => { if (runRef.current === run) showSequence(seqRef.current); }, 600);
   };
 
   return (

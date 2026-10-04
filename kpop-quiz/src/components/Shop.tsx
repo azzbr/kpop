@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 
 // Define shop items
 const SHOP_ITEMS = [
@@ -13,6 +14,7 @@ const SHOP_ITEMS = [
 
 const Shop: React.FC = () => {
   const { userCurrency, setUserCurrency, setGameState, addToInventory, inventory } = useGameStore();
+  const later = useSafeTimeout();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleBuy = (item: typeof SHOP_ITEMS[0]) => {
@@ -23,7 +25,7 @@ const Shop: React.FC = () => {
       setUserCurrency(userCurrency - item.price);
       addToInventory(item.id);
       setSuccessMessage(`Purchased ${item.name}! 🎉`);
-      setTimeout(() => setSuccessMessage(null), 3000);
+      later(() => setSuccessMessage(null), 3000);
     } else {
       alert('Not enough treasure points! Earn more by playing! 💰');
     }

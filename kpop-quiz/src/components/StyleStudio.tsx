@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playClick, playPop, playWin, playUnlock } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -38,6 +39,7 @@ const defaultLook: Look = {
 
 const StyleStudio: React.FC = () => {
   const { setGameState, addXP } = useGameStore();
+  const later = useSafeTimeout();
   const [look, setLook] = useState<Look>(defaultLook);
   const [savedLooks, setSavedLooks] = useState<Look[]>(() => {
     try { return JSON.parse(localStorage.getItem('style_looks') || '[]'); } catch { return []; }
@@ -89,8 +91,8 @@ const StyleStudio: React.FC = () => {
     setConfetti(true);
     const bonus = vibeMatched ? vibeMatched.bonus : 0;
     addXP(20 + bonus);
-    if (vibeMatched) { setShowVibePop(true); setTimeout(() => setShowVibePop(false), 1800); }
-    setTimeout(() => { setStrut(false); setConfetti(false); }, 2800);
+    if (vibeMatched) { setShowVibePop(true); later(() => setShowVibePop(false), 1800); }
+    later(() => { setStrut(false); setConfetti(false); }, 2800);
   };
 
   const renderModel = (lookData: Look, size: 'big' | 'small' = 'big') => {

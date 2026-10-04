@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playClick, playWin, playPop, playCorrect } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -94,6 +95,7 @@ type Phase = 'setup' | 'filling' | 'reveal';
 
 export default function ChaoticBackstage() {
   const { setGameState } = useGameStore();
+  const later = useSafeTimeout();
   const [roster, setRoster] = useState<string[]>([]);
   const [story, setStory] = useState<Story>(STORIES[0]);
   const [assignments, setAssignments] = useState<Record<number, string>>({});
@@ -148,7 +150,7 @@ export default function ChaoticBackstage() {
       setPhase('reveal');
       setConfetti(true);
       playWin();
-      setTimeout(() => setConfetti(false), 4000);
+      later(() => setConfetti(false), 4000);
     } else {
       setFillIdx(nextIdx);
       setInput(assignments[nextIdx] ?? '');

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playClick, playCorrect, playWrong, playWin, playPop } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -32,6 +33,7 @@ function pickOptions(correct: Track): Track[] {
 
 export default function GuessTheIntro() {
   const { setGameState, addXP } = useGameStore();
+  const later = useSafeTimeout();
   const [round, setRound] = useState(0);
   const [score, setScore] = useState(0);
   const [clipIdx, setClipIdx] = useState(0);
@@ -116,7 +118,7 @@ export default function GuessTheIntro() {
       setDone(true);
       setConfetti(true);
       playWin();
-      setTimeout(() => setConfetti(false), 3000);
+      later(() => setConfetti(false), 3000);
       return;
     }
     const nextTarget = TRACKS[Math.floor(Math.random() * TRACKS.length)];
