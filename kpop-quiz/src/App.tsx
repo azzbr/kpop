@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import type { ComponentType, LazyExoticComponent } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from './store';
@@ -6,6 +6,10 @@ import type { GameState } from './store';
 import WelcomeScreen from './components/WelcomeScreen';
 import GameModeSelection from './components/GameModeSelection';
 import MusicPlayer from './components/MusicPlayer';
+import PlayTimeTracker from './components/PlayTimeTracker';
+import BadgeToast from './components/BadgeToast';
+import PumpkinHunt from './components/events/PumpkinHunt';
+import { useEventTheme } from './events/useEventTheme';
 
 // Every screen except the first two loads on demand, so the iPad downloads only what she opens.
 const SCREENS: Partial<Record<GameState, LazyExoticComponent<ComponentType>>> = {
@@ -56,6 +60,11 @@ const SCREENS: Partial<Record<GameState, LazyExoticComponent<ComponentType>>> = 
   emoji_guess: lazy(() => import('./components/games/EmojiGuess')),
   quiz_maker: lazy(() => import('./components/QuizMaker')),
   locker: lazy(() => import('./components/Locker')),
+  tower_defense: lazy(() => import('./components/games/TowerDefense')),
+  pet_pal: lazy(() => import('./components/PetPal')),
+  quest_map: lazy(() => import('./components/QuestMap')),
+  parent_corner: lazy(() => import('./components/ParentCorner')),
+  heads_up: lazy(() => import('./components/games/HeadsUp')),
 };
 
 const Loading = () => (
@@ -66,6 +75,13 @@ const Loading = () => (
 
 function App() {
   const gameState = useGameStore(s => s.gameState);
+  useEventTheme();
+
+  // A refresh while in a Friends Arena room (or iPad Safari reloading a sleeping tab) goes
+  // straight back into the room instead of the welcome screen. (Key from online/useRoom.ts.)
+  useEffect(() => {
+    try { if (sessionStorage.getItem('kpop_room')) useGameStore.getState().setGameState('online_hub'); } catch { /* ignore */ }
+  }, []);
 
   const renderCurrentScreen = () => {
     if (gameState === 'welcome') return <WelcomeScreen key="welcome" />;
@@ -82,6 +98,9 @@ function App() {
         </AnimatePresence>
       </Suspense>
       <MusicPlayer hidden={gameState === 'living_mural' || gameState === 'fm_radio'} />
+      <PlayTimeTracker />
+      <BadgeToast />
+      <PumpkinHunt screen={gameState} />
     </div>
   );
 }

@@ -18,6 +18,14 @@ const inputTime = (len: number) => 4000 + len * 1000;
 
 type Phase = 'intro' | 'watch' | 'input' | 'submitted' | 'result' | 'final';
 
+// Messages exchanged over the room channel
+type CopyCatMsg = { from?: string } & (
+  | { t: 'cc_seq'; round: number; seq: number[]; alive: string[] }
+  | { t: 'cc_input'; from: string; round: number; taps: number[] }
+  | { t: 'cc_result'; round: number; out: string[]; alive: string[]; seq: number[] }
+  | { t: 'cc_final'; winners: string[]; round: number }
+);
+
 const CopyCat: React.FC<{ room: RoomApi }> = ({ room }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -53,7 +61,7 @@ const CopyCat: React.FC<{ room: RoomApi }> = ({ room }) => {
     const h = hd.current;
     h.alive = players.map((p) => p.id);
     h.timer = window.setTimeout(() => hostNextRound(), 1500);
-    return () => window.clearTimeout(hd.current.timer);
+    return () => window.clearTimeout(h.timer); // h is hd.current, so this reads the latest timer
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -94,7 +102,7 @@ const CopyCat: React.FC<{ room: RoomApi }> = ({ room }) => {
   // ---- EVERYONE ----
   useEffect(() => {
     return onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as CopyCatMsg;
       const h = hd.current;
       switch (m.t) {
         case 'cc_seq':

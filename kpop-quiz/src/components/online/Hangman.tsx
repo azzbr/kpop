@@ -40,6 +40,17 @@ interface TopEntry {
 }
 type Phase = 'intro' | 'play' | 'reveal' | 'final';
 
+// Messages exchanged over the room channel
+type HmMsg = { from?: string } & (
+  | { t: 'hm_guess'; letter: string }
+  | { t: 'hm_round'; round: number; total: number; len: number; endsAt: number }
+  | { t: 'hm_hit'; to: string; letter: string; positions: number[]; wrong: number; good: boolean }
+  | { t: 'hm_solved'; playerId: string; scores: Record<string, number> }
+  | { t: 'hm_out'; playerId: string }
+  | { t: 'hm_reveal'; word: string; scores: Record<string, number> }
+  | { t: 'hm_final'; top: TopEntry[] }
+);
+
 const Hangman: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, config }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -117,7 +128,7 @@ const Hangman: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, confi
     };
 
     const offMsg = onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as HmMsg;
       if (m.t === 'hm_guess' && !h.ended && m.from && typeof m.letter === 'string') {
         const st = h.pp[m.from];
         if (!st || st.done) return;
@@ -162,7 +173,7 @@ const Hangman: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, confi
   // ---- EVERYONE ----
   useEffect(() => {
     return onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as HmMsg;
       if (m.t === 'hm_round') {
         setPhase('play');
         setRound(m.round);

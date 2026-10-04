@@ -15,7 +15,7 @@ const WordScramble: React.FC<{ room: RoomApi }> = ({ room }) => (
     roundMs={30000}
     rounds={10}
     buildRounds={() =>
-      pickScrambleWords(10).map((w): GuessRound => ({
+      pickScrambleWords(10).map((w): GuessRound<{ scrambled: string; category: string }> => ({
         prompt: { scrambled: scramble(w.word), category: w.category },
         answer: w.word,
       }))

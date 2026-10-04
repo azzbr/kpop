@@ -53,6 +53,8 @@ const TriviaBattle: React.FC = () => {
     if (timeLeft <= 3) playTick();
     timerRef.current = window.setTimeout(() => setTimeLeft(t => t - 1), 1000);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+    // resolveRound is recreated every render; adding it would restart the 1s tick on every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft, phase, locked]);
 
   // Countdown before battle
@@ -78,7 +80,7 @@ const TriviaBattle: React.FC = () => {
   const handleAnswer = (player: 0 | 1, answerIdx: number) => {
     if (locked || answered[player] !== null) return;
     const isCorrect = q.answers[answerIdx].isCorrect;
-    const newAnswered: [number | null, number | null] = [...answered] as any;
+    const newAnswered: [number | null, number | null] = [answered[0], answered[1]];
     newAnswered[player] = answerIdx;
     setAnswered(newAnswered);
 

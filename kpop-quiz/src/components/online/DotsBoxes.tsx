@@ -15,6 +15,24 @@ const SIZE: Record<string, { R: number; C: number }> = {
 };
 const DISC = ['', '#fb7185', '#38bdf8']; // 1 rose, 2 sky
 
+// Messages exchanged over the room channel
+type DbMsg = { from?: string } & (
+  | { t: 'db_edge'; edge: number }
+  | { t: 'db_again' }
+  | {
+      t: 'db_state';
+      R: number;
+      C: number;
+      drawn: number[];
+      owners: Record<number, number>;
+      turn: number;
+      scores: { 1: number; 2: number };
+      winner: number;
+      p0: string;
+      p1: string;
+    }
+);
+
 const DotsBoxes: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, config }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -75,7 +93,7 @@ const DotsBoxes: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, con
       send({ t: 'db_state', R: h.R, C: h.C, drawn: [...h.drawn], owners: h.owners, turn: h.turn, scores: h.scores, winner: h.winner, p0: h.p0, p1: h.p1 });
 
     const offMsg = onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as DbMsg;
       if (m.t === 'db_edge' && !h.winner && typeof m.edge === 'number') {
         const disc = m.from === h.p0 ? 1 : m.from === h.p1 ? 2 : 0;
         if (disc !== h.turn) return;
@@ -117,7 +135,7 @@ const DotsBoxes: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, con
   // ---- EVERYONE ----
   useEffect(() => {
     return onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as DbMsg;
       if (m.t === 'db_state') {
         setR(m.R);
         setC(m.C);

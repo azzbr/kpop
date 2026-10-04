@@ -40,6 +40,15 @@ function neighbors(i: number, rows: number, cols: number): number[] {
   return out;
 }
 
+// Messages exchanged over the room channel
+type MwMsg = { from?: string } & (
+  | { t: 'mw_dig'; cell: number }
+  | { t: 'mw_init'; rows: number; cols: number; mines: number; start: { i: number; v: number }[]; endsAt: number }
+  | { t: 'mw_cells'; to: string; cells: { i: number; v: number }[]; lives: number; dead: boolean }
+  | { t: 'mw_solved'; playerId: string; scores: Record<string, number> }
+  | { t: 'mw_final'; top: TopEntry[] }
+);
+
 const Minesweeper: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, config }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -139,7 +148,7 @@ const Minesweeper: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, c
     };
 
     const offMsg = onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as MwMsg;
       if (m.t === 'mw_dig' && !h.ended && m.from && typeof m.cell === 'number') {
         const st = h.pp[m.from];
         if (!st || st.dead || st.solved || st.revealed.has(m.cell)) return;
@@ -179,7 +188,7 @@ const Minesweeper: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, c
   // ---- EVERYONE ----
   useEffect(() => {
     return onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as MwMsg;
       if (m.t === 'mw_init') {
         setCols(m.cols);
         setMineCount(m.mines);

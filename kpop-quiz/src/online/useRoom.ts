@@ -33,7 +33,8 @@ export type GameId =
   | 'dots_boxes'
   | 'colour_clash'
   | 'sliding_puzzle'
-  | 'quiz_party';
+  | 'quiz_party'
+  | 'imposter';
 
 // Optional per-game setup chosen by the host in the lobby (difficulty, etc.),
 // broadcast to everyone in the `start` message.
@@ -87,16 +88,42 @@ export function getMyId(): string {
   return id;
 }
 
+// The room this tab is in, so a refresh (or iPad Safari reloading a sleeping tab) rejoins it
+// with the same seat. `joinedAt` decides who is host, so keeping it keeps the host the host.
+const ROOM_KEY = 'kpop_room';
+export interface SavedRoom { code: string; name: string; emoji: string; joinedAt: number }
+export function savedRoom(): SavedRoom | null {
+  try { return JSON.parse(sessionStorage.getItem(ROOM_KEY) || 'null'); } catch { return null; }
+}
+const saveRoom = (r: SavedRoom | null) => {
+  try { if (r) sessionStorage.setItem(ROOM_KEY, JSON.stringify(r)); else sessionStorage.removeItem(ROOM_KEY); } catch { /* ignore */ }
+};
+
+/** How long everyone waits for a vanished host to come back before someone else takes over. */
+export const HOST_GRACE_MS = 20000;
+
+/** The host is whoever has been in the room longest (ties broken by id, so every device agrees). */
+export function pickHost(list: { id: string; joinedAt: number }[]): string | null {
+  if (!list.length) return null;
+  return [...list].sort((a, b) => a.joinedAt - b.joinedAt || (a.id < b.id ? -1 : 1))[0].id;
+}
+
 export function useRoom() {
   const [status, setStatus] = useState<RoomStatus>('idle');
   const [code, setCode] = useState<string | null>(null);
   const [players, setPlayers] = useState<RoomPlayer[]>([]);
-  const [isHost, setIsHost] = useState(false);
+  const [hostId, setHostId] = useState<string | null>(null);
+  /** True while the host has vanished and we're waiting HOST_GRACE_MS for them to come back. */
+  const [hostAway, setHostAway] = useState(false);
   const myId = useRef(getMyId()).current;
   const channelRef = useRef<RealtimeChannel | LocalChannel | null>(null);
   const handlersRef = useRef<Set<(msg: GameMsg) => void>>(new Set());
+  const hostRef = useRef<string | null>(null);
+  const graceTimer = useRef<number | undefined>(undefined);
+  const isHost = hostId === myId;
 
   const cleanup = useCallback(() => {
+    window.clearTimeout(graceTimer.current);
     const ch = channelRef.current;
     if (ch) {
       if (ch instanceof LocalChannel) ch.close();
@@ -108,15 +135,25 @@ export function useRoom() {
   useEffect(() => () => cleanup(), [cleanup]);
 
   const connect = useCallback(
-    (roomCode: string, me: { name: string; emoji: string }, asHost: boolean): Promise<boolean> => {
+    (roomCode: string, me: { name: string; emoji: string }, creating: boolean, joinedAt = Date.now()): Promise<boolean> => {
       cleanup();
       setStatus('connecting');
-      setIsHost(asHost);
       setCode(roomCode);
       setPlayers([]);
+      setHostId(null);
+      setHostAway(false);
+      hostRef.current = null;
 
       return new Promise((resolve) => {
         let resolved = false;
+        const finish = (ok: boolean, st: RoomStatus) => {
+          if (resolved) return;
+          resolved = true;
+          setStatus(st);
+          if (ok) saveRoom({ code: roomCode, name: me.name, emoji: me.emoji, joinedAt });
+          else cleanup();
+          resolve(ok);
+        };
         // ?localroom swaps Supabase for a BroadcastChannel between tabs (tests, offline play).
         const channel = (LOCAL_ROOMS
           ? new LocalChannel(`kpoproom:${roomCode}`, myId)
@@ -134,18 +171,29 @@ export function useRoom() {
             .map((metas) => metas[0] as unknown as RoomPlayer)
             .filter((p) => p && p.id)
             .sort((a, b) => a.joinedAt - b.joinedAt);
-          setPlayers(list);
-
-          const hostPresent = list.some((p) => p.isHost);
-          if (!asHost) {
-            if (hostPresent && !resolved) {
-              resolved = true;
-              setStatus('lobby');
-              resolve(true);
-            } else if (!hostPresent && resolved) {
-              setStatus('closed');
-            }
+          const elected = pickHost(list);
+          const current = hostRef.current;
+          if (current && !list.some(p => p.id === current)) {
+            // The host vanished (sleeping iPad, refresh, bad Wi-Fi). Give them time to come back.
+            setHostAway(true);
+            window.clearTimeout(graceTimer.current);
+            graceTimer.current = window.setTimeout(() => {
+              const now = Object.values(channel.presenceState()).map(m => m[0] as unknown as RoomPlayer).filter(p => p && p.id);
+              const next = pickHost(now);
+              hostRef.current = next;
+              setHostId(next);
+              setHostAway(false);
+            }, HOST_GRACE_MS);
+          } else {
+            if (current && list.some(p => p.id === current)) { window.clearTimeout(graceTimer.current); setHostAway(false); }
+            // A returning host (same joinedAt) takes their seat back; otherwise keep the current host.
+            const next = !current || (elected && list.find(p => p.id === elected)!.joinedAt < (list.find(p => p.id === current)?.joinedAt ?? Infinity)) ? elected : current;
+            hostRef.current = next;
+            setHostId(next);
           }
+          setPlayers(list.map(p => ({ ...p, isHost: p.id === hostRef.current })));
+          // Joining: the room exists once anyone else is in it.
+          if (!creating && list.some(p => p.id !== myId)) finish(true, 'lobby');
         });
 
         channel.on('broadcast', { event: 'msg' }, ({ payload }) => {
@@ -154,36 +202,13 @@ export function useRoom() {
 
         channel.subscribe(async (st) => {
           if (st === 'SUBSCRIBED') {
-            await channel.track({
-              id: myId,
-              name: me.name,
-              emoji: me.emoji,
-              isHost: asHost,
-              joinedAt: Date.now(),
-            });
-            if (asHost && !resolved) {
-              resolved = true;
-              setStatus('lobby');
-              resolve(true);
-            }
-            if (!asHost) {
-              // If no host shows up in presence shortly, the room doesn't exist
-              setTimeout(() => {
-                if (!resolved) {
-                  resolved = true;
-                  setStatus('not_found');
-                  cleanup();
-                  resolve(false);
-                }
-              }, 3000);
-            }
-          } else if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') {
-            if (!resolved) {
-              resolved = true;
-              setStatus('error');
-              cleanup();
-              resolve(false);
-            }
+            // Track on every (re)subscribe: after a dropped connection the channel rejoins and
+            // our presence has to be announced again.
+            await channel.track({ id: myId, name: me.name, emoji: me.emoji, isHost: false, joinedAt });
+            if (creating) finish(true, 'lobby');
+            else setTimeout(() => finish(false, 'not_found'), 3500);
+          } else if ((st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') && !resolved) {
+            finish(false, 'error');
           }
         });
       });
@@ -205,12 +230,24 @@ export function useRoom() {
     [connect]
   );
 
+  /** Rejoin the room saved for this tab (after a refresh), keeping the same seat and host rank. */
+  const rejoin = useCallback(async (): Promise<boolean> => {
+    const r = savedRoom();
+    if (!r) return false;
+    // Try as a joiner first (others are there); if the room is empty, reopen it as its host.
+    const ok = await connect(r.code, { name: r.name, emoji: r.emoji }, false, r.joinedAt);
+    return ok || connect(r.code, { name: r.name, emoji: r.emoji }, true, r.joinedAt);
+  }, [connect]);
+
   const leaveRoom = useCallback(() => {
     cleanup();
+    saveRoom(null);
     setStatus('idle');
     setCode(null);
     setPlayers([]);
-    setIsHost(false);
+    setHostId(null);
+    setHostAway(false);
+    hostRef.current = null;
   }, [cleanup]);
 
   const send = useCallback(
@@ -229,5 +266,5 @@ export function useRoom() {
 
   const reportResult = useCallback((rankedIds: string[]) => send({ t: SESSION_RESULT, ranked: rankedIds }), [send]);
 
-  return { status, code, players, isHost, myId, createRoom, joinRoom, leaveRoom, send, onMessage, reportResult };
+  return { status, code, players, isHost, hostId, hostAway, myId, createRoom, joinRoom, rejoin, leaveRoom, send, onMessage, reportResult };
 }

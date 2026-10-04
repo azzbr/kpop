@@ -18,6 +18,16 @@ const TEAM_INFO = [
 
 type Phase = 'wait' | 'countdown' | 'battle' | 'round_end' | 'final';
 
+// Messages exchanged over the room channel
+type TugMsg = { from?: string } & (
+  | { t: 'round_start'; round: number; teams: Record<string, 0 | 1>; scores: number[]; startsAt: number }
+  | { t: 'pos'; pos: number }
+  | { t: 'taps'; from: string; n: number }
+  | { t: 'round_end'; team: 0 | 1; scores: number[]; pos: number }
+  | { t: 'rematch' }
+  | { t: 'final'; team: 0 | 1; scores: number[] }
+);
+
 const TeamTugOnline: React.FC<{ room: RoomApi }> = ({ room }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -129,7 +139,7 @@ const TeamTugOnline: React.FC<{ room: RoomApi }> = ({ room }) => {
   // ---- EVERYONE: message handling ----
   useEffect(() => {
     return onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as TugMsg;
       const h = hd.current;
       switch (m.t) {
         case 'round_start':

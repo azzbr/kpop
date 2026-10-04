@@ -1,6 +1,9 @@
 // ─── Audio Context ───────────────────────────────────────────────────────────
 
 let _ctx: AudioContext | null = null;
+/** Sound-effect volume 0–1 (Parent corner). Music has its own volume. */
+let _sfxVolume = 1;
+export function setSfxVolume(v: number): void { _sfxVolume = Math.max(0, Math.min(1, v)); }
 
 /** Call this once a user gesture has occurred so the context is running. */
 export function initAudio(): void {
@@ -57,6 +60,7 @@ interface Tone {
 }
 
 function schedule(tones: Tone[], gapSec = 0.04): void {
+  if (_sfxVolume <= 0) return;
   const ctx = ac();
   if (!ctx) return;
   const now = ctx.currentTime + 0.01; // tiny safety buffer
@@ -68,7 +72,7 @@ function schedule(tones: Tone[], gapSec = 0.04): void {
     osc.type = t.type ?? 'sine';
     osc.frequency.value = t.freq;
 
-    const v = t.vol ?? 0.28;
+    const v = (t.vol ?? 0.28) * _sfxVolume;
     gain.gain.setValueAtTime(0.0001, now + offset);
     gain.gain.linearRampToValueAtTime(v, now + offset + 0.012);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + t.dur);

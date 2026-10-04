@@ -15,7 +15,7 @@ const RiddleRush: React.FC<{ room: RoomApi }> = ({ room }) => (
     roundMs={35000}
     rounds={8}
     buildRounds={() =>
-      pickRiddles(8).map((r): GuessRound => ({ prompt: r.q, answer: r.answer, alts: r.alt, hint: r.hint }))
+      pickRiddles(8).map((r): GuessRound<string> => ({ prompt: r.q, answer: r.answer, alts: r.alt, hint: r.hint }))
     }
     renderPrompt={({ prompt, hint, len }) => (
       <div className="text-center">

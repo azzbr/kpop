@@ -105,6 +105,8 @@ function WordScramble({ onRestart }: { onRestart: () => void }) {
     if (timeLeft <= 4) playTick();
     const id = setTimeout(() => setTimeLeft(t => t - 1), 1000);
     return () => clearTimeout(id);
+    // advance is recreated every render; adding it would restart the tick on every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft, feedback, gameOver, later]);
 
   const guessedWord = selected.map(i => scrambled[i]).join('');
@@ -127,6 +129,8 @@ function WordScramble({ onRestart }: { onRestart: () => void }) {
       later(() => setSelected([]), 600);
       later(() => setFeedback(null), 600);
     }
+    // Only check when the selection changes — not when the timer/streak/feedback change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, later]);
 
   function advance(wasCorrect: boolean) {

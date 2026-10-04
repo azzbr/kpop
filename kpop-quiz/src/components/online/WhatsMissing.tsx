@@ -56,6 +56,17 @@ const DIFF: Record<string, { count: number; viewMs: number }> = {
 const ROUND_MS = 13000;
 const TOTAL = 6;
 
+// Messages exchanged over the room channel
+type WmMsg = { from?: string } & (
+  | { t: 'wm_pick'; index: number }
+  | { t: 'wm_study'; round: number; total: number; tray: Item[]; studyEndsAt: number }
+  | { t: 'wm_quiz'; removeIndex: number; options: Item[]; endsAt: number }
+  | { t: 'wm_correct'; playerId: string; gained: number; scores: Record<string, number> }
+  | { t: 'wm_wrong'; playerId: string }
+  | { t: 'wm_reveal'; correctIndex: number; scores: Record<string, number> }
+  | { t: 'wm_final'; top: TopEntry[] }
+);
+
 const WhatsMissing: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, config }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -136,7 +147,7 @@ const WhatsMissing: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, 
     };
 
     const offMsg = onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as WmMsg;
       if (m.t === 'wm_pick' && !h.ended && m.from && !h.answered[m.from]) {
         h.answered[m.from] = true;
         if (m.index === h.correctIndex) {
@@ -163,7 +174,7 @@ const WhatsMissing: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, 
   // ---- EVERYONE ----
   useEffect(() => {
     return onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as WmMsg;
       if (m.t === 'wm_study') {
         setPhase('study');
         setRound(m.round);

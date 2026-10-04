@@ -9,8 +9,8 @@ import ConfettiBurst from '../ConfettiBurst';
 // Rush and Word Scramble are all this game with a different prompt — they pass
 // `buildRounds` (host-only, answers stay host-side) and `renderPrompt`.
 
-export interface GuessRound {
-  prompt: unknown; // serializable payload broadcast to clients (string or object)
+export interface GuessRound<P = unknown> {
+  prompt: P; // serializable payload broadcast to clients (string or object)
   answer: string; // host-only — never broadcast
   alts?: string[]; // host-only accepted variants
   hint?: string;
@@ -23,7 +23,7 @@ interface TopEntry {
   score: number;
 }
 
-interface GuessRaceProps {
+interface GuessRaceProps<P> {
   room: RoomApi;
   gp: string; // message-type prefix, e.g. 'ed' → ed_round, ed_guess, …
   title: string;
@@ -33,8 +33,8 @@ interface GuessRaceProps {
   inputPlaceholder: string;
   roundMs: number;
   rounds: number;
-  buildRounds: () => GuessRound[];
-  renderPrompt: (args: { prompt: any; hint?: string; len: number }) => React.ReactNode;
+  buildRounds: () => GuessRound<P>[];
+  renderPrompt: (args: { prompt: P; hint?: string; len: number }) => React.ReactNode;
 }
 
 const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -42,16 +42,35 @@ const letters = (s: string) => s.replace(/[^a-z0-9]/gi, '').length;
 
 type Phase = 'intro' | 'play' | 'reveal' | 'final';
 
-const GuessRace: React.FC<GuessRaceProps> = ({
+// Messages exchanged over the room channel. `t` is `${gp}_round`, `${gp}_guess`, …
+// so it can't be a literal union; which fields are present depends on `t`.
+interface GrMsg<P> {
+  t: string;
+  from?: string;
+  text?: unknown; // _guess, _nope
+  round: number; // _round, _reveal
+  total: number; // _round
+  prompt: P; // _round
+  hint?: string; // _round
+  len: number; // _round
+  endsAt: number; // _round
+  playerId: string; // _correct, _nope
+  gained: number; // _correct
+  scores: Record<string, number>; // _correct, _reveal
+  answer: string; // _reveal
+  top: TopEntry[]; // _final
+}
+
+const GuessRace = <P,>({
   room, gp, title, icon, themeClass, accent, inputPlaceholder, roundMs, rounds, buildRounds, renderPrompt,
-}) => {
+}: GuessRaceProps<P>) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
 
   const [phase, setPhase] = useState<Phase>('intro');
   const [round, setRound] = useState(0);
   const [total, setTotal] = useState(rounds);
-  const [prompt, setPrompt] = useState<any>(null);
+  const [prompt, setPrompt] = useState<P | null>(null);
   const [hint, setHint] = useState<string | undefined>(undefined);
   const [len, setLen] = useState(0);
   const [endsAt, setEndsAt] = useState(0);
@@ -74,7 +93,7 @@ const GuessRace: React.FC<GuessRaceProps> = ({
 
   // Host-side authoritative state
   const hd = useRef({
-    rounds: [] as GuessRound[],
+    rounds: [] as GuessRound<P>[],
     round: 0,
     answer: '',
     alts: [] as string[],
@@ -126,7 +145,7 @@ const GuessRace: React.FC<GuessRaceProps> = ({
     };
 
     const offMsg = onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as GrMsg<P>;
       if (m.t === `${gp}_guess` && !h.ended && m.from && !h.correct[m.from]) {
         const accepted = [h.answer, ...h.alts].map(normalize);
         if (accepted.includes(normalize(String(m.text)))) {
@@ -155,7 +174,7 @@ const GuessRace: React.FC<GuessRaceProps> = ({
   // ---- EVERYONE: messages ----
   useEffect(() => {
     return onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as GrMsg<P>;
       if (m.t === `${gp}_round`) {
         setPhase('play');
         setRound(m.round);
@@ -230,7 +249,7 @@ const GuessRace: React.FC<GuessRaceProps> = ({
         {/* Prompt card */}
         {(phase === 'play' || phase === 'reveal') && (
           <div className="bg-white/10 border border-white/15 rounded-3xl px-4 py-6 mb-4 shadow-xl min-h-[8rem] flex items-center justify-center">
-            {renderPrompt({ prompt, hint, len })}
+            {renderPrompt({ prompt: prompt as P, hint, len })}
           </div>
         )}
 

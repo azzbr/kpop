@@ -11,6 +11,14 @@ const DIRS = ['⬅️ Left', '⬆️ Middle', '➡️ Right'];
 
 type Phase = 'intro' | 'pick' | 'result' | 'final';
 
+// Messages exchanged over the room channel
+type PdMsg = { from?: string } & (
+  | { t: 'pd_round'; n: number; shooterId: string; endsAt: number }
+  | { t: 'pd_pick'; from: string; n: number; dir: number }
+  | { t: 'pd_result'; n: number; shooterId: string; shot: number; dive: number; goal: boolean; scores: Record<string, number> }
+  | { t: 'pd_final'; winnerId: string; scores: Record<string, number> }
+);
+
 const PenaltyDuel: React.FC<{ room: RoomApi }> = ({ room }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -49,7 +57,7 @@ const PenaltyDuel: React.FC<{ room: RoomApi }> = ({ room }) => {
     const t = window.setTimeout(() => hostSendRound(1), 1800);
     return () => {
       window.clearTimeout(t);
-      window.clearTimeout(hd.current.timer);
+      window.clearTimeout(h.timer); // h is hd.current, so this reads the latest timer
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -92,7 +100,7 @@ const PenaltyDuel: React.FC<{ room: RoomApi }> = ({ room }) => {
   // ---- EVERYONE: messages ----
   useEffect(() => {
     return onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as PdMsg;
       const h = hd.current;
       switch (m.t) {
         case 'pd_round':

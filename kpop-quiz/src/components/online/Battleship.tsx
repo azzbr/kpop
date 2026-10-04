@@ -46,6 +46,15 @@ function randomFleet(): number[][] {
 
 type Phase = 'place' | 'wait' | 'battle' | 'over';
 
+// Messages exchanged over the room channel
+type BsMsg = { from?: string } & (
+  | { t: 'bs_place'; ships: number[][] }
+  | { t: 'bs_fire'; cell: number }
+  | { t: 'bs_again' }
+  | { t: 'bs_reset' }
+  | { t: 'bs_state'; to: string; mine: number[]; enemy: number[]; turn: string; winner: string; meLeft: number; enemyLeft: number }
+);
+
 const Battleship: React.FC<{ room: RoomApi }> = ({ room }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -107,7 +116,7 @@ const Battleship: React.FC<{ room: RoomApi }> = ({ room }) => {
     };
 
     const offMsg = onMessage((raw) => {
-      const msg = raw as any;
+      const msg = raw as unknown as BsMsg;
       if (msg.t === 'bs_place' && msg.from && Array.isArray(msg.ships) && !h.started) {
         h.fleet[msg.from] = (msg.ships as number[][]).map((cells) => ({ cells, hits: [] }));
         h.placed[msg.from] = true;
@@ -150,7 +159,7 @@ const Battleship: React.FC<{ room: RoomApi }> = ({ room }) => {
   // ---- EVERYONE ----
   useEffect(() => {
     return onMessage((raw) => {
-      const msg = raw as any;
+      const msg = raw as unknown as BsMsg;
       if (msg.t === 'bs_state' && msg.to === myId) {
         setMine(msg.mine);
         setEnemy(msg.enemy);

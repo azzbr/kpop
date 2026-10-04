@@ -343,7 +343,7 @@ export default function ChaoticBackstage() {
                     return <mark key={i} className="bg-yellow-200 text-rose-700 font-bold px-1 rounded">{part}</mark>;
                   }
                   // highlight filled words
-                  let result = part;
+                  const result = part;
                   const segments: React.ReactNode[] = [];
                   let remaining = part;
                   values.forEach(v => {

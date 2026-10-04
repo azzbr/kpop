@@ -51,6 +51,8 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ onDrawingChange }) => {
 
     // Save initial state
     saveState();
+    // Mount-only: re-running would wipe the drawing when saveState changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const saveState = useCallback(() => {

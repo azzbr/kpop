@@ -12,6 +12,15 @@ const SECS = 12;
 
 type Phase = 'intro' | 'q' | 'result' | 'final';
 
+// Messages exchanged over the room channel
+type QdMsg = { from?: string } & (
+  | { t: 'q'; round: number; text: string; options: string[]; endsAt: number }
+  | { t: 'ans'; from: string; round: number; choice: number }
+  | { t: 'locked'; playerId: string; round: number }
+  | { t: 'result'; round: number; correct: number; winnerId: string | null; scores: Record<string, number> }
+  | { t: 'final'; scores: Record<string, number>; winnerId: string }
+);
+
 const QuizDuelOnline: React.FC<{ room: RoomApi }> = ({ room }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -95,7 +104,7 @@ const QuizDuelOnline: React.FC<{ room: RoomApi }> = ({ room }) => {
   // ---- EVERYONE: message handling ----
   useEffect(() => {
     return onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as QdMsg;
       const h = hd.current;
       switch (m.t) {
         case 'q':

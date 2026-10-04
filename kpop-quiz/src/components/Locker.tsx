@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
 import { LOCKER_ITEMS, ownsItem } from '../data/lockerItems';
+import { eventLockerItems, isRewardOnly } from '../events/events';
+import { localDateKey } from '../utils/dates';
 import type { LockerItem, LockerKind } from '../data/lockerItems';
 import ThemeSwitcher from './ThemeSwitcher';
 import { playClick, playWrong, playUnlock } from '../utils/sounds';
@@ -32,6 +34,7 @@ export default function Locker() {
       if (slot) { playClick(); equip({ [slot]: item.value }); say(`Equipped ${item.emoji} ${item.name}!`); }
       return;
     }
+    if (isRewardOnly(item.id)) { playWrong(); say('Find all 31 pumpkins 🎃 to earn this one!'); return; }
     if (userCurrency < item.price) { playWrong(); say(`You need ${item.price - userCurrency} more coins — play some games! 🪙`); return; }
     if (buyItem(item.id, item.price)) {
       playUnlock();
@@ -78,7 +81,7 @@ export default function Locker() {
           <div className="rounded-3xl bg-white p-4 text-slate-900"><ThemeSwitcher /></div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {LOCKER_ITEMS.filter(i => i.kind === tab).map(item => {
+            {[...LOCKER_ITEMS, ...eventLockerItems(localDateKey(), inventory)].filter(i => i.kind === tab).map(item => {
               const owned = ownsItem(inventory, item);
               const on = isEquipped(item);
               return (
@@ -89,8 +92,9 @@ export default function Locker() {
                     ? <span className="w-12 h-12 rounded-xl border-2 border-white" style={{ background: item.value }} />
                     : <span className={`text-4xl ${item.kind === 'title' ? 'text-3xl' : ''}`}>{item.emoji}</span>}
                   <span className="font-fredoka text-base text-center leading-tight">{item.name}</span>
+                  {item.id.startsWith('hw26_') && <span className="text-xs font-nunito rounded-full bg-orange-500/80 px-2">Limited 🎃</span>}
                   <span className={`font-nunito text-sm ${on ? 'text-yellow-300' : owned ? 'text-green-300' : userCurrency >= item.price ? 'text-white' : 'text-white/50'}`}>
-                    {on ? '✔ Equipped' : owned ? (SLOT[item.kind] ? 'Tap to wear' : '✔ Owned') : `🪙 ${item.price}`}
+                    {on ? '✔ Equipped' : owned ? (SLOT[item.kind] ? 'Tap to wear' : '✔ Owned') : isRewardOnly(item.id) ? '🎃 Find all 31' : `🪙 ${item.price}`}
                   </span>
                 </motion.button>
               );

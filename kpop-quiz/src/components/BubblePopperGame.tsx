@@ -20,6 +20,15 @@ interface PopParticle {
   emoji: string;
 }
 
+// Bubble emojis for different types - using universally supported emojis
+const bubbleEmojis = {
+  regular: ['💭', '💬', '💭', '💙', '💚', '💜', '🎈', '✨'],
+  rainbow: ['🌈', '⭐', '✨', '⚡', '🔥'],
+  mystery: ['🎁', '❓', '🎲', '🎪']
+};
+
+const particleEmojis = ['✨', '⭐', '💫', '🎆', '🌟', '🎇'];
+
 const BubblePopperGame: React.FC = () => {
   // Import the stats increment function
   const { incrementBubblesPopped } = useGameStore();
@@ -38,15 +47,6 @@ const BubblePopperGame: React.FC = () => {
 
   // Timer ref to prevent multiple timers
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Bubble emojis for different types - using universally supported emojis
-  const bubbleEmojis = {
-    regular: ['💭', '💬', '💭', '💙', '💚', '💜', '🎈', '✨'],
-    rainbow: ['🌈', '⭐', '✨', '⚡', '🔥'],
-    mystery: ['🎁', '❓', '🎲', '🎪']
-  };
-
-  const particleEmojis = ['✨', '⭐', '💫', '🎆', '🌟', '🎇'];
 
   // Generate bubbles for current level
   const generateBubbles = useCallback((count: number) => {
@@ -143,7 +143,7 @@ const BubblePopperGame: React.FC = () => {
         setPopParticles(prev => prev.filter(p => !particles.find(particle => particle.id === p.id)));
       }, 800);
     }
-  }, [gameState]);
+  }, [gameState, incrementBubblesPopped]);
 
   // Level completion detection - with correct dependencies to prevent stale closures
   useEffect(() => {
@@ -213,7 +213,7 @@ const BubblePopperGame: React.FC = () => {
         timerRef.current = null;
       }
     };
-  }, [gameState, timeLeft, generateBubbles, bubbles.length]);
+  }, [gameState, timeLeft, generateBubbles, bubbles.length, level]);
 
   return (
     <div className="space-y-4">

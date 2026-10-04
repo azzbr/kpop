@@ -40,6 +40,24 @@ interface TapRaceProps {
 
 type Phase = 'intro' | 'play' | 'reveal' | 'final';
 
+// Messages exchanged over the room channel. `t` is `${gp}_round`, `${gp}_pick`, …
+// so it can't be a literal union; which fields are present depends on `t`.
+interface TapMsg {
+  t: string;
+  from?: string;
+  index: number; // _pick
+  round: number; // _round, _reveal
+  total: number; // _round
+  prompt: string; // _round
+  options: TapOption[]; // _round
+  endsAt: number; // _round
+  playerId: string; // _correct, _wrong
+  gained: number; // _correct
+  scores: Record<string, number>; // _correct, _reveal
+  correctIndex: number; // _reveal
+  top: TopEntry[]; // _final
+}
+
 const TapRace: React.FC<TapRaceProps> = ({ room, gp, title, icon, themeClass, accent, roundMs, rounds, buildRounds }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -114,7 +132,7 @@ const TapRace: React.FC<TapRaceProps> = ({ room, gp, title, icon, themeClass, ac
     };
 
     const offMsg = onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as TapMsg;
       if (m.t === `${gp}_pick` && !h.ended && m.from && !h.answered[m.from]) {
         h.answered[m.from] = true;
         const correct = m.index === h.correctIndex;
@@ -142,7 +160,7 @@ const TapRace: React.FC<TapRaceProps> = ({ room, gp, title, icon, themeClass, ac
   // ---- EVERYONE ----
   useEffect(() => {
     return onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as TapMsg;
       if (m.t === `${gp}_round`) {
         setPhase('play');
         setRound(m.round);

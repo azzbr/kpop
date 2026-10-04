@@ -42,6 +42,8 @@ export interface QuizSnapshot {
 }
 
 const COUNTDOWN_MS = 3000;
+/** The host's game is saved per tab so a refresh (or a sleeping iPad reloading) can carry on. */
+const HOST_KEY = 'qp_host_state';
 
 interface HostAnswer { a: PlayerAnswer; ms: number; display: number | null }
 
@@ -66,7 +68,9 @@ export function useQuizParty(room: RoomApi) {
     chestView: Record<string, ChestView>;
     reveal: QuizSnapshot['reveal'];
     rng: Rng;
-  }>({ settings: null, phase: 'setup', n: 0, questions: [], startedAt: 0, endsAt: 0, answers: {}, players: {}, chestRolls: {}, chestView: {}, reveal: null, rng: createRng(Date.now() % 1e9) });
+    /** Set when a new host ends a game it didn't start (it never had the questions). */
+    totalOverride: number | null;
+  }>({ settings: null, phase: 'setup', n: 0, questions: [], startedAt: 0, endsAt: 0, answers: {}, players: {}, chestRolls: {}, chestView: {}, reveal: null, rng: createRng(Date.now() % 1e9), totalOverride: null });
   const timer = useRef<number | undefined>(undefined);
   const flushTimer = useRef<number | undefined>(undefined);
 
@@ -78,7 +82,7 @@ export function useQuizParty(room: RoomApi) {
       phase: s.phase,
       settings: s.settings,
       n: s.n,
-      total: s.questions.length,
+      total: s.totalOverride ?? s.questions.length,
       endsAt: s.endsAt,
       question: cur && (s.phase === 'question' || s.phase === 'reveal') ? publicQuestion(cur) : null,
       answeredIds: Object.keys(s.answers),
@@ -95,10 +99,15 @@ export function useQuizParty(room: RoomApi) {
       flushTimer.current = undefined;
       const snapshot = buildSnapshot();
       if (snapshot) send({ t: 'qp_state', snap: snapshot });
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { rng, ...rest } = S.current;
+        sessionStorage.setItem(HOST_KEY, JSON.stringify({ code: room.code, ...rest }));
+      } catch { /* ignore */ }
     };
     if (now) { window.clearTimeout(flushTimer.current); go(); return; }
     if (flushTimer.current === undefined) flushTimer.current = window.setTimeout(go, 150);
-  }, [buildSnapshot, send]);
+  }, [buildSnapshot, send, room.code]);
 
   const activeIds = useCallback(() => Object.keys(S.current.players), []);
 
@@ -198,6 +207,8 @@ export function useQuizParty(room: RoomApi) {
     window.clearTimeout(timer.current);
     S.current.phase = 'setup';
     S.current.settings = null;
+    S.current.totalOverride = null;
+    try { sessionStorage.removeItem(HOST_KEY); } catch { /* ignore */ }
     setSnap(null);
     send({ t: 'qp_reset' });
   }, [isHost, send]);
@@ -271,6 +282,38 @@ export function useQuizParty(room: RoomApi) {
   }, [isHost, roomPlayers, myId, addPlayer, broadcast]);
 
   useEffect(() => () => { window.clearTimeout(timer.current); window.clearTimeout(flushTimer.current); }, []);
+
+  // Becoming host mid-game: either this tab WAS the host and just refreshed (restore and carry
+  // on), or the old host left for good (we never had the questions — end with the standings).
+  const lastSnap = useRef<QuizSnapshot | null>(null);
+  lastSnap.current = snap;
+  useEffect(() => {
+    if (!isHost || S.current.settings) return;
+    let saved: (Omit<typeof S.current, 'rng'> & { code: string }) | null = null;
+    try { saved = JSON.parse(sessionStorage.getItem(HOST_KEY) || 'null'); } catch { /* ignore */ }
+    if (saved && saved.code === room.code && saved.settings && saved.phase !== 'setup') {
+      const s = S.current;
+      Object.assign(s, saved, { rng: createRng(Date.now() % 1e9) });
+      for (const id of Object.keys(s.players)) s.players[id] = fixPlayer(s.players[id]);
+      const left = s.endsAt - Date.now();
+      if (s.phase === 'question') timer.current = window.setTimeout(doReveal, Math.max(0, left) + 300);
+      if (s.phase === 'countdown') timer.current = window.setTimeout(askQuestion, Math.max(0, left));
+      broadcast(true);
+      return;
+    }
+    const last = lastSnap.current;
+    if (last && last.phase !== 'podium') {
+      const s = S.current;
+      s.settings = last.settings;
+      s.players = Object.fromEntries(last.players.map(p => [p.id, p]));
+      s.n = last.n;
+      s.totalOverride = last.total;
+      s.phase = 'podium';
+      broadcast(true);
+      room.reportResult(rankPlayers(last.settings.mode, last.players).map(p => p.id));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHost]);
 
   // ---- player actions ----
   const answer = useCallback((a: { choice?: number; order?: number[]; text?: string }) => {

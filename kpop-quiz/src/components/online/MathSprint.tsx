@@ -68,9 +68,9 @@ function makeProblem(difficulty: string): { prompt: string; answer: string } {
   return { prompt: `${a} ${op} ${b}`, answer: String(ans) };
 }
 
-function makeMathRounds(difficulty: string, n: number): GuessRound[] {
+function makeMathRounds(difficulty: string, n: number): GuessRound<string>[] {
   const seen = new Set<string>();
-  const rounds: GuessRound[] = [];
+  const rounds: GuessRound<string>[] = [];
   let guard = 0;
   while (rounds.length < n && guard < n * 25) {
     guard++;

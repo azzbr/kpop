@@ -48,6 +48,16 @@ interface Round {
 const shuffle = <T,>(a: T[]) => [...a].sort(() => Math.random() - 0.5);
 const randInt = (lo: number, hi: number) => Math.floor(Math.random() * (hi - lo + 1)) + lo;
 
+// Messages exchanged over the room channel
+type CcMsg = { from?: string } & (
+  | { t: 'cc_pick'; index: number }
+  | { t: 'cc_round'; round: number; total: number; word: string; inkHex: string; options: Swatch[]; endsAt: number }
+  | { t: 'cc_correct'; playerId: string; gained: number; scores: Record<string, number> }
+  | { t: 'cc_wrong'; playerId: string }
+  | { t: 'cc_reveal'; correctIndex: number; scores: Record<string, number> }
+  | { t: 'cc_final'; top: TopEntry[] }
+);
+
 const ColourClash: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, config }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -129,7 +139,7 @@ const ColourClash: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, c
       }, 2400);
     };
     const offMsg = onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as CcMsg;
       if (m.t === 'cc_pick' && !h.ended && m.from && !h.answered[m.from]) {
         h.answered[m.from] = true;
         if (m.index === h.correctIndex) {
@@ -154,7 +164,7 @@ const ColourClash: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, c
   // ---- EVERYONE ----
   useEffect(() => {
     return onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as CcMsg;
       if (m.t === 'cc_round') {
         setPhase('play');
         setRound(m.round);

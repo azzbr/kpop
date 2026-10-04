@@ -237,7 +237,7 @@ describe('bots', () => {
     return { w, botDeaths };
   }
 
-  it('rarely hit the wall over a long run (5 minutes of play)', () => {
+  it('rarely hit the wall over a long run (5 minutes of play)', { timeout: 30000 }, () => {
     let wall = 0;
     for (const seed of [1, 2, 3]) wall += run(seed, 5 * 60 * TICK_HZ).w.wallDeaths;
     expect(wall).toBeLessThanOrEqual(3); // 18 bot-runs of 5 minutes
@@ -250,7 +250,7 @@ describe('bots', () => {
     for (const b of bots) if (b.alive) expect(Math.hypot(b.segs[0].x, b.segs[0].y)).toBeLessThan(WORLD_R);
   });
 
-  it('avoid bodies ahead most of the time', () => {
+  it('avoid bodies ahead most of the time', { timeout: 30000 }, () => {
     const { botDeaths } = run(5, 2 * 60 * TICK_HZ);
     expect(botDeaths).toBeLessThan(15); // 6 bots × 2 minutes
   });

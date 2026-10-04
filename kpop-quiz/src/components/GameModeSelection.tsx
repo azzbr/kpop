@@ -7,6 +7,7 @@ import { playClick, playWin } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 import { challengeFor, DAILY_REWARD } from '../utils/dailyChallenge';
 import { localDateKey } from '../utils/dates';
+import EventBanner from './events/EventBanner';
 
 type Category = 'arcade' | 'puzzle' | 'quiz' | 'party' | 'create' | 'me' | 'teacher';
 
@@ -39,6 +40,7 @@ const TILES: Tile[] = [
   { id: 'kpop_rush', title: 'Rush Runner', description: 'Endless runner — jump, duck, grab power-ups.', icon: '🏃', color: 'from-fuchsia-500 to-purple-600', category: 'arcade' },
   { id: 'ninja_slice', title: 'Ninja Slice', description: 'Swipe to slice fruit. Dodge the bombs!', icon: '🥷', color: 'from-red-500 to-orange-500', category: 'arcade' },
   { id: 'rocket_launch', title: 'Rocket Launch', description: 'Aim, set power, hit the planets.', icon: '🚀', color: 'from-sky-500 to-indigo-600', category: 'arcade' },
+  { id: 'tower_defense', title: 'Tower Defense', description: 'Answer questions to earn coins, build towers, stop the snails!', icon: '🏰', color: 'from-emerald-500 to-sky-600', category: 'arcade', isNew: true },
   { id: 'battle_arena', title: 'Battle Arena', description: 'Turn-based duels against a crafty bot.', icon: '⚔️', color: 'from-slate-500 to-blue-700', category: 'arcade' },
 
   // Puzzles
@@ -64,6 +66,7 @@ const TILES: Tile[] = [
   // Party
   { id: 'online_hub', title: 'Friends Arena — Online', description: 'Share a 4-letter code and play on different devices: Quiz Party (Kahoot-style, Gold Quest, Racing, Cash Climb), doodles, Monopoly Deal & 30 more.', icon: '🌐', color: 'from-emerald-500 to-cyan-600', category: 'party', isNew: true },
   { id: 'tug_of_war', title: 'Tug-of-War', description: 'Two players mash buttons to drag the rope to their side. Best of 3!', icon: '🪢', color: 'from-amber-500 to-pink-600', category: 'party' },
+  { id: 'heads_up', title: 'Heads Up', description: 'Hold the iPad on your forehead, friends act it out — tilt down if you get it!', icon: '🙆', color: 'from-sky-500 to-pink-500', category: 'party', isNew: true },
   { id: 'would_you_rather', title: 'Would You Rather', description: 'Silly choices — see what everyone else picked. Pass the iPad!', icon: '🤷', color: 'from-pink-500 to-orange-500', category: 'party', isNew: true },
   { id: 'truth_or_dare', title: 'Truth or Dare', description: 'Silly truths and hilarious dares for 2–4.', icon: '🎯', color: 'from-orange-500 to-red-600', category: 'party' },
   { id: 'trivia_battle', title: 'Buzzer Battle', description: 'Two players race to hit the right answer.', icon: '🛎️', color: 'from-rose-500 to-pink-600', category: 'party' },
@@ -81,6 +84,8 @@ const TILES: Tile[] = [
   { id: 'idol_diary', title: 'Secret Diary', description: 'Fill in the blanks for a ridiculous story.', icon: '📔', color: 'from-amber-500 to-rose-500', category: 'create' },
 
   // Me
+  { id: 'pet_pal', title: 'Pet Pal', description: 'Adopt a pet that grows every day you play. Feed it, decorate its room!', icon: '🐾', color: 'from-pink-500 to-amber-500', category: 'me', isNew: true },
+  { id: 'quest_map', title: 'Quest Map', description: '30 quests to complete — claim coins along the trail.', icon: '🧭', color: 'from-teal-500 to-indigo-600', category: 'me', isNew: true },
   { id: 'locker', title: 'Locker', description: 'Spend coins on avatars, colours, trails and titles.', icon: '🎒', color: 'from-yellow-500 to-fuchsia-600', category: 'me', isNew: true },
   { id: 'streak_calendar', title: 'Daily Streak', description: 'How many days in a row can you play?', icon: '🔥', color: 'from-orange-500 to-red-500', category: 'me' },
   { id: 'achievement_showcase', title: 'Trophy Room', description: 'Your level, badges, themes and best scores.', icon: '🏆', color: 'from-yellow-500 to-amber-600', category: 'me' },
@@ -169,6 +174,8 @@ const GameModeSelection: React.FC = () => {
 
         <PlayerLevelBadge />
 
+        <div className="max-w-xl mx-auto mt-4"><EventBanner /></div>
+
         <motion.button
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
           whileTap={{ scale: 0.98 }}
@@ -245,9 +252,12 @@ const GameModeSelection: React.FC = () => {
           );
         })}
 
-        <div className="text-center mt-4">
+        <div className="flex flex-wrap justify-center gap-3 mt-4">
           <button onClick={() => setGameState('welcome')} className="btn-kid-secondary font-fredoka text-lg">
             ← Back to Welcome
+          </button>
+          <button onClick={() => open('parent_corner')} className="min-h-[48px] px-5 rounded-full bg-white/10 font-fredoka text-base text-violet-200">
+            👪 Grown-ups
           </button>
         </div>
       </div>

@@ -45,6 +45,13 @@ function findWin(board: number[], disc: number): number[] | null {
   return null;
 }
 
+// Messages exchanged over the room channel
+type C4Msg = { from?: string } & (
+  | { t: 'c4_drop'; col: number }
+  | { t: 'c4_again' }
+  | { t: 'c4_state'; board: number[]; turn: number; winner: number; winLine?: number[]; p0: string; p1: string }
+);
+
 const ConnectFour: React.FC<{ room: RoomApi }> = ({ room }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -85,7 +92,7 @@ const ConnectFour: React.FC<{ room: RoomApi }> = ({ room }) => {
       send({ t: 'c4_state', board: h.board, turn: h.turn, winner: h.winner, winLine: winLineArr, p0: h.p0, p1: h.p1 });
 
     const offMsg = onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as C4Msg;
       if (m.t === 'c4_drop' && h.winner === 0 && typeof m.col === 'number') {
         const disc = m.from === h.p0 ? 1 : m.from === h.p1 ? 2 : 0;
         if (disc !== h.turn) return;
@@ -120,7 +127,7 @@ const ConnectFour: React.FC<{ room: RoomApi }> = ({ room }) => {
   // ---- EVERYONE ----
   useEffect(() => {
     return onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as C4Msg;
       if (m.t === 'c4_state') {
         setBoard(m.board);
         setTurn(m.turn);

@@ -10,6 +10,14 @@ const COUNTDOWN_MS = 3500;
 
 type Phase = 'wait' | 'countdown' | 'race' | 'final';
 
+// Messages exchanged over the room channel
+type RrMsg = { from?: string } & (
+  | { t: 'rr_start'; startsAt: number; progress: Record<string, number> }
+  | { t: 'taps'; from: string; n: number }
+  | { t: 'rr_pos'; p: Record<string, number> }
+  | { t: 'rr_final'; winnerId: string; p: Record<string, number> }
+);
+
 const RocketTapRace: React.FC<{ room: RoomApi }> = ({ room }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -80,7 +88,7 @@ const RocketTapRace: React.FC<{ room: RoomApi }> = ({ room }) => {
   // ---- EVERYONE ----
   useEffect(() => {
     return onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as RrMsg;
       const h = hd.current;
       switch (m.t) {
         case 'rr_start':

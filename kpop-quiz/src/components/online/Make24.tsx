@@ -95,6 +95,15 @@ function validate(nums: number[], steps: Step[], target: number): boolean {
   return pool.length === 1 && pool[0] === target;
 }
 
+// Messages exchanged over the room channel
+type MkMsg = { from?: string } & (
+  | { t: 'mk_solved'; steps: Step[] }
+  | { t: 'mk_round'; round: number; total: number; nums: number[]; target: number; endsAt: number }
+  | { t: 'mk_correct'; playerId: string; scores: Record<string, number> }
+  | { t: 'mk_reveal'; scores: Record<string, number> }
+  | { t: 'mk_final'; top: TopEntry[] }
+);
+
 const Make24: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, config }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -172,7 +181,7 @@ const Make24: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, config
     };
 
     const offMsg = onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as MkMsg;
       if (m.t === 'mk_solved' && !h.ended && m.from && !h.solved[m.from] && Array.isArray(m.steps)) {
         if (validate(h.nums, m.steps as Step[], h.target)) {
           h.solved[m.from] = true;
@@ -203,7 +212,7 @@ const Make24: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, config
   // ---- EVERYONE ----
   useEffect(() => {
     return onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as MkMsg;
       if (m.t === 'mk_round') {
         setPhase('play');
         setRound(m.round);

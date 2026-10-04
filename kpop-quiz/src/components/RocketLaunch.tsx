@@ -210,7 +210,8 @@ const RocketLaunch: React.FC = () => {
       const rad = (a * Math.PI) / 180;
       const v = p * 0.19;
       let px = LAUNCH_X, py = GROUND_Y - 50;
-      let pvx = v * Math.cos(rad), pvy = -v * Math.sin(rad);
+      const pvx = v * Math.cos(rad);
+      let pvy = -v * Math.sin(rad);
       ctx.save();
       ctx.setLineDash([6, 8]);
       ctx.strokeStyle = 'rgba(255,255,255,0.28)';

@@ -300,6 +300,27 @@ const CardFace: React.FC<{ c: Card; small?: boolean; assignedColor?: string }> =
 type ModalStep =
   | 'main' | 'wildcolor' | 'rentcolor' | 'renttarget' | 'target' | 'prop' | 'myprop' | 'set';
 
+// Messages exchanged over the room channel. Players send moves to the host
+// (`from` is filled in by the room); the host broadcasts the whole state.
+type MdMsg =
+  | { t: 'md_jsn'; from: string; pendingId: number; use: boolean }
+  | { t: 'md_pay'; from: string; pendingId: number; cardIds: number[] }
+  | { t: 'md_discard'; from: string; cardIds: number[] }
+  | { t: 'md_flip'; from: string; cardId: number; color: string }
+  | { t: 'md_end'; from: string }
+  | {
+      t: 'md_play';
+      from: string;
+      cardId: number;
+      mode: 'money' | 'property' | 'rent' | 'action';
+      color?: string;
+      doubleId?: number | null;
+      target?: string;
+      propId?: number;
+      myPropId?: number;
+    }
+  | { t: 'md_state'; from?: string; s: MDState };
+
 const MonopolyDeal: React.FC<{ room: RoomApi }> = ({ room }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -638,7 +659,7 @@ const MonopolyDeal: React.FC<{ room: RoomApi }> = ({ room }) => {
     }, 700);
 
     const offMsg = onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as MdMsg;
       if (h.winner) return;
       const currentPid = h.order[h.turnIdx];
 
@@ -929,7 +950,7 @@ const MonopolyDeal: React.FC<{ room: RoomApi }> = ({ room }) => {
   // ---- EVERYONE: state sync ----
   useEffect(() => {
     return onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as MdMsg;
       if (m.t !== 'md_state') return;
       const st = m.s as MDState;
       setS((prev) => {

@@ -79,6 +79,15 @@ function isValidGrid(grid: number[], n: number, boxR: number, boxC: number): boo
   return true;
 }
 
+// Messages exchanged over the room channel
+type SkMsg = { from?: string } & (
+  | { t: 'sk_submit'; grid: number[] }
+  | { t: 'sk_init'; spec: Spec; puzzle: number[]; endsAt: number }
+  | { t: 'sk_result'; to: string; ok: boolean }
+  | { t: 'sk_solved'; playerId: string; scores: Record<string, number> }
+  | { t: 'sk_final'; top: TopEntry[]; solution: number[] }
+);
+
 const SudokuMini: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, config }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -141,7 +150,7 @@ const SudokuMini: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, co
     };
 
     const offMsg = onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as SkMsg;
       if (m.t === 'sk_submit' && !h.ended && m.from && !h.solved[m.from] && Array.isArray(m.grid)) {
         const g = m.grid as number[];
         const keepsGivens = h.puzzle.every((v, i) => v === 0 || g[i] === v);
@@ -171,7 +180,7 @@ const SudokuMini: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, co
   // ---- EVERYONE ----
   useEffect(() => {
     return onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as SkMsg;
       if (m.t === 'sk_init') {
         const sp = m.spec as Spec;
         setSpec(sp);

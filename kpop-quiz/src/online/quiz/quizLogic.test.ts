@@ -212,3 +212,12 @@ describe('question prep', () => {
     expect(correctText(typed('Q', ['Paris', 'paris']))).toBe('Paris');
   });
 });
+
+import { pickHost } from '../useRoom';
+describe('room host election', () => {
+  it('picks whoever joined first, ties broken by id, so every device agrees', () => {
+    expect(pickHost([{ id: 'b', joinedAt: 5 }, { id: 'a', joinedAt: 9 }])).toBe('b');
+    expect(pickHost([{ id: 'z', joinedAt: 5 }, { id: 'c', joinedAt: 5 }])).toBe('c');
+    expect(pickHost([])).toBeNull();
+  });
+});

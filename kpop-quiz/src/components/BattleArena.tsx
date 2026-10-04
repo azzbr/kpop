@@ -41,7 +41,8 @@ const MISS_LINES = ["Woah, they dodged it! 💨", "Missed by a mile! Try again! 
 const GUARD_LINES = ["They blocked it cold! 🛡️", "Not today! Solid defence! 💪", "Blocked! Back to the drawing board! 🧱"];
 
 function calcDamage(atk: number, def: number, move: Move, isGuarding: boolean): { dmg: number; miss: boolean } {
-  let base = 0, miss = false;
+  let base = 0;
+  const miss = false;
   if (move === 'guard') return { dmg: 0, miss: false };
   if (move === 'punch') base = atk * 0.38;
   else if (move === 'kick') { if (Math.random() < 0.2) return { dmg: 0, miss: true }; base = atk * 0.58; }

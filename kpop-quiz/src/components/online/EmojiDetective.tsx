@@ -15,7 +15,7 @@ const EmojiDetective: React.FC<{ room: RoomApi }> = ({ room }) => (
     roundMs={30000}
     rounds={10}
     buildRounds={() =>
-      pickEmojiPuzzles(10).map((p): GuessRound => ({ prompt: p.emoji, answer: p.answer, alts: p.alt, hint: p.hint }))
+      pickEmojiPuzzles(10).map((p): GuessRound<string> => ({ prompt: p.emoji, answer: p.answer, alts: p.alt, hint: p.hint }))
     }
     renderPrompt={({ prompt, hint, len }) => (
       <div className="text-center">

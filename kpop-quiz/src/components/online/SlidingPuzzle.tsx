@@ -47,6 +47,14 @@ function isSolved(b: number[]): boolean {
   return b[b.length - 1] === 0;
 }
 
+// Messages exchanged over the room channel
+type SldMsg = { from?: string } & (
+  | { t: 'sld_solved'; board: number[] }
+  | { t: 'sld_init'; n: number; board: number[]; endsAt: number }
+  | { t: 'sld_done'; playerId: string; scores: Record<string, number> }
+  | { t: 'sld_final'; top: TopEntry[] }
+);
+
 const SlidingPuzzle: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, config }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -103,7 +111,7 @@ const SlidingPuzzle: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room,
     };
 
     const offMsg = onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as SldMsg;
       if (m.t === 'sld_solved' && !h.ended && m.from && !h.solved[m.from] && Array.isArray(m.board)) {
         if ((m.board as number[]).length === h.n * h.n && isSolved(m.board)) {
           h.solved[m.from] = true;
@@ -127,7 +135,7 @@ const SlidingPuzzle: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room,
   // ---- EVERYONE ----
   useEffect(() => {
     return onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as SldMsg;
       if (m.t === 'sld_init') {
         setN(m.n);
         setBoard(m.board);

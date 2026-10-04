@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { localDateKey, getStreak } from './utils/dates';
 import { challengeFor, DAILY_REWARD } from './utils/dailyChallenge';
 import type { QuizQuestion } from './data/quiz/types';
+import { GAME_BADGES } from './data/gameBadges';
 
 export type GameState =
   | 'welcome' | 'game_mode'
@@ -14,7 +15,8 @@ export type GameState =
   | 'style_studio' | 'sparkle_match' | 'idol_diary' | 'jarvis_hq' | 'guess_intro' | 'idol_profile'
   | 'fm_radio' | 'freeze_dance' | 'chaotic_backstage' | 'paper_clash' | 'tug_of_war' | 'online_hub'
   | 'snake_arena' | 'game_2048' | 'block_blast' | 'word_guess' | 'quiz_arena' | 'would_you_rather'
-  | 'real_or_fake' | 'emoji_guess' | 'quiz_maker' | 'locker';
+  | 'real_or_fake' | 'emoji_guess' | 'quiz_maker' | 'locker'
+  | 'tower_defense' | 'pet_pal' | 'quest_map' | 'parent_corner' | 'heads_up';
 
 export type Theme = 'default' | 'neon' | 'ocean' | 'forest' | 'sunset' | 'galaxy';
 
@@ -62,7 +64,36 @@ export interface Badge {
   unlocked: boolean;
 }
 
-export interface RoundResult { isBest: boolean; best: number; xp: number; coins: number; dailyDone?: boolean }
+export interface RoundResult { isBest: boolean; best: number; xp: number; coins: number; dailyDone?: boolean; newBadges?: string[] }
+
+/** Seconds played and rounds per game, per local date (last 30 days kept). */
+export type PlayLog = Record<string, { seconds: number; games: Record<string, number> }>;
+
+export interface ParentSettings {
+  /** Remind to take a break after this many minutes of play in one sitting (0 = off). */
+  breakMinutes: number;
+  /** Sound-effect volume 0–1 (music has its own slider). */
+  sfxVolume: number;
+}
+export const DEFAULT_PARENT: ParentSettings = { breakMinutes: 0, sfxVolume: 1 };
+
+export interface PetState {
+  name: string;
+  species: string;
+  /** Grows by playing on different days. */
+  growth: number;
+  /** 0–100, goes down a little each day without a visit. */
+  happiness: number;
+  lastVisitDate: string;
+  lastFedDate: string;
+  decor: string[];
+  born: string;
+  /** Local date the pet last grew, so it grows at most once a day. */
+  grewDate?: string;
+}
+
+/** Seasonal events (e.g. Halloween): collected item ids per event key like "halloween-2026". */
+export type EventProgress = Record<string, string[]>;
 
 export interface SavedQuiz { id: string; title: string; emoji: string; questions: QuizQuestion[]; updatedAt: number }
 
@@ -107,6 +138,13 @@ interface GameStore {
   /** Local date of the last completed daily challenge. */
   dailyDoneDate: string;
   wordGuess: WordGuessState;
+  playLog: PlayLog;
+  /** Rounds finished per game id (all time). */
+  rounds: Record<string, number>;
+  gameBadges: string[];
+  parent: ParentSettings;
+  pet: PetState | null;
+  events: EventProgress;
   datesPlayed: string[];
 
   // Team maker
@@ -165,6 +203,14 @@ interface GameStore {
   saveQuiz: (quiz: SavedQuiz) => void;
   deleteQuiz: (id: string) => void;
   setWordGuess: (patch: Partial<WordGuessState>) => void;
+  /** Adds play time to today's log (App calls it while a screen is open). */
+  logPlaySeconds: (seconds: number) => void;
+  setParent: (patch: Partial<ParentSettings>) => void;
+  setPet: (pet: PetState | null) => void;
+  /** Collect an event item (e.g. a pumpkin). Returns false if already collected. */
+  collectEventItem: (eventKey: string, itemId: string) => boolean;
+  /** Clears all progress (Parent corner). */
+  resetProgress: () => void;
   incrementDrawingsCreated: () => void;
   incrementBubblesPopped: () => void;
   incrementPatternsCreated: () => void;
@@ -250,6 +296,12 @@ export const useGameStore = create<GameStore>()(
       equipped: DEFAULT_EQUIPPED,
       dailyDoneDate: '',
       wordGuess: { daily: null, played: 0, won: 0, streak: 0, bestStreak: 0 },
+      playLog: {},
+      rounds: {},
+      gameBadges: [],
+      parent: DEFAULT_PARENT,
+      pet: null,
+      events: {},
       secretStats: { bubblesPopped: 0, patternsCreated: 0, drawingsCreated: 0, treasureFound: 0 },
 
       setGameState: (state) => set({ gameState: state }),
@@ -322,8 +374,22 @@ export const useGameStore = create<GameStore>()(
           bonusXp = DAILY_REWARD.xp;
           set({ dailyDoneDate: today });
         }
-        set({ xp: get().xp + xp + bonusXp, userCurrency: get().userCurrency + coins });
-        return { isBest, best, xp: xp + bonusXp, coins, dailyDone };
+        // Rounds per game (all time + today's log), then per-game badges.
+        const rounds = { ...get().rounds, [gameId]: (get().rounds[gameId] ?? 0) + 1 };
+        const log = { ...get().playLog };
+        const day = log[today] ?? { seconds: 0, games: {} };
+        log[today] = { ...day, games: { ...day.games, [gameId]: (day.games[gameId] ?? 0) + 1 } };
+        const have = new Set(get().gameBadges);
+        const check = { gameId, score, best, highScores: get().highScores, rounds, daysPlayed: get().datesPlayed.length };
+        const newBadges = GAME_BADGES.filter(b => !have.has(b.id) && b.test(check)).map(b => b.id);
+        set({
+          xp: get().xp + xp + bonusXp,
+          userCurrency: get().userCurrency + coins + newBadges.length * 10,
+          rounds,
+          playLog: log,
+          gameBadges: newBadges.length ? [...get().gameBadges, ...newBadges] : get().gameBadges,
+        });
+        return { isBest, best, xp: xp + bonusXp, coins: coins + newBadges.length * 10, dailyDone, newBadges };
       },
 
       recordPlay: () => {
@@ -382,6 +448,27 @@ export const useGameStore = create<GameStore>()(
       },
       deleteQuiz: (id) => set({ myQuizzes: get().myQuizzes.filter(q => q.id !== id) }),
       setWordGuess: (patch) => set({ wordGuess: { ...get().wordGuess, ...patch } }),
+      logPlaySeconds: (seconds) => {
+        const today = localDateKey();
+        const log: PlayLog = {};
+        // Keep the last 30 days only.
+        for (const [d, v] of Object.entries(get().playLog)) if (d >= localDateKey(new Date(Date.now() - 30 * 86400000))) log[d] = v;
+        const day = log[today] ?? { seconds: 0, games: {} };
+        log[today] = { ...day, seconds: day.seconds + seconds };
+        set({ playLog: log });
+      },
+      setParent: (patch) => set({ parent: { ...get().parent, ...patch } }),
+      setPet: (pet) => set({ pet }),
+      collectEventItem: (eventKey, itemId) => {
+        const got = get().events[eventKey] ?? [];
+        if (got.includes(itemId)) return false;
+        set({ events: { ...get().events, [eventKey]: [...got, itemId] } });
+        return true;
+      },
+      resetProgress: () => {
+        try { localStorage.removeItem(SAVE_KEY); } catch { /* ignore */ }
+        window.location.reload();
+      },
       incrementDrawingsCreated: () => bump(set, get, 'drawingsCreated'),
       incrementBubblesPopped: () => bump(set, get, 'bubblesPopped'),
       incrementPatternsCreated: () => bump(set, get, 'patternsCreated'),
@@ -389,7 +476,7 @@ export const useGameStore = create<GameStore>()(
     }),
     {
       name: SAVE_KEY,
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => localStorage),
       // Only progress is saved — never the current screen or an in-progress quiz.
       partialize: (s) => ({
@@ -407,6 +494,12 @@ export const useGameStore = create<GameStore>()(
         equipped: s.equipped,
         dailyDoneDate: s.dailyDoneDate,
         wordGuess: s.wordGuess,
+        playLog: s.playLog,
+        rounds: s.rounds,
+        gameBadges: s.gameBadges,
+        parent: s.parent,
+        pet: s.pet,
+        events: s.events,
         secretStats: s.secretStats,
         huntrxUnlocked: s.huntrxUnlocked,
         currentTheme: s.currentTheme,
@@ -422,6 +515,8 @@ export const useGameStore = create<GameStore>()(
           s.equipped = { ...DEFAULT_EQUIPPED, ...(s.equipped ?? {}) };
           s.dailyDoneDate = s.dailyDoneDate ?? '';
         }
+        // v2 → v3 added playLog, rounds, gameBadges, parent, pet, events (all default to empty).
+        if (version < 3) s.parent = { ...DEFAULT_PARENT, ...(s.parent ?? {}) };
         return s as GameStore;
       },
       onRehydrateStorage: () => (state) => {

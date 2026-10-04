@@ -26,6 +26,17 @@ const DIFF: Record<string, { start: number; perMs: number }> = {
 };
 const TOTAL = 6;
 
+// Messages exchanged over the room channel
+type MdMsg = { from?: string } & (
+  | { t: 'md_answer'; text: string }
+  | { t: 'md_show'; round: number; total: number; seq: number[]; len: number; studyEndsAt: number }
+  | { t: 'md_input'; len: number; endsAt: number }
+  | { t: 'md_correct'; playerId: string; gained: number; scores: Record<string, number> }
+  | { t: 'md_wrong'; playerId: string }
+  | { t: 'md_reveal'; answer: string; scores: Record<string, number> }
+  | { t: 'md_final'; top: TopEntry[] }
+);
+
 const MemoryDigits: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, config }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -105,7 +116,7 @@ const MemoryDigits: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, 
     };
 
     const offMsg = onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as MdMsg;
       if (m.t === 'md_answer' && !h.ended && m.from && !h.answered[m.from]) {
         h.answered[m.from] = true;
         const clean = String(m.text || '').replace(/\D/g, '');
@@ -133,7 +144,7 @@ const MemoryDigits: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, 
   // ---- EVERYONE ----
   useEffect(() => {
     return onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as MdMsg;
       if (m.t === 'md_show') {
         setPhase('study');
         setRound(m.round);

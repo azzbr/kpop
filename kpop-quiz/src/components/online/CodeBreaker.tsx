@@ -73,6 +73,15 @@ interface TopEntry {
   score: number;
 }
 
+// Messages exchanged over the room channel
+type CbMsg = { from?: string } & (
+  | { t: 'cb_guess'; guess: number[] }
+  | { t: 'cb_start'; endsAt: number }
+  | { t: 'cb_feedback'; to: string; guess: number[]; exact: number; color: number; solved: boolean }
+  | { t: 'cb_solved'; playerId: string; guesses: number; scores: Record<string, number> }
+  | { t: 'cb_final'; code: number[]; top: TopEntry[] }
+);
+
 const Dot: React.FC<{ ci: number; size?: string }> = ({ ci, size = 'w-8 h-8' }) => (
   <span className={`${size} rounded-full inline-block border-2 border-white/30`} style={{ background: COLORS[ci]?.hex || '#334155' }} />
 );
@@ -130,7 +139,7 @@ const CodeBreaker: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, c
     };
 
     const offMsg = onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as CbMsg;
       if (m.t === 'cb_guess' && !h.ended && m.from && !h.solved[m.from] && Array.isArray(m.guess)) {
         h.guesses[m.from] = (h.guesses[m.from] || 0) + 1;
         const fb = evalGuess(h.code, m.guess as number[]);
@@ -163,7 +172,7 @@ const CodeBreaker: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, c
   // ---- EVERYONE ----
   useEffect(() => {
     return onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as CbMsg;
       if (m.t === 'cb_start') {
         setEndsAt(m.endsAt);
       } else if (m.t === 'cb_feedback' && m.to === myId) {

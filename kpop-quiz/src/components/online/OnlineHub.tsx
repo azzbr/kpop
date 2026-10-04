@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store';
-import { useRoom, SESSION_RESULT } from '../../online/useRoom';
+import { useRoom, SESSION_RESULT, savedRoom } from '../../online/useRoom';
 import type { GameId, GameConfig, RoomApi } from '../../online/useRoom';
 import { playClick, playUnlock, playWin } from '../../utils/sounds';
 import QuizDuelOnline from './QuizDuelOnline';
 import TeamTugOnline from './TeamTugOnline';
 import WorldTourRace from './WorldTourRace';
 import QuizParty from './quiz/QuizParty';
+import Imposter from './Imposter';
 import RocketTapRace from './RocketTapRace';
 import CopyCat from './CopyCat';
 import TimesTableBingo from './TimesTableBingo';
@@ -38,6 +39,7 @@ import SlidingPuzzle from './SlidingPuzzle';
 const EMOJIS = ['🎤', '🎸', '🥁', '🎹', '🎧', '🌟', '💖', '🔥', '🦄', '🐯', '🐰', '🦊'];
 
 const GAMES: { id: GameId; icon: string; title: string; desc: string; min: number; max: number; tag: string }[] = [
+  { id: 'imposter', icon: '🤫', title: 'Imposter', desc: 'Everyone gets the secret word — except the imposter! Give clues, then vote out the bluffer.', min: 3, max: 12, tag: 'party!' },
   { id: 'quiz_party', icon: '🎉', title: 'Quiz Party', desc: 'Kahoot-style quiz on a big screen or everyone\'s iPad — Classic, Gold Quest, Racing & Cash Climb. Topics, school subjects or your own quiz!', min: 2, max: 40, tag: 'whole class!' },
   { id: 'doodle_dash', icon: '🎨', title: 'Doodle Dash', desc: 'One draws, everyone guesses — the doodle appears live on every screen!', min: 2, max: 30, tag: 'whole class!' },
   { id: 'tt_bingo', icon: '🔢', title: 'Times-Table Bingo', desc: 'Solve the call, find it on your card — first full line shouts BINGO!', min: 2, max: 30, tag: 'whole class!' },
@@ -108,6 +110,9 @@ const GAME_OPTIONS: Partial<Record<GameId, OptionGroup[]>> = {
   ] }],
 };
 
+// Games that can take late joiners and survive a host change (they sync from a snapshot).
+const LATE_JOIN_GAMES: GameId[] = ['quiz_party', 'imposter'];
+
 type HubScreen = 'menu' | 'create' | 'join' | 'lobby';
 
 const OnlineHub: React.FC = () => {
@@ -119,12 +124,55 @@ const OnlineHub: React.FC = () => {
   const [joinCode, setJoinCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [joinError, setJoinError] = useState('');
-  const [activeGame, setActiveGame] = useState<GameId | null>(null);
+  // After a refresh, start straight back in the game this tab was playing (read synchronously,
+  // before the effect below would clear it).
+  const [restored] = useState<{ game: GameId; config: GameConfig } | null>(() => {
+    try { return savedRoom() ? JSON.parse(sessionStorage.getItem('kpop_active_game') || 'null') : null; } catch { return null; }
+  });
+  const [activeGame, setActiveGame] = useState<GameId | null>(restored?.game ?? null);
   const [selGame, setSelGame] = useState<GameId>('quiz_party');
   const [opts, setOpts] = useState<Record<string, string>>({});
-  const [gameConfig, setGameConfig] = useState<GameConfig>({});
+  const [gameConfig, setGameConfig] = useState<GameConfig>(restored?.config ?? {});
   // Session leaderboard across games played in this room: 3/2/1 points for 1st/2nd/3rd.
   const [session, setSession] = useState<Record<string, { pts: number; wins: number }>>({});
+
+  // ---- Surviving refreshes / sleeping iPads ----
+  // The running game is remembered per tab so a refresh drops you back into it.
+  const ACTIVE_KEY = 'kpop_active_game';
+  useEffect(() => {
+    try {
+      if (activeGame) sessionStorage.setItem(ACTIVE_KEY, JSON.stringify({ game: activeGame, config: gameConfig }));
+      else sessionStorage.removeItem(ACTIVE_KEY);
+    } catch { /* ignore */ }
+  }, [activeGame, gameConfig]);
+
+  // On mount: if this tab was in a room, go straight back in.
+  const rejoined = useRef(false);
+  useEffect(() => {
+    if (rejoined.current || !savedRoom()) return;
+    rejoined.current = true;
+    setScreen('lobby');
+    setBusy(true);
+    room.rejoin().then((ok) => {
+      setBusy(false);
+      if (!ok) { setScreen('menu'); setActiveGame(null); setJoinError('That room has closed — make a new one!'); }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // A new host took over (the old one left for good). Games that can't move to a new host
+  // send everyone back to the lobby; Quiz Party ends itself with the latest standings.
+  const prevHost = useRef<string | null>(null);
+  const [hostChanged, setHostChanged] = useState(false);
+  useEffect(() => {
+    const before = prevHost.current;
+    prevHost.current = room.hostId;
+    if (!before || !room.hostId || before === room.hostId) return;
+    setHostChanged(true);
+    window.setTimeout(() => setHostChanged(false), 5000);
+    if (room.isHost && activeGame && !LATE_JOIN_GAMES.includes(activeGame)) room.send({ t: 'to_lobby' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room.hostId]);
 
   // Route lobby-level messages (game start / return to lobby)
   useEffect(() => {
@@ -149,11 +197,12 @@ const OnlineHub: React.FC = () => {
         });
       }
     });
+    // Only re-subscribe if the room's message bus changes (room itself is a new object each render).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room.onMessage]);
 
-  // Late joiners: games that can sync mid-game (Quiz Party) get the start message re-sent
-  // when someone new arrives, so their device opens the game too.
-  const LATE_JOIN_GAMES: GameId[] = ['quiz_party'];
+  // Late joiners: games that can sync mid-game get the start message re-sent when someone
+  // new arrives, so their device opens the game too (see LATE_JOIN_GAMES).
   const playerIds = room.players.map(p => p.id).join(',');
   useEffect(() => {
     if (room.isHost && activeGame && LATE_JOIN_GAMES.includes(activeGame)) {
@@ -238,13 +287,33 @@ const OnlineHub: React.FC = () => {
   };
 
   // Active game takes over the whole screen
+  const hostName = room.players.find(p => p.isHost)?.name ?? 'Someone';
+  const statusOverlay = (
+    <AnimatePresence>
+      {room.hostAway && (
+        <motion.div key="away" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-x-0 top-0 z-[60] flex justify-center p-3 pointer-events-none">
+          <div className="rounded-full bg-amber-500 text-stone-900 font-fredoka text-lg px-5 py-2 shadow-xl">⏳ The host is reconnecting… hang on!</div>
+        </motion.div>
+      )}
+      {hostChanged && !room.hostAway && (
+        <motion.div key="new" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-x-0 top-0 z-[60] flex justify-center p-3 pointer-events-none">
+          <div className="rounded-full bg-emerald-500 text-white font-fredoka text-lg px-5 py-2 shadow-xl">👑 {room.isHost ? "You're the host now!" : `${hostName} is the host now`}</div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
   if (activeGame && room.status === 'lobby') {
     return (
       <div className="relative">
+        {statusOverlay}
         {activeGame === 'quiz_duel' && <QuizDuelOnline room={api} />}
         {activeGame === 'team_tug' && <TeamTugOnline room={api} />}
         {activeGame === 'world_tour' && <WorldTourRace room={api} />}
         {activeGame === 'quiz_party' && <QuizParty room={api} />}
+        {activeGame === 'imposter' && <Imposter room={api} />}
         {activeGame === 'rocket_race' && <RocketTapRace room={api} />}
         {activeGame === 'copy_cat' && <CopyCat room={api} />}
         {activeGame === 'tt_bingo' && <TimesTableBingo room={api} />}
@@ -393,6 +462,10 @@ const OnlineHub: React.FC = () => {
           </motion.div>
         )}
 
+        {statusOverlay}
+        {screen === 'lobby' && room.status === 'connecting' && (
+          <div className="text-center font-fredoka text-2xl py-10">📡 Getting you back into the room…</div>
+        )}
         {screen === 'lobby' && room.status === 'lobby' && (
           <motion.div initial={{ scale: 0.97, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
             <div className="bg-white/10 rounded-3xl p-6 border border-white/20 mb-6 text-center">

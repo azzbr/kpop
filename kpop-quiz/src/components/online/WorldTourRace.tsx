@@ -60,6 +60,35 @@ const TILE_TINT: Record<TileKind, string> = {
 
 const OWNER_BG = ['bg-pink-500', 'bg-blue-500', 'bg-emerald-500', 'bg-amber-500'];
 
+// Messages exchanged over the room channel
+type WtMsg = { from?: string } & (
+  | { t: 'roll_req'; from: string }
+  | { t: 'mini_ans'; from: string; choice: number }
+  | { t: 'buy_res'; from: string; buy: boolean }
+  | { t: 'setup'; order: string[]; pos: Record<string, number>; coins: Record<string, number>; owners: Record<number, string> }
+  | { t: 'turn'; playerId: string; pos: Record<string, number>; coins: Record<string, number>; owners: Record<number, string> }
+  | {
+      t: 'rolled';
+      playerId: string;
+      dice: number;
+      to: number;
+      final: number;
+      kind: TileKind;
+      auto: boolean;
+      rent: { to: string; amount: number } | null;
+      home: number;
+      pos: Record<string, number>;
+      coins: Record<string, number>;
+      owners: Record<number, string>;
+    }
+  | { t: 'offer'; playerId: string; tile: number; price: number; endsAt: number }
+  | { t: 'bought'; playerId: string; tile: number; owners: Record<number, string>; coins: Record<string, number> }
+  | { t: 'skip_buy'; playerId: string; tile: number }
+  | { t: 'mini_q'; playerId: string; text: string; options: string[]; endsAt: number }
+  | { t: 'mini_res'; playerId: string; ok: boolean; pos: Record<string, number>; coins: Record<string, number> }
+  | { t: 'final'; winnerId: string; pos: Record<string, number>; coins: Record<string, number>; owners: Record<number, string> }
+);
+
 const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -228,7 +257,7 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
     };
 
     const offMsg = onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as WtMsg;
       if (m.t === 'roll_req') doRoll(m.from, false);
       if (m.t === 'mini_ans' && m.from === h.miniFor) resolveMini(m.from, m.choice === h.miniCorrect);
       if (m.t === 'buy_res') resolveOffer(m.from, !!m.buy);
@@ -251,7 +280,7 @@ const WorldTourRace: React.FC<{ room: RoomApi }> = ({ room }) => {
   // ---- EVERYONE: render-state updates ----
   useEffect(() => {
     return onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as WtMsg;
       switch (m.t) {
         case 'setup':
           setOrder(m.order);

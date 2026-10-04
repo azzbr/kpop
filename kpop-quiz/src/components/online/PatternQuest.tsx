@@ -98,10 +98,10 @@ const TIERS: Record<string, Gen[]> = {
   ],
 };
 
-function makeRounds(difficulty: string, n: number): GuessRound[] {
+function makeRounds(difficulty: string, n: number): GuessRound<string>[] {
   const gens = TIERS[difficulty] || TIERS.medium;
   const seen = new Set<string>();
-  const rounds: GuessRound[] = [];
+  const rounds: GuessRound<string>[] = [];
   let guard = 0;
   while (rounds.length < n && guard < n * 30) {
     guard++;

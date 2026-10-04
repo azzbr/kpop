@@ -26,6 +26,18 @@ type Pt = [number, number, number]; // x, y, newStroke
 
 type Phase = 'intro' | 'draw' | 'round_end' | 'final';
 
+// Messages exchanged over the room channel
+type DdMsg = { from?: string } & (
+  | { t: 'dd_guess'; from: string; text: string }
+  | { t: 'dd_round'; round: number; total: number; drawerId: string; word: string; endsAt: number }
+  | { t: 'dd_stroke'; pts: Pt[]; c: string; w: number }
+  | { t: 'dd_clear' }
+  | { t: 'dd_correct'; playerId: string; gained: number; scores: Record<string, number> }
+  | { t: 'dd_nope'; playerId: string; text: string }
+  | { t: 'dd_endround'; round: number; word: string; scores: Record<string, number> }
+  | { t: 'dd_final'; top: TopEntry[] }
+);
+
 const DoodleDash: React.FC<{ room: RoomApi }> = ({ room }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -161,7 +173,7 @@ const DoodleDash: React.FC<{ room: RoomApi }> = ({ room }) => {
     };
 
     const offMsg = onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as DdMsg;
       if (m.t === 'dd_guess' && !h.ended && m.from !== h.drawer && !h.correct[m.from]) {
         if (normalize(m.text) === normalize(h.word)) {
           h.correct[m.from] = true;
@@ -189,7 +201,7 @@ const DoodleDash: React.FC<{ room: RoomApi }> = ({ room }) => {
   // ---- EVERYONE: messages ----
   useEffect(() => {
     return onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as DdMsg;
       switch (m.t) {
         case 'dd_round':
           setPhase('draw');

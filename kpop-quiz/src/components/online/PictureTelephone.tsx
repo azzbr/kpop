@@ -29,6 +29,14 @@ interface BookMsg {
 }
 type Phase = 'intro' | 'task' | 'sent' | 'reveal' | 'done';
 
+// Messages exchanged over the room channel
+type PtMsg = { from?: string } & (
+  | { t: 'pt_submit'; content?: string }
+  | { t: 'pt_task'; to: string; step: number; mode: 'draw' | 'write'; payload: string; endsAt: number }
+  | ({ t: 'pt_book' } & BookMsg)
+  | { t: 'pt_done' }
+);
+
 const PictureTelephone: React.FC<{ room: RoomApi }> = ({ room }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -121,7 +129,7 @@ const PictureTelephone: React.FC<{ room: RoomApi }> = ({ room }) => {
     };
 
     const offMsg = onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as PtMsg;
       if (m.t === 'pt_submit' && m.from && !h.closing) {
         if (h.submitted[m.from] === undefined) {
           h.submitted[m.from] = String(m.content ?? '');
@@ -143,7 +151,7 @@ const PictureTelephone: React.FC<{ room: RoomApi }> = ({ room }) => {
   // ---- EVERYONE: my task / reveal ----
   useEffect(() => {
     return onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as PtMsg;
       if (m.t === 'pt_task' && m.to === myId) {
         submittedRef.current = false;
         setWriteText('');

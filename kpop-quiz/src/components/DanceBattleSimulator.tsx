@@ -137,6 +137,8 @@ const DanceBattleSimulator: React.FC = () => {
         playTimeOut();
       }
     }
+    // Only react to the phase change; score/showConfetti are read at that moment
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
   const stars = score >= 800 ? 3 : score >= 400 ? 2 : score > 0 ? 1 : 0;

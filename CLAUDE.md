@@ -13,9 +13,10 @@ npm run dev        # http://localhost:5173
 npm run build      # production build (tsc -b && vite build)
 npm run lint       # ESLint
 npm test           # vitest — pure game logic and content checks
+npm run test:e2e   # Playwright end-to-end (see e2e/README.md; WebKit/iPad runs in GitHub Actions)
 ```
 
-**Deployed on Netlify.** `netlify.toml` lives at the repo root; build base is `kpop-quiz/`, Node 22.
+**Deployed on Netlify.** `netlify.toml` lives at the repo root; build base is `kpop-quiz/`, Node 22. `package.json` is `"type": "module"`, so the serverless functions in `netlify/functions/` must use ESM (`export const handler`) — CommonJS makes the deploy fail at "Functions bundling".
 
 ---
 
@@ -58,7 +59,7 @@ To add a screen:
 4. Every screen needs a clear Back button → `setGameState('game_mode')`
 
 ### Store (`store.ts`)
-Zustand with `persist` (save key `funquest-save`, `version: 2`; v2 added `myQuizzes`, `equipped`, `dailyDoneDate`, `wordGuess`). `partialize` saves **progress only** (name, XP, coins, high scores, days played, badges, stats, theme, volume) — never the current screen or an in-progress game. Bump `version` and add a `migrate` step when changing the saved shape.
+Zustand with `persist` (save key `funquest-save`, `version: 3`; v2 added `myQuizzes`, `equipped`, `dailyDoneDate`, `wordGuess`; v3 added `playLog`, `rounds`, `gameBadges`, `parent`, `pet`, `events`). `partialize` saves **progress only** (name, XP, coins, high scores, days played, badges, stats, theme, volume) — never the current screen or an in-progress game. Bump `version` and add a `migrate` step when changing the saved shape.
 
 The old scattered localStorage keys (`kpop_xp`, `ninja_best`, …) are imported once by `readLegacy()` and deleted after hydration. Some per-game content keys still live in components (`zip_best`, `wordladder_solved`, `diary_list`, `style_*`, `cipher_*`, `jarvis_*`) — fine for content, but **scores go through the store**.
 
@@ -81,8 +82,20 @@ The old scattered localStorage keys (`kpop_xp`, `ninja_best`, …) are imported 
 
 **Debug hook:** with `?debug` in the URL, Paper Clash exposes `window.__game` (`start`, `hold`, `step`, `steer`, `world`, `percent`); `?seed=42` makes a run repeatable. Use this for Playwright tests instead of real-time play.
 
+### Badges, quests, pet, events, parents
+- **Per-game badges**: `data/gameBadges.ts` — `finishRound` tests every badge after each round (+10 coins each); `BadgeToast` (mounted in App) announces them. Never rename a badge id.
+- **Quest Map** (`quest_map`): `data/quests.ts`, claimed ids in localStorage `funquest-quests-claimed`.
+- **Pet Pal** (`pet_pal`): rules in `utils/petLogic.ts` (grows once per day she plays, never dies), decor in `data/petItems.ts`.
+- **Seasonal events**: `events/events.ts` (`activeEvent(date)`; `?event=halloween` forces one on). `PumpkinHunt` (mounted in App) hides collectibles on menu screens only, max 3 per day; `EventBanner` on the grid; `useEventTheme` sets `<html data-event>` for `events/*.css`; limited Locker items via `eventLockerItems`. Add a new event = a new entry in `SEASON_EVENTS` (+ optional CSS, quiz bank, Locker items).
+- **Parent corner** (`parent_corner`, "👪 Grown-ups" button under the grid, behind a times-table check): weekly play time from `playLog` (filled by `PlayTimeTracker` in App every 15 s), break reminder, sound-effect volume (`utils/sounds.setSfxVolume`), reset.
+
+### Offline (service worker)
+`sw/sw.js` is built into `dist/sw.js` by the `serviceWorker()` plugin in `vite.config.ts` (precache list + version injected). App files are precached; music is cached on first play and answered with 206 range responses (Safari needs them). Registered in `main.tsx` in production only (`?nosw` disables). Cross-origin requests (Supabase, fonts) are not cached.
+
 ### Online rooms (Friends Arena)
 `src/online/useRoom.ts` joins a Supabase Realtime channel named after the room code. The host's device holds the authoritative game state and broadcasts it; other devices send inputs. Question/puzzle banks live in `src/online/*.ts`.
+- **Host = whoever joined first** (`pickHost`, by `joinedAt`). Each tab saves its room + `joinedAt` in sessionStorage (`kpop_room`), so a refresh rejoins with the same seat (and a refreshing host stays host); App opens Friends Arena automatically. If the host vanishes, `hostAway` is true for `HOST_GRACE_MS` (20 s) before the next player takes over.
+- Games in `LATE_JOIN_GAMES` (OnlineHub: Quiz Party, Imposter) sync late joiners and survive a host change; for any other game a new host sends everyone back to the lobby. Quiz Party's host state is also saved per tab (`qp_host_state`) so a refreshed host carries on mid-question.
 - **`?localroom`** swaps Supabase for a `BroadcastChannel` between tabs of one browser (`online/localChannel.ts`) — use it for Playwright tests (several pages in one context) and offline play.
 - `room.reportResult(rankedIds)` (host) feeds the lobby's session leaderboard ("Tonight's leaderboard": 3/2/1 points). Quiz Party, `GuessRace` and `TapRace` call it; add one line to other games when touching them.
 - **Quiz Party** (`online/quiz/`): rules are pure in `quizLogic.ts` (+ tests) — scoring with streaks, typed-answer matching, order questions, Gold Quest chests, Racing, Cash Climb upgrades, teams. `useQuizParty.ts` is the host-authoritative sync: the host broadcasts a full `qp_state` snapshot (never containing unrevealed answers), coalesced to ≤ ~7/s; players send `qp_ans` / `qp_chest` / `qp_target` / `qp_buy`; late joiners say `qp_hello`. Host can be a big screen or play too. Question sources (`sources.ts`): `data/quiz` banks, school questions, music, and the player's own quizzes (`myQuizzes`, made in Quiz Maker — they're only ever sent one question at a time, never stored online).
@@ -96,12 +109,13 @@ The old scattered localStorage keys (`kpop_xp`, `ninja_best`, …) are imported 
 
 | Category | Games (`gameState`) |
 |---|---|
-| Arcade | `paper_clash`, `snake_arena`, `kpop_rush` (Rush Runner), `ninja_slice`, `rocket_launch`, `battle_arena` |
+| Arcade | `paper_clash`, `snake_arena`, `tower_defense` (quiz-powered), `kpop_rush` (Rush Runner), `ninja_slice`, `rocket_launch`, `battle_arena` |
 | Puzzles | `word_guess`, `game_2048`, `block_blast`, `mini_sudoku`, `zip_game`, `word_ladder`, `crossword_mini`, `word_scramble`, `pattern_memory`, `memory_speed`, `sparkle_match` (Gem Match) |
 | Quiz | `quiz_arena` (solo, Classic/Lightning, any source), `quiz_maker`, `real_or_fake`, `emoji_guess`, `idol_personality_quiz` |
-| Party | `online_hub` (Friends Arena — online rooms incl. Quiz Party, ~30 games in `components/online/`), `would_you_rather`, `tug_of_war`, `truth_or_dare`, `trivia_battle` (Buzzer Battle), `reaction_duel`, `talent_show`, `team_maker` |
+| Party | `online_hub` (Friends Arena — online rooms incl. Quiz Party and Imposter, ~30 games in `components/online/`), `heads_up` (tilt the iPad; needs DeviceOrientation permission from a tap), `would_you_rather`, `tug_of_war`, `truth_or_dare`, `trivia_battle` (Buzzer Battle), `reaction_duel`, `talent_show`, `team_maker` |
 | Create & Music | `beat_maker`, `guess_intro`, `fm_radio`, `dance_battle`, `style_studio`, `idol_profile` (Superstar Card), `idol_diary` (Secret Diary) |
-| My Stuff | `locker`, `streak_calendar`, `achievement_showcase` (Trophy Room) |
+| My Stuff | `pet_pal`, `quest_map`, `locker`, `streak_calendar`, `achievement_showcase` (Trophy Room) |
+| Grown-ups | `parent_corner` |
 | Teacher (hidden) | `jarvis_hq`, `freeze_dance`, `chaotic_backstage` — tiles appear after typing **JARVIS** as the player name |
 | Hidden | `secret_menu` (tap the **A** in "Arcade" on the welcome screen), `living_mural` (tap the **F**), `agent_hq`, `huntrx_splash` (name **HUNTRX**) |
 

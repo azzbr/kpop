@@ -41,6 +41,15 @@ interface Standing {
   marks: number;
 }
 
+// Messages exchanged over the room channel
+type TbMsg = { from?: string } & (
+  | { t: 'tb_claim'; from: string; cells: number[] }
+  | { t: 'tb_setup'; cards: Record<string, number[]> }
+  | { t: 'tb_call'; n: number; a: number; b: number; answer: number }
+  | { t: 'tb_winner'; playerId: string; standings: Standing[] }
+  | { t: 'tb_final'; standings: Standing[] }
+);
+
 const TimesTableBingo: React.FC<{ room: RoomApi }> = ({ room }) => {
   const { players, isHost, myId, send, onMessage } = room;
   const { addXP } = useGameStore();
@@ -104,7 +113,7 @@ const TimesTableBingo: React.FC<{ room: RoomApi }> = ({ room }) => {
     };
 
     const offMsg = onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as TbMsg;
       if (m.t === 'tb_claim' && !h.winner) {
         const playerCard = h.cards[m.from];
         const cells = m.cells as number[];
@@ -139,7 +148,7 @@ const TimesTableBingo: React.FC<{ room: RoomApi }> = ({ room }) => {
   // ---- EVERYONE ----
   useEffect(() => {
     return onMessage((raw) => {
-      const m = raw as any;
+      const m = raw as unknown as TbMsg;
       switch (m.t) {
         case 'tb_setup':
           setCard(m.cards[myId] || []);
