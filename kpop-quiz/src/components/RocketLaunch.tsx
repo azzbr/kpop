@@ -361,10 +361,20 @@ const RocketLaunch: React.FC = () => {
       g.particles = g.particles.filter(p => p.life > 0);
       ctx.globalAlpha = 1;
 
-      raf = requestAnimationFrame(draw);
     }
 
-    draw();
+    // draw() also advances the rocket and particles by one 1/60 s step, so run it on a fixed
+    // 60 Hz clock — otherwise a 120 Hz iPad plays at double speed.
+    const STEP_MS = 1000 / 60;
+    let last = performance.now();
+    let acc = STEP_MS;
+    const frame = (now: number) => {
+      acc += Math.min(now - last, 100);
+      last = now;
+      while (acc >= STEP_MS) { draw(); acc -= STEP_MS; }
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

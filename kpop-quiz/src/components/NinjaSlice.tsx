@@ -340,8 +340,16 @@ const NinjaSlice: React.FC = () => {
       }
     }
 
-    function loop() {
-      update(); draw();
+    // Physics are tuned per 1/60 s step; run them on a fixed 60 Hz clock so a 120 Hz iPad
+    // isn't double speed.
+    const STEP_MS = 1000 / 60;
+    let last = performance.now();
+    let acc = 0;
+    function loop(now: number) {
+      acc += Math.min(now - last, 250);
+      last = now;
+      while (acc >= STEP_MS) { update(); acc -= STEP_MS; }
+      draw();
       raf = requestAnimationFrame(loop);
     }
 
@@ -380,7 +388,7 @@ const NinjaSlice: React.FC = () => {
     canvas.addEventListener('touchmove', onMove, { passive: false });
     canvas.addEventListener('touchend', onUp);
 
-    loop();
+    raf = requestAnimationFrame(loop);
     return () => {
       cancelAnimationFrame(raf);
       clearTimeout(confettiTimer);
