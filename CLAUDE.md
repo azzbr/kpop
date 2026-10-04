@@ -32,12 +32,16 @@ kpop-quiz/
     ├── App.tsx               # Screen router: lazy-loaded screens keyed by gameState
     ├── store.ts              # Zustand store (persisted) — all shared state
     ├── index.css             # Tailwind + utility classes (see Design System)
-    ├── quizData.ts           # Music/K-Pop quiz questions (5 difficulties)
-    ├── utils/                # sounds.ts (Web Audio effects), dates.ts (local dates, streaks)
+    ├── quizData.ts           # Music questions (used as the "Music" quiz source)
+    ├── utils/                # sounds.ts, dates.ts, dailyChallenge.ts, cleanText.ts, useSafeTimeout.ts
     ├── games/engine/         # Shared game engine (see below)
     ├── components/           # One file per screen
-    │   └── games/            # New-style games built on the engine (+ *Logic.ts, *.test.ts)
-    └── data/                 # Puzzle/content data with tests
+    │   ├── games/            # New-style games built on the engine (+ *Logic.ts, *.test.ts)
+    │   ├── quiz/AnswerPad.tsx # Shared answer UI for every question type
+    │   ├── ui/OnScreenKeyboard.tsx
+    │   └── online/           # Friends Arena games (online/quiz/QuizParty.tsx = Kahoot-style)
+    ├── online/               # Room transport (useRoom, localChannel), quiz engine (online/quiz/), banks
+    └── data/                 # Content with tests: quiz/ banks, words, would-you-rather, real-or-fake, locker items
 ```
 
 ---
@@ -54,13 +58,15 @@ To add a screen:
 4. Every screen needs a clear Back button → `setGameState('game_mode')`
 
 ### Store (`store.ts`)
-Zustand with `persist` (save key `funquest-save`, `version: 1`). `partialize` saves **progress only** (name, XP, coins, high scores, days played, badges, stats, theme, volume) — never the current screen or an in-progress game. Bump `version` and add a `migrate` step when changing the saved shape.
+Zustand with `persist` (save key `funquest-save`, `version: 2`; v2 added `myQuizzes`, `equipped`, `dailyDoneDate`, `wordGuess`). `partialize` saves **progress only** (name, XP, coins, high scores, days played, badges, stats, theme, volume) — never the current screen or an in-progress game. Bump `version` and add a `migrate` step when changing the saved shape.
 
 The old scattered localStorage keys (`kpop_xp`, `ninja_best`, …) are imported once by `readLegacy()` and deleted after hydration. Some per-game content keys still live in components (`zip_best`, `wordladder_solved`, `diary_list`, `style_*`, `cipher_*`, `jarvis_*`) — fine for content, but **scores go through the store**.
 
 ### Scoring & rewards — one rule
 - `finishRound(gameId, score, xpScale)` — call once when a round ends. It saves the best score, marks today as played (daily streak), and gives XP = `clamp(round(score / xpScale), 5, 50)` (+25 for a new best), coins = `floor(XP / 5)`. It returns `{ isBest, best, xp, coins }`.
 - `GameShell` calls it for you. Pick an `xpScale` so a good round lands near 40 XP.
+- **Daily challenge** (`utils/dailyChallenge.ts`): one game + target per local date. `finishRound` checks it (game id + score ≥ target) and adds +50 coins / +100 XP once a day. The ids and score units in `CHALLENGES` must match what each game passes to `finishRound` — change both together.
+- **Coins** are spent in the **Locker** (`components/Locker.tsx`, catalogue in `data/lockerItems.ts`): avatars, colours, trails, titles, themes, stickers. `buyItem(id, price)` / `equip({...})`. Never rename an item id (it's saved in `inventory`). `equipped.avatar/color` are used by Paper Clash, Snake Arena and Friends Arena; `equipped.trail` by Paper Clash.
 - `submitScore` saves the score without a reward. `addXP` is for small one-off rewards (puzzle solved) and also counts as a day played.
 - Never give XP just for opening a screen or tapping a tile.
 
@@ -77,6 +83,9 @@ The old scattered localStorage keys (`kpop_xp`, `ninja_best`, …) are imported 
 
 ### Online rooms (Friends Arena)
 `src/online/useRoom.ts` joins a Supabase Realtime channel named after the room code. The host's device holds the authoritative game state and broadcasts it; other devices send inputs. Question/puzzle banks live in `src/online/*.ts`.
+- **`?localroom`** swaps Supabase for a `BroadcastChannel` between tabs of one browser (`online/localChannel.ts`) — use it for Playwright tests (several pages in one context) and offline play.
+- `room.reportResult(rankedIds)` (host) feeds the lobby's session leaderboard ("Tonight's leaderboard": 3/2/1 points). Quiz Party, `GuessRace` and `TapRace` call it; add one line to other games when touching them.
+- **Quiz Party** (`online/quiz/`): rules are pure in `quizLogic.ts` (+ tests) — scoring with streaks, typed-answer matching, order questions, Gold Quest chests, Racing, Cash Climb upgrades, teams. `useQuizParty.ts` is the host-authoritative sync: the host broadcasts a full `qp_state` snapshot (never containing unrevealed answers), coalesced to ≤ ~7/s; players send `qp_ans` / `qp_chest` / `qp_target` / `qp_buy`; late joiners say `qp_hello`. Host can be a big screen or play too. Question sources (`sources.ts`): `data/quiz` banks, school questions, music, and the player's own quizzes (`myQuizzes`, made in Quiz Maker — they're only ever sent one question at a time, never stored online).
 
 ### Music
 `MusicPlayer` is always mounted as a small floating button at the right edge that expands into controls; `hidden` keeps the audio playing without the controls (FM Radio, Living Mural). Tracks are listed in `TRACKS` in `store.ts`; `trackInfo(file)` gives the title/artist. To add one: drop an `.m4a` (AAC) with a plain slug name in `public/musickpop/` and add it to `TRACKS`.
@@ -87,14 +96,14 @@ The old scattered localStorage keys (`kpop_xp`, `ninja_best`, …) are imported 
 
 | Category | Games (`gameState`) |
 |---|---|
-| Arcade | `paper_clash`, `kpop_rush` (Rush Runner), `ninja_slice`, `rocket_launch`, `battle_arena` |
-| Puzzles | `mini_sudoku`, `zip_game`, `word_ladder`, `crossword_mini`, `word_scramble`, `pattern_memory`, `memory_speed`, `sparkle_match` (Gem Match) |
-| Quiz | `difficulty` → `quiz` → `result` (Music Quiz), `lightning_quiz`, `idol_personality_quiz` |
-| Party | `online_hub` (Friends Arena — online rooms, ~30 games in `components/online/`), `tug_of_war`, `truth_or_dare`, `trivia_battle` (Buzzer Battle), `reaction_duel`, `talent_show`, `team_maker` |
+| Arcade | `paper_clash`, `snake_arena`, `kpop_rush` (Rush Runner), `ninja_slice`, `rocket_launch`, `battle_arena` |
+| Puzzles | `word_guess`, `game_2048`, `block_blast`, `mini_sudoku`, `zip_game`, `word_ladder`, `crossword_mini`, `word_scramble`, `pattern_memory`, `memory_speed`, `sparkle_match` (Gem Match) |
+| Quiz | `quiz_arena` (solo, Classic/Lightning, any source), `quiz_maker`, `real_or_fake`, `emoji_guess`, `idol_personality_quiz` |
+| Party | `online_hub` (Friends Arena — online rooms incl. Quiz Party, ~30 games in `components/online/`), `would_you_rather`, `tug_of_war`, `truth_or_dare`, `trivia_battle` (Buzzer Battle), `reaction_duel`, `talent_show`, `team_maker` |
 | Create & Music | `beat_maker`, `guess_intro`, `fm_radio`, `dance_battle`, `style_studio`, `idol_profile` (Superstar Card), `idol_diary` (Secret Diary) |
-| My Stuff | `streak_calendar`, `achievement_showcase` (Trophy Room) |
+| My Stuff | `locker`, `streak_calendar`, `achievement_showcase` (Trophy Room) |
 | Teacher (hidden) | `jarvis_hq`, `freeze_dance`, `chaotic_backstage` — tiles appear after typing **JARVIS** as the player name |
-| Hidden | `secret_menu` (tap the **A** in "Arcade" on the welcome screen), `living_mural` (tap the **F**), `agent_hq`, `shop`, `huntrx_splash` (name **HUNTRX**) |
+| Hidden | `secret_menu` (tap the **A** in "Arcade" on the welcome screen), `living_mural` (tap the **F**), `agent_hq`, `huntrx_splash` (name **HUNTRX**) |
 
 ---
 
@@ -102,7 +111,8 @@ The old scattered localStorage keys (`kpop_xp`, `ninja_best`, …) are imported 
 
 - Touch first. Buttons at least 44×44 px (48+ for primary actions). No hover-only UI.
 - Wrap real-time game areas in `.game-surface` (no scrolling, zoom, text selection or long-press menu) and use Pointer Events.
-- Avoid the on-screen keyboard: prefer tap choices or an in-game keyboard. Never `autoFocus` inputs.
+- Avoid the iPad keyboard: prefer tap choices or `components/ui/OnScreenKeyboard.tsx` (in-game keys, optional letter colouring, space, digits). Editors like Quiz Maker may use real inputs. Never `autoFocus` inputs.
+- Text kids type that others will see (quiz titles/questions) goes through `utils/cleanText.ts`.
 - Use `.min-h-screen-d` (dvh) rather than 100vh, and respect `env(safe-area-inset-*)`.
 - Audio only starts after a tap (MusicPlayer unlocks on the first tap). Safari ignores `<audio>` volume changes — pause other audio instead of fading it.
 - Pause games when the page is hidden (`useGameLoop`'s `onHidden`).

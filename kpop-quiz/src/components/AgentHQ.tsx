@@ -351,14 +351,14 @@ const AgentHQ: React.FC = () => {
         {/* Treasure Shop quick link */}
         <motion.button
           initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.4 }}
-          onClick={() => { playUnlock(); setGameState('shop'); }}
+          onClick={() => { playUnlock(); setGameState('locker'); }}
           className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:brightness-110 rounded-2xl p-4 mb-4 shadow-lg flex items-center justify-between"
         >
           <div className="flex items-center gap-3">
             <span className="text-3xl">🛍️</span>
             <div className="text-left">
               <p className="font-fredoka font-bold text-white text-lg">TREASURE SHOP</p>
-              <p className="font-nunito text-green-100 text-xs">Spend your XP on awesome upgrades</p>
+              <p className="font-nunito text-green-100 text-xs">Spend your coins on avatars &amp; trails</p>
             </div>
           </div>
           <span className="text-white text-2xl">▶</span>

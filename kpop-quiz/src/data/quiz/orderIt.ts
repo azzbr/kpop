@@ -1,0 +1,36 @@
+import type { QuizBank } from './types';
+import { ordered } from './types';
+
+export const orderIt: QuizBank = {
+  id: 'order',
+  title: 'Order It',
+  emoji: '🔢',
+  questions: [
+    ordered('Put these planets in order of size: smallest → biggest', ['Mercury', 'Mars', 'Earth', 'Neptune', 'Jupiter'], { fact: 'Jupiter is about 11 times wider than Earth.' }),
+    ordered('Put these planets in order from the Sun: closest → furthest', ['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter']),
+    ordered('Put these space objects in order of size: smallest → biggest', ['The Moon', 'Earth', 'Jupiter', 'The Sun']),
+    ordered('Put these planets in order of average temperature: coldest → hottest', ['Neptune', 'Mars', 'Earth', 'Venus']),
+    ordered('Put these inventions in order: oldest → newest', ['The wheel', 'The printing press', 'The telephone', 'The television', 'The smartphone']),
+    ordered('Put these events in order: longest ago → most recent', ['Dinosaurs die out', 'Great Pyramid is built', 'First aeroplane flight', 'First Moon landing'], { fact: 'The dinosaurs died out about 66 million years ago.' }),
+    ordered('Put these moments in history in order: longest ago → most recent', ['Great Pyramid is built', 'Hadrian\'s Wall is built', 'Queen Victoria is crowned', 'First Moon landing']),
+    ordered('Put these animals in order of size: smallest → biggest', ['Ant', 'Mouse', 'Rabbit', 'Horse', 'Blue whale'], { fact: 'A blue whale can be longer than two buses parked end to end.' }),
+    ordered('Put these tiny-to-huge things in order: smallest → biggest', ['Atom', 'Human cell', 'Ladybird', 'Elephant']),
+    ordered('Put these animals in order of top speed: slowest → fastest', ['Snail', 'Tortoise', 'Human', 'Horse', 'Cheetah']),
+    ordered('Put these in order of weight: lightest → heaviest', ['Feather', 'Apple', 'Bowling ball', 'Car', 'Blue whale']),
+    ordered('Put these in order of legs: fewest → most', ['Snake', 'Chicken', 'Cat', 'Ant', 'Spider']),
+    ordered('Put these shapes in order of sides: fewest → most', ['Triangle', 'Square', 'Pentagon', 'Hexagon', 'Octagon']),
+    ordered('Put these lengths of time in order: shortest → longest', ['Second', 'Minute', 'Hour', 'Day', 'Week']),
+    ordered('Put these spans of time in order: shortest → longest', ['Week', 'Fortnight', 'Year', 'Century']),
+    ordered('Put these lengths in order: shortest → longest', ['Millimetre', 'Centimetre', 'Metre', 'Kilometre']),
+    ordered('Put these races in order of distance: shortest → longest', ['100 m race', '400 m race', '1 mile race', 'Marathon'], { fact: 'A mile is about 1,609 metres; a marathon is about 42 km.' }),
+    ordered('Put these Roman numerals in order: smallest → biggest', ['I', 'V', 'X', 'L', 'C'], { fact: 'I = 1, V = 5, X = 10, L = 50 and C = 100.' }),
+    ordered('Put these fractions in order: smallest → biggest', ['¼', '⅓', '½', '¾']),
+    ordered('Put these in order of temperature: coldest → hottest', ['Ice', 'Warm bath', 'Boiling water', 'Surface of the Sun']),
+    ordered('Put these in order of height: shortest → tallest', ['Giraffe', 'Big Ben clock tower', 'Eiffel Tower', 'Mount Everest']),
+    ordered('Put these mountains in order of height: lowest → highest', ['Ben Nevis', 'Mont Blanc', 'Kilimanjaro', 'Mount Everest'], { fact: 'Ben Nevis in Scotland is the highest mountain in the UK.' }),
+    ordered('Put these oceans in order of size: smallest → biggest', ['Arctic', 'Indian', 'Atlantic', 'Pacific']),
+    ordered('Put these continents in order of size: smallest → biggest', ['Australia', 'Europe', 'South America', 'Africa', 'Asia']),
+    ordered('Put these team sports in order of players on court or pitch: fewest → most', ['Basketball', 'Netball', 'Football', 'Rugby union'], { fact: 'Basketball has 5 per team, netball 7, football 11 and rugby union 15.' }),
+    ordered('Put a butterfly\'s life cycle in order: first → last', ['Egg', 'Caterpillar', 'Chrysalis', 'Butterfly'], { fact: 'Inside the chrysalis, the caterpillar completely rebuilds its body.' }),
+  ],
+};

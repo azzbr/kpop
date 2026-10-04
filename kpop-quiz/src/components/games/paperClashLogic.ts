@@ -93,7 +93,9 @@ const DIFF = {
 export const idx = (w: World, x: number, y: number) => y * w.size + x;
 const inBounds = (w: World, x: number, y: number) => x >= 0 && y >= 0 && x < w.size && y < w.size;
 
-export function createWorld(opts: { size?: number; bots?: number; rng: Rng; difficulty?: Difficulty; humanName?: string; humanEmoji?: string }): World {
+const SPARE_COLORS = ['#14b8a6', '#a855f7', '#0ea5e9', '#84cc16', '#f43f5e', '#6366f1'];
+
+export function createWorld(opts: { size?: number; bots?: number; rng: Rng; difficulty?: Difficulty; humanName?: string; humanEmoji?: string; humanColor?: string }): World {
   const size = opts.size ?? 100;
   const w: World = {
     size,
@@ -107,13 +109,17 @@ export function createWorld(opts: { size?: number; bots?: number; rng: Rng; diff
     events: [],
   };
   const total = 1 + (opts.bots ?? 6);
+  const humanColor = opts.humanColor || HUMAN_COLOR;
+  // A bot never gets the same colour as the player's Locker colour.
+  const spare = SPARE_COLORS.filter(c => c !== humanColor);
+  const botColor = (c: string, i: number) => (c.toLowerCase() === humanColor.toLowerCase() ? spare[i % spare.length] : c);
   for (let i = 0; i < total; i++) {
     const bot = i === 0 ? null : BOTS[(i - 1) % BOTS.length];
     w.players.push({
       id: i + 1,
       name: bot ? bot.name : opts.humanName || 'You',
       emoji: bot ? bot.emoji : opts.humanEmoji || '😎',
-      color: bot ? bot.color : HUMAN_COLOR,
+      color: bot ? botColor(bot.color, i) : humanColor,
       isHuman: i === 0,
       x: 0, y: 0, prevX: 0, prevY: 0,
       dir: 0, nextDir: 0,

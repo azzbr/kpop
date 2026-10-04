@@ -15,7 +15,8 @@ const THEME_INFO: Record<string, { name: string; icon: string; desc: string; unl
 const SCORE_NAMES: Record<string, string> = {
   paper_clash: '🗺️ Paper Clash', kpop_rush: '🏃 Rush Runner', ninja_slice: '🥷 Ninja Slice', rocket_launch: '🚀 Rocket Launch',
   battle_arena: '⚔️ Arena wins', pattern_memory: '🧠 Pattern Memory', sparkle_match: '💎 Gem Match',
-  quiz_easy: '🎼 Quiz (Easy)', quiz_normal: '🎼 Quiz (Normal)', quiz_hard: '🎼 Quiz (Hard)', quiz_lyrics: '🎼 Quiz (Lyrics)', quiz_demon: '🎼 Quiz (Demon)',
+  snake_arena: '🐍 Snake Arena (length)', game_2048: '🧮 2048', block_blast: '🧱 Block Blast', quiz_arena: '❓ Quiz Arena',
+  quiz_party: '🎉 Quiz Party', real_or_fake: '🤔 Real or Fake (streak)', emoji_guess: '🕵️ Emoji Guess', would_you_rather: '🤷 Would You Rather',
 };
 
 const TABS = ['🏅 Overview', '🎨 Themes', '📊 Stats'];

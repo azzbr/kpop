@@ -166,3 +166,25 @@ export const playCoin = () =>
     ],
     0.02
   );
+
+/**
+ * Quiz "thinking" music: a soft looping bass + arpeggio while a question is open.
+ * Returns a stop function. Gets faster for the last 5 seconds if `urgent()` returns true.
+ */
+export function startQuizMusic(urgent: () => boolean = () => false): () => void {
+  const notes = [262, 330, 392, 330, 294, 349, 440, 349];
+  let i = 0;
+  let stopped = false;
+  let timer: number | undefined;
+  const tick = () => {
+    if (stopped) return;
+    const fast = urgent();
+    const n = notes[i % notes.length];
+    schedule([{ freq: n, dur: 0.12, type: 'triangle', vol: 0.09 }], 0);
+    if (i % 4 === 0) schedule([{ freq: n / 2, dur: 0.22, type: 'sine', vol: 0.12 }], 0);
+    i++;
+    timer = window.setTimeout(tick, fast ? 140 : 250);
+  };
+  tick();
+  return () => { stopped = true; window.clearTimeout(timer); };
+}

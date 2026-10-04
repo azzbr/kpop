@@ -26,6 +26,9 @@ export function useSwipeInput(
     let start: { x: number; y: number; id: number } | null = null;
 
     const down = (e: PointerEvent) => {
+      // Let on-screen buttons inside the play area (d-pad, boost, undo) get their own taps:
+      // capturing the pointer here would retarget their click.
+      if ((e.target as HTMLElement | null)?.closest('button')) return;
       start = { x: e.clientX, y: e.clientY, id: e.pointerId };
       el.setPointerCapture?.(e.pointerId);
     };

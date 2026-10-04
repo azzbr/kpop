@@ -11,7 +11,6 @@ import type { World, Dir, Difficulty, Player } from './paperClashLogic';
 
 const ROUND_SECONDS = 180;
 const ROUND_TICKS = ROUND_SECONDS * TICK_HZ;
-const AVATARS = ['😎', '🤖', '👽', '🐯', '🐙', '🦖'];
 
 interface Float { x: number; y: number; text: string; life: number }
 interface Spark { x: number; y: number; vx: number; vy: number; life: number; color: string }
@@ -26,7 +25,8 @@ export default function PaperClash() {
   const [status, setStatus] = useState<ShellStatus>('ready');
   const [round, setRound] = useState(0);
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
-  const [avatar, setAvatar] = useState(AVATARS[0]);
+  const equipped = useGameStore(s => s.equipped);
+  const setGameState = useGameStore(s => s.setGameState);
   const [showPad, setShowPad] = useState(false);
   const [hud, setHud] = useState<Hud>({ secondsLeft: ROUND_SECONDS, myPct: 0, board: [] });
   const [over, setOver] = useState({ score: 0, title: '', kills: 0, seconds: 0 });
@@ -35,6 +35,8 @@ export default function PaperClash() {
   const statusRef = useRef(status);
   statusRef.current = status;
   const floats = useRef<Float[]>([]);
+  // Locker trail: little emoji left behind the player.
+  const trailFx = useRef<{ x: number; y: number; life: number }[]>([]);
   const sparks = useRef<Spark[]>([]);
   const peakPct = useRef(0);
   // ?debug only: stops the real-time loop from ticking so tests can step the game themselves.
@@ -87,7 +89,7 @@ export default function PaperClash() {
 
   const start = useCallback(() => {
     const seed = SEED ? Number(SEED) : Math.floor(Math.random() * 1e9);
-    const w = createWorld({ rng: createRng(seed), difficulty, humanName: userName || 'You', humanEmoji: avatar });
+    const w = createWorld({ rng: createRng(seed), difficulty, humanName: userName || 'You', humanEmoji: equipped.avatar, humanColor: equipped.color });
     worldRef.current = w;
     floats.current = [];
     sparks.current = [];
@@ -96,7 +98,7 @@ export default function PaperClash() {
     updateHud();
     setRound(r => r + 1);
     setStatus('playing');
-  }, [difficulty, avatar, userName, refreshMinimap, updateHud]);
+  }, [difficulty, equipped, userName, refreshMinimap, updateHud]);
 
   const tick = useCallback(() => {
     const w = worldRef.current;
@@ -122,6 +124,7 @@ export default function PaperClash() {
       }
     }
     if (changed) refreshMinimap();
+    if (equipped.trail && me.alive && w.tick % 2 === 0) trailFx.current.push({ x: me.prevX, y: me.prevY, life: 24 });
     peakPct.current = Math.max(peakPct.current, percentOf(w, 1));
     if (w.tick % 5 === 0 || changed) updateHud();
 
@@ -137,7 +140,7 @@ export default function PaperClash() {
     } else if (w.tick >= ROUND_TICKS || percentOf(w, 1) >= 99.5) {
       endRound("Time's up!");
     }
-  }, [endRound, refreshMinimap, updateHud]);
+  }, [endRound, refreshMinimap, updateHud, equipped.trail]);
 
   const draw = useCallback((alpha: number) => {
     const canvas = canvasRef.current;
@@ -206,6 +209,20 @@ export default function PaperClash() {
     }
     ctx.globalAlpha = 1;
 
+    // Locker trail behind the player
+    if (equipped.trail) {
+      ctx.font = `${cs * 0.7}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (const t of trailFx.current) {
+        ctx.globalAlpha = Math.max(0, t.life / 24) * 0.9;
+        ctx.fillText(equipped.trail, sx(t.x) + cs / 2, sy(t.y) + cs / 2);
+        t.life--;
+      }
+      ctx.globalAlpha = 1;
+      trailFx.current = trailFx.current.filter(t => t.life > 0);
+    }
+
     // Players
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -270,7 +287,7 @@ export default function PaperClash() {
       const r = p.isHuman ? 3 : 2;
       ctx.fillRect(mx + (p.x / w.size) * mm - r, my + (p.y / w.size) * mm - r, r * 2, r * 2);
     }
-  }, [minimap, size]);
+  }, [minimap, size, equipped.trail]);
 
   const pause = useCallback(() => { if (statusRef.current === 'playing') setStatus('paused'); }, []);
   useGameLoop({ tickHz: TICK_HZ, update: () => { if (!holdRef.current) tick(); }, draw, running: status === 'playing', onHidden: pause });
@@ -326,14 +343,10 @@ export default function PaperClash() {
             <li>✂️ Cross someone's trail to knock them out — but don't let anyone touch <b>yours</b>!</li>
             <li>⏱️ Grab as much of the map as you can in 3 minutes.</li>
           </ul>
-          <div>
-            <div className="font-fredoka text-lg mb-1">Pick your player</div>
-            <div className="flex gap-2 flex-wrap">
-              {AVATARS.map(a => (
-                <button key={a} onClick={() => setAvatar(a)}
-                  className={`w-12 h-12 rounded-xl text-3xl ${a === avatar ? 'bg-fuchsia-500 ring-2 ring-white' : 'bg-white/10'}`}>{a}</button>
-              ))}
-            </div>
+          <div className="flex items-center gap-3 rounded-2xl bg-white/10 p-2">
+            <span className="w-12 h-12 rounded-xl flex items-center justify-center text-3xl border-2 border-white" style={{ background: equipped.color }}>{equipped.avatar}</span>
+            <span className="flex-1">Your look {equipped.trail && `· trail ${equipped.trail}`}</span>
+            <button onClick={() => setGameState('locker')} className="min-h-[44px] px-3 rounded-xl bg-white/15 font-fredoka">🎒 Locker</button>
           </div>
           <div>
             <div className="font-fredoka text-lg mb-1">Bots</div>

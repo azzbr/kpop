@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from './supabaseClient';
+import { LocalChannel, LOCAL_ROOMS } from './localChannel';
 
 export type GameId =
   | 'quiz_duel'
   | 'team_tug'
   | 'world_tour'
-  | 'class_show'
   | 'rocket_race'
   | 'copy_cat'
   | 'tt_bingo'
@@ -32,7 +32,8 @@ export type GameId =
   | 'minesweeper'
   | 'dots_boxes'
   | 'colour_clash'
-  | 'sliding_puzzle';
+  | 'sliding_puzzle'
+  | 'quiz_party';
 
 // Optional per-game setup chosen by the host in the lobby (difficulty, etc.),
 // broadcast to everyone in the `start` message.
@@ -62,7 +63,11 @@ export interface RoomApi {
   myId: string;
   send: (msg: GameMsg) => void;
   onMessage: (handler: (msg: GameMsg) => void) => () => void;
+  /** Host only: report a finished game's ranking (best first) for the lobby's session leaderboard. */
+  reportResult: (rankedIds: string[]) => void;
 }
+
+export const SESSION_RESULT = 'session_result';
 
 // No I/O — they look like 1 and 0 on a whiteboard
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -88,12 +93,14 @@ export function useRoom() {
   const [players, setPlayers] = useState<RoomPlayer[]>([]);
   const [isHost, setIsHost] = useState(false);
   const myId = useRef(getMyId()).current;
-  const channelRef = useRef<RealtimeChannel | null>(null);
+  const channelRef = useRef<RealtimeChannel | LocalChannel | null>(null);
   const handlersRef = useRef<Set<(msg: GameMsg) => void>>(new Set());
 
   const cleanup = useCallback(() => {
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
+    const ch = channelRef.current;
+    if (ch) {
+      if (ch instanceof LocalChannel) ch.close();
+      else supabase.removeChannel(ch);
       channelRef.current = null;
     }
   }, []);
@@ -110,12 +117,15 @@ export function useRoom() {
 
       return new Promise((resolve) => {
         let resolved = false;
-        const channel = supabase.channel(`kpoproom:${roomCode}`, {
-          config: {
-            presence: { key: myId },
-            broadcast: { self: true },
-          },
-        });
+        // ?localroom swaps Supabase for a BroadcastChannel between tabs (tests, offline play).
+        const channel = (LOCAL_ROOMS
+          ? new LocalChannel(`kpoproom:${roomCode}`, myId)
+          : supabase.channel(`kpoproom:${roomCode}`, {
+              config: {
+                presence: { key: myId },
+                broadcast: { self: true },
+              },
+            })) as RealtimeChannel;
         channelRef.current = channel;
 
         channel.on('presence', { event: 'sync' }, () => {
@@ -217,5 +227,7 @@ export function useRoom() {
     };
   }, []);
 
-  return { status, code, players, isHost, myId, createRoom, joinRoom, leaveRoom, send, onMessage };
+  const reportResult = useCallback((rankedIds: string[]) => send({ t: SESSION_RESULT, ranked: rankedIds }), [send]);
+
+  return { status, code, players, isHost, myId, createRoom, joinRoom, leaveRoom, send, onMessage, reportResult };
 }

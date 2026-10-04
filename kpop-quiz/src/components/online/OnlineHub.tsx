@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store';
-import { useRoom } from '../../online/useRoom';
+import { useRoom, SESSION_RESULT } from '../../online/useRoom';
 import type { GameId, GameConfig, RoomApi } from '../../online/useRoom';
 import { playClick, playUnlock, playWin } from '../../utils/sounds';
 import QuizDuelOnline from './QuizDuelOnline';
 import TeamTugOnline from './TeamTugOnline';
 import WorldTourRace from './WorldTourRace';
-import ClassQuizShow from './ClassQuizShow';
+import QuizParty from './quiz/QuizParty';
 import RocketTapRace from './RocketTapRace';
 import CopyCat from './CopyCat';
 import TimesTableBingo from './TimesTableBingo';
@@ -38,7 +38,7 @@ import SlidingPuzzle from './SlidingPuzzle';
 const EMOJIS = ['🎤', '🎸', '🥁', '🎹', '🎧', '🌟', '💖', '🔥', '🦄', '🐯', '🐰', '🦊'];
 
 const GAMES: { id: GameId; icon: string; title: string; desc: string; min: number; max: number; tag: string }[] = [
-  { id: 'class_show', icon: '🎤', title: 'Class Quiz Show', desc: 'Pick a subject — Maths, Science, English & more. Everyone answers on their device!', min: 2, max: 31, tag: 'whole class!' },
+  { id: 'quiz_party', icon: '🎉', title: 'Quiz Party', desc: 'Kahoot-style quiz on a big screen or everyone\'s iPad — Classic, Gold Quest, Racing & Cash Climb. Topics, school subjects or your own quiz!', min: 2, max: 40, tag: 'whole class!' },
   { id: 'doodle_dash', icon: '🎨', title: 'Doodle Dash', desc: 'One draws, everyone guesses — the doodle appears live on every screen!', min: 2, max: 30, tag: 'whole class!' },
   { id: 'tt_bingo', icon: '🔢', title: 'Times-Table Bingo', desc: 'Solve the call, find it on your card — first full line shouts BINGO!', min: 2, max: 30, tag: 'whole class!' },
   { id: 'rocket_race', icon: '🚀', title: 'Rocket Tap Race', desc: 'Mash to blast off! Every rocket races on screen — first to the moon!', min: 2, max: 30, tag: 'whole class!' },
@@ -115,14 +115,16 @@ const OnlineHub: React.FC = () => {
   const room = useRoom();
   const [screen, setScreen] = useState<HubScreen>('menu');
   const [name, setName] = useState('');
-  const [emoji, setEmoji] = useState('🎤');
+  const [emoji, setEmoji] = useState(() => useGameStore.getState().equipped.avatar || '🎤');
   const [joinCode, setJoinCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [joinError, setJoinError] = useState('');
   const [activeGame, setActiveGame] = useState<GameId | null>(null);
-  const [selGame, setSelGame] = useState<GameId>('class_show');
+  const [selGame, setSelGame] = useState<GameId>('quiz_party');
   const [opts, setOpts] = useState<Record<string, string>>({});
   const [gameConfig, setGameConfig] = useState<GameConfig>({});
+  // Session leaderboard across games played in this room: 3/2/1 points for 1st/2nd/3rd.
+  const [session, setSession] = useState<Record<string, { pts: number; wins: number }>>({});
 
   // Route lobby-level messages (game start / return to lobby)
   useEffect(() => {
@@ -133,6 +135,16 @@ const OnlineHub: React.FC = () => {
         playUnlock();
       } else if (m.t === 'to_lobby') {
         setActiveGame(null);
+      } else if (m.t === SESSION_RESULT) {
+        const ranked = (m.ranked as string[]) || [];
+        setSession(prev => {
+          const next = { ...prev };
+          ranked.slice(0, 3).forEach((id, i) => {
+            const cur = next[id] ?? { pts: 0, wins: 0 };
+            next[id] = { pts: cur.pts + 3 - i, wins: cur.wins + (i === 0 ? 1 : 0) };
+          });
+          return next;
+        });
       }
     });
   }, [room.onMessage]);
@@ -209,6 +221,7 @@ const OnlineHub: React.FC = () => {
     myId: room.myId,
     send: room.send,
     onMessage: room.onMessage,
+    reportResult: room.reportResult,
   };
 
   // Active game takes over the whole screen
@@ -218,7 +231,7 @@ const OnlineHub: React.FC = () => {
         {activeGame === 'quiz_duel' && <QuizDuelOnline room={api} />}
         {activeGame === 'team_tug' && <TeamTugOnline room={api} />}
         {activeGame === 'world_tour' && <WorldTourRace room={api} />}
-        {activeGame === 'class_show' && <ClassQuizShow room={api} />}
+        {activeGame === 'quiz_party' && <QuizParty room={api} />}
         {activeGame === 'rocket_race' && <RocketTapRace room={api} />}
         {activeGame === 'copy_cat' && <CopyCat room={api} />}
         {activeGame === 'tt_bingo' && <TimesTableBingo room={api} />}
@@ -335,7 +348,7 @@ const OnlineHub: React.FC = () => {
             <div className="mb-6">
               <label className="block font-fredoka text-teal-200 mb-2">🎭 Pick your avatar</label>
               <div className="grid grid-cols-6 gap-2">
-                {EMOJIS.map((e) => (
+                {Array.from(new Set([useGameStore.getState().equipped.avatar, ...EMOJIS])).map((e) => (
                   <button
                     key={e}
                     onClick={() => { playClick(); setEmoji(e); }}
@@ -395,6 +408,27 @@ const OnlineHub: React.FC = () => {
                 ))}
               </div>
             </div>
+
+            {Object.keys(session).length > 0 && (
+              <div className="bg-white/10 rounded-3xl p-5 border border-white/20 mb-6">
+                <div className="font-fredoka text-lg mb-2">🏆 Tonight's leaderboard</div>
+                {Object.entries(session)
+                  .sort((a, b) => b[1].pts - a[1].pts)
+                  .map(([id, v], i) => {
+                    const p = room.players.find(x => x.id === id);
+                    if (!p) return null;
+                    return (
+                      <div key={id} className={`flex items-center gap-3 font-fredoka text-lg ${id === room.myId ? 'text-amber-300' : ''}`}>
+                        <span className="w-6">{i + 1}.</span>
+                        <span className="flex-1">{p.emoji} {p.name}</span>
+                        <span className="text-sm font-nunito text-teal-200">{v.wins} 🥇</span>
+                        <span>{v.pts} pts</span>
+                      </div>
+                    );
+                  })}
+                <div className="font-nunito text-xs text-teal-300 mt-1">3 points for 1st, 2 for 2nd, 1 for 3rd in each game.</div>
+              </div>
+            )}
 
             {room.isHost ? (
               <>

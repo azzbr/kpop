@@ -108,6 +108,7 @@ const TapRace: React.FC<TapRaceProps> = ({ room, gp, title, icon, themeClass, ac
             .map(([id, score]) => ({ id, name: byId(id).name, emoji: byId(id).emoji, score }))
             .sort((a, b) => b.score - a.score);
           send({ t: `${gp}_final`, top });
+          room.reportResult(top.map(e => e.id));
         }
       }, 3000);
     };

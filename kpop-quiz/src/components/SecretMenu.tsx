@@ -63,7 +63,7 @@ const SecretMenu: React.FC = () => {
                 {[
                   { id: 'living_mural' as const, icon: '🖼️', title: 'Living Mural', desc: 'A giant canvas to draw on together.' },
                   { id: 'agent_hq' as const, icon: '🕵️', title: 'Agent HQ', desc: 'Crack ciphers and run secret missions.' },
-                  { id: 'shop' as const, icon: '🛍️', title: 'Secret Shop', desc: 'Spend your coins on cool stuff.' },
+                  { id: 'locker' as const, icon: '🎒', title: 'Locker', desc: 'Spend your coins on avatars, colours and trails.' },
                 ].map(p => (
                   <button
                     key={p.id}

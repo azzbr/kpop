@@ -9,17 +9,12 @@ import MusicPlayer from './components/MusicPlayer';
 
 // Every screen except the first two loads on demand, so the iPad downloads only what she opens.
 const SCREENS: Partial<Record<GameState, LazyExoticComponent<ComponentType>>> = {
-  difficulty: lazy(() => import('./components/DifficultyScreen')),
-  quiz: lazy(() => import('./components/QuizView')),
-  result: lazy(() => import('./components/ResultScreen')),
   team_maker: lazy(() => import('./components/TeamMaker')),
   secret_menu: lazy(() => import('./components/SecretMenu')),
   living_mural: lazy(() => import('./components/LivingMural')),
   agent_hq: lazy(() => import('./components/AgentHQ')),
-  shop: lazy(() => import('./components/Shop')),
   kpop_rush: lazy(() => import('./components/KPopRushGame')),
   word_scramble: lazy(() => import('./components/WordScramble')),
-  lightning_quiz: lazy(() => import('./components/LightningQuiz')),
   idol_personality_quiz: lazy(() => import('./components/IdolPersonalityQuiz')),
   dance_battle: lazy(() => import('./components/DanceBattleSimulator')),
   beat_maker: lazy(() => import('./components/BeatMaker')),
@@ -51,6 +46,12 @@ const SCREENS: Partial<Record<GameState, LazyExoticComponent<ComponentType>>> = 
   paper_clash: lazy(() => import('./components/games/PaperClash')),
   tug_of_war: lazy(() => import('./components/TugOfWar')),
   online_hub: lazy(() => import('./components/online/OnlineHub')),
+  snake_arena: lazy(() => import('./components/games/SnakeArena')),
+  game_2048: lazy(() => import('./components/games/Game2048')),
+  block_blast: lazy(() => import('./components/games/BlockBlast')),
+  quiz_arena: lazy(() => import('./components/games/QuizArena')),
+  quiz_maker: lazy(() => import('./components/QuizMaker')),
+  locker: lazy(() => import('./components/Locker')),
 };
 
 const Loading = () => (

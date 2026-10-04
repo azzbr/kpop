@@ -1,19 +1,20 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { Question, HunterProfile } from './quizData';
-import { getQuestionsByDifficulty, getProfileByScore } from './quizData';
 import { localDateKey, getStreak } from './utils/dates';
+import { challengeFor, DAILY_REWARD } from './utils/dailyChallenge';
+import type { QuizQuestion } from './data/quiz/types';
 
 export type GameState =
-  | 'welcome' | 'game_mode' | 'difficulty' | 'quiz' | 'result'
-  | 'team_maker' | 'secret_menu' | 'living_mural' | 'agent_hq' | 'shop' | 'kpop_rush'
-  | 'word_scramble' | 'lightning_quiz' | 'idol_personality_quiz' | 'dance_battle' | 'beat_maker'
+  | 'welcome' | 'game_mode'
+  | 'team_maker' | 'secret_menu' | 'living_mural' | 'agent_hq' | 'kpop_rush'
+  | 'word_scramble' | 'idol_personality_quiz' | 'dance_battle' | 'beat_maker'
   | 'huntrx_splash' | 'truth_or_dare' | 'trivia_battle' | 'talent_show' | 'zip_game' | 'mini_sudoku'
   | 'crossword_mini' | 'word_ladder' | 'memory_speed' | 'reaction_duel' | 'streak_calendar'
   | 'achievement_showcase' | 'pattern_memory' | 'ninja_slice' | 'battle_arena' | 'rocket_launch'
   | 'style_studio' | 'sparkle_match' | 'idol_diary' | 'jarvis_hq' | 'guess_intro' | 'idol_profile'
-  | 'fm_radio' | 'freeze_dance' | 'chaotic_backstage' | 'paper_clash' | 'tug_of_war' | 'online_hub';
-export type Difficulty = 'easy' | 'normal' | 'hard' | 'lyrics' | 'demon';
+  | 'fm_radio' | 'freeze_dance' | 'chaotic_backstage' | 'paper_clash' | 'tug_of_war' | 'online_hub'
+  | 'snake_arena' | 'game_2048' | 'block_blast' | 'word_guess' | 'quiz_arena' | 'would_you_rather'
+  | 'real_or_fake' | 'emoji_guess' | 'quiz_maker' | 'locker';
 
 export type Theme = 'default' | 'neon' | 'ocean' | 'forest' | 'sunset' | 'galaxy';
 
@@ -61,19 +62,27 @@ export interface Badge {
   unlocked: boolean;
 }
 
-export interface RoundResult { isBest: boolean; best: number; xp: number; coins: number }
+export interface RoundResult { isBest: boolean; best: number; xp: number; coins: number; dailyDone?: boolean }
+
+export interface SavedQuiz { id: string; title: string; emoji: string; questions: QuizQuestion[]; updatedAt: number }
+
+/** What the player has equipped from the Locker. */
+export interface Equipped { avatar: string; color: string; trail: string; title: string }
+export const DEFAULT_EQUIPPED: Equipped = { avatar: '😎', color: '#3b82f6', trail: '', title: '' };
+
+export interface WordGuessState {
+  /** The daily puzzle in progress / finished (keyed by local date). */
+  daily: { date: string; guesses: string[]; done: boolean; won: boolean } | null;
+  played: number;
+  won: number;
+  streak: number;
+  bestStreak: number;
+}
 
 interface GameStore {
   // Game flow
   gameState: GameState;
   userName: string;
-  difficulty: Difficulty | null;
-  questions: Question[];
-  currentQuestionIndex: number;
-  selectedAnswer: number | null;
-  isAnswerCorrect: boolean | null;
-  score: number;
-  hunterProfile: HunterProfile | null;
 
   // Music
   currentTrack: number;
@@ -88,12 +97,16 @@ interface GameStore {
   totalCorrectAnswers: number;
   songsListened: number;
   currentStreak: number;
-  quizStartTime: number | null;
 
   // Progress
   xp: number;
   userCurrency: number;
   highScores: Record<string, number>;
+  myQuizzes: SavedQuiz[];
+  equipped: Equipped;
+  /** Local date of the last completed daily challenge. */
+  dailyDoneDate: string;
+  wordGuess: WordGuessState;
   datesPlayed: string[];
 
   // Team maker
@@ -116,12 +129,6 @@ interface GameStore {
   // Actions
   setGameState: (state: GameState) => void;
   setUserName: (name: string) => void;
-  setDifficulty: (difficulty: Difficulty) => void;
-  initializeQuiz: () => void;
-  selectAnswer: (answerIndex: number) => void;
-  nextQuestion: () => void;
-  calculateResult: () => void;
-  resetGame: () => void;
 
   setCurrentTrack: (track: number) => void;
   setIsPlaying: (playing: boolean) => void;
@@ -152,6 +159,12 @@ interface GameStore {
   unlockHuntrx: () => void;
   setTheme: (theme: Theme) => void;
   addToInventory: (itemId: string) => void;
+  /** Spend coins on a Locker item. Returns false if it can't be afforded or is already owned. */
+  buyItem: (itemId: string, price: number) => boolean;
+  equip: (patch: Partial<Equipped>) => void;
+  saveQuiz: (quiz: SavedQuiz) => void;
+  deleteQuiz: (id: string) => void;
+  setWordGuess: (patch: Partial<WordGuessState>) => void;
   incrementDrawingsCreated: () => void;
   incrementBubblesPopped: () => void;
   incrementPatternsCreated: () => void;
@@ -197,13 +210,6 @@ export const useGameStore = create<GameStore>()(
     (set, get) => ({
       gameState: 'welcome',
       userName: '',
-      difficulty: null,
-      questions: [],
-      currentQuestionIndex: 0,
-      selectedAnswer: null,
-      isAnswerCorrect: null,
-      score: 0,
-      hunterProfile: null,
 
       currentTrack: 0,
       isPlaying: false,
@@ -225,7 +231,6 @@ export const useGameStore = create<GameStore>()(
       totalCorrectAnswers: 0,
       songsListened: 0,
       currentStreak: 0,
-      quizStartTime: null,
 
       xp: legacy.xp,
       userCurrency: 100,
@@ -241,76 +246,14 @@ export const useGameStore = create<GameStore>()(
       huntrxUnlocked: legacy.huntrxUnlocked,
       currentTheme: legacy.currentTheme,
       inventory: [],
+      myQuizzes: [],
+      equipped: DEFAULT_EQUIPPED,
+      dailyDoneDate: '',
+      wordGuess: { daily: null, played: 0, won: 0, streak: 0, bestStreak: 0 },
       secretStats: { bubblesPopped: 0, patternsCreated: 0, drawingsCreated: 0, treasureFound: 0 },
 
       setGameState: (state) => set({ gameState: state }),
       setUserName: (name) => set({ userName: name }),
-      setDifficulty: (difficulty) => set({ difficulty }),
-
-      initializeQuiz: () => {
-        const { difficulty } = get();
-        if (!difficulty) return;
-        const questions = getQuestionsByDifficulty(difficulty).map(q => ({
-          ...q,
-          answers: [...q.answers].sort(() => Math.random() - 0.5),
-        }));
-        set({
-          questions,
-          currentQuestionIndex: 0,
-          selectedAnswer: null,
-          isAnswerCorrect: null,
-          score: 0,
-          quizStartTime: Date.now(),
-          gameState: 'quiz',
-        });
-      },
-
-      selectAnswer: (answerIndex) => {
-        const { questions, currentQuestionIndex, currentStreak } = get();
-        const isCorrect = questions[currentQuestionIndex].answers[answerIndex].isCorrect;
-        set({
-          selectedAnswer: answerIndex,
-          isAnswerCorrect: isCorrect,
-          score: isCorrect ? get().score + 1 : get().score,
-          currentStreak: isCorrect ? currentStreak + 1 : 0,
-          totalCorrectAnswers: isCorrect ? get().totalCorrectAnswers + 1 : get().totalCorrectAnswers,
-        });
-        get().checkAndAwardBadges();
-      },
-
-      nextQuestion: () => {
-        const { currentQuestionIndex, questions } = get();
-        const nextIndex = currentQuestionIndex + 1;
-        if (nextIndex >= questions.length) {
-          get().calculateResult();
-        } else {
-          set({ currentQuestionIndex: nextIndex, selectedAnswer: null, isAnswerCorrect: null });
-        }
-      },
-
-      calculateResult: () => {
-        const { score, questions } = get();
-        set({
-          gameState: 'result',
-          hunterProfile: getProfileByScore(score, questions.length),
-          totalQuizzesCompleted: get().totalQuizzesCompleted + 1,
-        });
-        get().finishRound(`quiz_${get().difficulty ?? 'easy'}`, score, 0.2);
-        get().checkAndAwardBadges();
-      },
-
-      // Back to the difficulty picker so "Play again" restarts the quiz rather than the whole app.
-      resetGame: () => {
-        set({
-          gameState: 'difficulty',
-          questions: [],
-          currentQuestionIndex: 0,
-          selectedAnswer: null,
-          isAnswerCorrect: null,
-          score: 0,
-          hunterProfile: null,
-        });
-      },
 
       setCurrentTrack: (track) => set({ currentTrack: track }),
       setIsPlaying: (playing) => set({ isPlaying: playing }),
@@ -331,8 +274,9 @@ export const useGameStore = create<GameStore>()(
           let ok = false;
           switch (badge.criteria.type) {
             case 'quizzes_completed': ok = state.totalQuizzesCompleted >= v; break;
-            case 'perfect_score': ok = state.gameState === 'result' && state.questions.length > 0 && state.score === state.questions.length; break;
-            case 'speed_completion': ok = state.gameState === 'result' && !!state.quizStartTime && (Date.now() - state.quizStartTime) / 1000 <= v; break;
+            // perfect_score and speed_completion are unlocked directly by Quiz Arena (unlockBadge).
+            case 'perfect_score':
+            case 'speed_completion': break;
             case 'songs_listened': ok = state.songsListened >= v; break;
             case 'streak_days': ok = streakDays >= v; break;
             case 'total_correct': ok = state.totalCorrectAnswers >= v; break;
@@ -367,9 +311,19 @@ export const useGameStore = create<GameStore>()(
         const { isBest, best } = get().submitScore(gameId, score);
         const base = Math.min(50, Math.max(5, Math.round(score / Math.max(xpScale, 0.0001))));
         const xp = base + (isBest && score > 0 ? 25 : 0);
-        const coins = Math.floor(xp / 5);
-        set({ xp: get().xp + xp, userCurrency: get().userCurrency + coins });
-        return { isBest, best, xp, coins };
+        let coins = Math.floor(xp / 5);
+        let bonusXp = 0;
+        // Daily challenge: first time today this game hits its target.
+        const today = localDateKey();
+        const ch = challengeFor(today);
+        const dailyDone = get().dailyDoneDate !== today && ch.gameId === gameId && score >= ch.target;
+        if (dailyDone) {
+          coins += DAILY_REWARD.coins;
+          bonusXp = DAILY_REWARD.xp;
+          set({ dailyDoneDate: today });
+        }
+        set({ xp: get().xp + xp + bonusXp, userCurrency: get().userCurrency + coins });
+        return { isBest, best, xp: xp + bonusXp, coins, dailyDone };
       },
 
       recordPlay: () => {
@@ -415,6 +369,19 @@ export const useGameStore = create<GameStore>()(
       addToInventory: (itemId) => {
         if (!get().inventory.includes(itemId)) set({ inventory: [...get().inventory, itemId] });
       },
+      buyItem: (itemId, price) => {
+        const { inventory, userCurrency } = get();
+        if (inventory.includes(itemId) || userCurrency < price) return false;
+        set({ inventory: [...inventory, itemId], userCurrency: userCurrency - price });
+        return true;
+      },
+      equip: (patch) => set({ equipped: { ...get().equipped, ...patch } }),
+      saveQuiz: (quiz) => {
+        const rest = get().myQuizzes.filter(q => q.id !== quiz.id);
+        set({ myQuizzes: [{ ...quiz, updatedAt: Date.now() }, ...rest] });
+      },
+      deleteQuiz: (id) => set({ myQuizzes: get().myQuizzes.filter(q => q.id !== id) }),
+      setWordGuess: (patch) => set({ wordGuess: { ...get().wordGuess, ...patch } }),
       incrementDrawingsCreated: () => bump(set, get, 'drawingsCreated'),
       incrementBubblesPopped: () => bump(set, get, 'bubblesPopped'),
       incrementPatternsCreated: () => bump(set, get, 'patternsCreated'),
@@ -422,7 +389,7 @@ export const useGameStore = create<GameStore>()(
     }),
     {
       name: SAVE_KEY,
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => localStorage),
       // Only progress is saved — never the current screen or an in-progress quiz.
       partialize: (s) => ({
@@ -436,13 +403,27 @@ export const useGameStore = create<GameStore>()(
         totalCorrectAnswers: s.totalCorrectAnswers,
         songsListened: s.songsListened,
         inventory: s.inventory,
+        myQuizzes: s.myQuizzes,
+        equipped: s.equipped,
+        dailyDoneDate: s.dailyDoneDate,
+        wordGuess: s.wordGuess,
         secretStats: s.secretStats,
         huntrxUnlocked: s.huntrxUnlocked,
         currentTheme: s.currentTheme,
         volume: s.volume,
         teamMembers: s.teamMembers,
       }),
-      migrate: (persisted) => persisted as GameStore,
+      // v1 → v2 added myQuizzes, equipped, dailyDoneDate and wordGuess. Missing keys fall back to
+      // the defaults above when the saved state is merged in, so only the shape needs fixing.
+      migrate: (persisted, version) => {
+        const s = (persisted ?? {}) as Partial<GameStore>;
+        if (version < 2) {
+          s.myQuizzes = s.myQuizzes ?? [];
+          s.equipped = { ...DEFAULT_EQUIPPED, ...(s.equipped ?? {}) };
+          s.dailyDoneDate = s.dailyDoneDate ?? '';
+        }
+        return s as GameStore;
+      },
       onRehydrateStorage: () => (state) => {
         try { LEGACY_KEYS.forEach(k => localStorage.removeItem(k)); } catch { /* ignore */ }
         if (state) document.documentElement.setAttribute('data-theme', state.currentTheme);
