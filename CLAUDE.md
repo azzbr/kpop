@@ -50,7 +50,7 @@ kpop-quiz/
 ## Architecture
 
 ### Screens
-Every screen is a `gameState` string. `App.tsx` renders Welcome and the game grid directly and lazy-loads everything else (`SCREENS` map), so the iPad only downloads what she opens. The tldraw-based Living Mural is ~1.6 MB on its own — keep it lazy.
+Every screen is a `gameState` string. `App.tsx` renders Welcome and the game grid directly and lazy-loads everything else (`SCREENS` map), so the iPad only downloads what she opens.
 
 To add a screen:
 1. Add the key to the `GameState` union in `store.ts`
@@ -59,7 +59,7 @@ To add a screen:
 4. Every screen needs a clear Back button → `setGameState('game_mode')`
 
 ### Store (`store.ts`)
-Zustand with `persist` (save key `funquest-save`, `version: 3`; v2 added `myQuizzes`, `equipped`, `dailyDoneDate`, `wordGuess`; v3 added `playLog`, `rounds`, `gameBadges`, `parent`, `pet`, `events`). `partialize` saves **progress only** (name, XP, coins, high scores, days played, badges, stats, theme, volume) — never the current screen or an in-progress game. Bump `version` and add a `migrate` step when changing the saved shape.
+Zustand with `persist` (save key `funquest-save`, `SAVE_VERSION` 4; v2 added `myQuizzes`, `equipped`, `dailyDoneDate`, `wordGuess`; v3 added `playLog`, `rounds`, `gameBadges`, `parent`, `pet`, `events`; v4 added `todCustom`, `pixelArt`, `agent`, `secretsFound`, `paperClash`, `equipped.skin`). `partializeSave` saves **progress only** (name, XP, coins, high scores, days played, badges, stats, theme, volume) — never the current screen or an in-progress game. Bump `SAVE_VERSION` and add a step to `migrateSave` when changing the saved shape; `src/storeMigration.test.ts` loads a real v3 save (`src/__fixtures__/save-v3.json`) — capture a new fixture from the live build before each bump. `secretReturn` (where a hidden screen's Back goes; `openSecret` / `leaveSecret`) is never saved.
 
 The old scattered localStorage keys (`kpop_xp`, `ninja_best`, …) are imported once by `readLegacy()` and deleted after hydration. Some per-game content keys still live in components (`zip_best`, `wordladder_solved`, `diary_list`, `style_*`, `cipher_*`, `jarvis_*`) — fine for content, but **scores go through the store**.
 
@@ -81,6 +81,12 @@ The old scattered localStorage keys (`kpop_xp`, `ninja_best`, …) are imported 
 **Pattern for a new real-time game:** put the rules in a pure `xxxLogic.ts` (no React, no canvas) with a vitest `xxxLogic.test.ts`; the component only handles input, drawing and the HUD. See `components/games/PaperClash.tsx` + `paperClashLogic.ts`.
 
 **Debug hook:** with `?debug` in the URL, Paper Clash exposes `window.__game` (`start`, `hold`, `step`, `steer`, `world`, `percent`); `?seed=42` makes a run repeatable. Use this for Playwright tests instead of real-time play.
+
+### Drawing (`components/draw/`)
+`DoodleCanvas` is the only drawing surface: a fixed 1200×900 board (survives rotation), Pointer Events, pen/marker/rainbow/eraser/fill/stickers (+ owned Locker stickers), undo capped at 20 (older ops are flattened). Rules in `doodleLogic.ts` (+ test). `DoodlePad` screen (`doodle_pad`, gallery in IndexedDB via `doodleStore.ts`, max 30) and the sticker board (`sticker_board`, autosaves one picture). Truth or Dare's "Draw it" dares use `<DoodleCanvas compact>`. tldraw was removed (the old Living Mural needed a licence key on the live site).
+
+### Truth or Dare (`truth_or_dare`)
+Cards in `data/truthOrDare.ts` (8 packs × 64, levels 1–3; the level is a ceiling and chosen packs are pooled). Rules in `components/games/truthOrDareLogic.ts` (+ test): fair laps (everyone once per lap, never twice in a row), the wheel lands on the picked player (`wheelRotation`), no repeats until a deck runs out, kind judging only (✅ Did it / 🐔 Chicken, 3 skips each, optional 😂). "Our cards" are kids' own cards (`todCustom`, through `cleanText`). Every card needs a tone review before shipping (see content rules).
 
 ### Badges, quests, pet, events, parents
 - **Per-game badges**: `data/gameBadges.ts` — `finishRound` tests every badge after each round (+10 coins each); `BadgeToast` (mounted in App) announces them. Never rename a badge id.
@@ -117,7 +123,7 @@ The old scattered localStorage keys (`kpop_xp`, `ninja_best`, …) are imported 
 | My Stuff | `pet_pal`, `quest_map`, `locker`, `streak_calendar`, `achievement_showcase` (Trophy Room) |
 | Grown-ups | `parent_corner` |
 | Teacher (hidden) | `jarvis_hq`, `freeze_dance`, `chaotic_backstage` — tiles appear after typing **JARVIS** as the player name |
-| Hidden | `secret_menu` (tap the **A** in "Arcade" on the welcome screen), `living_mural` (tap the **F**), `agent_hq`, `huntrx_splash` (name **HUNTRX**) |
+| Hidden | `secret_menu` (tap the **A** in "Arcade" on the welcome screen), `sticker_board` (tap the **F**), `doodle_pad`, `agent_hq`, `huntrx_splash` (name **HUNTRX**) |
 
 ---
 
@@ -161,4 +167,4 @@ The old scattered localStorage keys (`kpop_xp`, `ninja_best`, …) are imported 
 
 ## Deployment
 
-Netlify builds `kpop-quiz/` on push to `main` (Node 22 — Vite 7 needs 20+). Security headers and SPA redirect are in `netlify.toml`; `/assets/*` is cached immutably. Serverless functions in `netlify/functions/` (`/api/health`, `/api/counter`, `/api/increment`) are optional.
+CI (`.github/workflows/e2e.yml`) runs unit tests, tsc and Playwright (WebKit + Chromium) on pushes to `claude/**` branches and `main`: push to the branch first and only fast-forward `main` once that run is green. Netlify builds `kpop-quiz/` on push to `main` (Node 22 — Vite 7 needs 20+). Security headers and SPA redirect are in `netlify.toml`; `/assets/*` is cached immutably. Serverless functions in `netlify/functions/` (`/api/health`, `/api/counter`, `/api/increment`) are optional.

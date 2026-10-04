@@ -28,9 +28,7 @@ function serviceWorker(): Plugin {
 export default defineConfig({
   plugins: [react(), serviceWorker()],
   build: {
-    // The tldraw drawing canvas (Living Mural) is ~1.6 MB on its own; it's lazy-loaded,
-    // so it only downloads when that screen is opened (and is precached for offline use).
-    chunkSizeWarningLimit: 1800,
+    chunkSizeWarningLimit: 600,
   },
   test: {
     environment: 'node',

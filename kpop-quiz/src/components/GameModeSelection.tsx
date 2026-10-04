@@ -68,7 +68,7 @@ const TILES: Tile[] = [
   { id: 'tug_of_war', title: 'Tug-of-War', description: 'Two players mash buttons to drag the rope to their side. Best of 3!', icon: '🪢', color: 'from-amber-500 to-pink-600', category: 'party' },
   { id: 'heads_up', title: 'Heads Up', description: 'Hold the iPad on your forehead, friends act it out — tilt down if you get it!', icon: '🙆', color: 'from-sky-500 to-pink-500', category: 'party', isNew: true },
   { id: 'would_you_rather', title: 'Would You Rather', description: 'Silly choices — see what everyone else picked. Pass the iPad!', icon: '🤷', color: 'from-pink-500 to-orange-500', category: 'party', isNew: true },
-  { id: 'truth_or_dare', title: 'Truth or Dare', description: 'Silly truths and hilarious dares for 2–4.', icon: '🎯', color: 'from-orange-500 to-red-600', category: 'party' },
+  { id: 'truth_or_dare', title: 'Truth or Dare', description: 'Spin the wheel! Silly truths and funny dares for 2–8 players.', icon: '🎯', color: 'from-orange-500 to-red-600', category: 'party', isNew: true },
   { id: 'trivia_battle', title: 'Buzzer Battle', description: 'Two players race to hit the right answer.', icon: '🛎️', color: 'from-rose-500 to-pink-600', category: 'party' },
   { id: 'reaction_duel', title: 'Reaction Duel', description: 'Tap your side first when the signal flashes.', icon: '👆', color: 'from-red-500 to-pink-500', category: 'party' },
   { id: 'talent_show', title: 'Talent Show', description: 'Perform, get judged, crown the star.', icon: '🎭', color: 'from-purple-500 to-fuchsia-600', category: 'party' },

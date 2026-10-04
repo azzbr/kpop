@@ -160,7 +160,7 @@ const WelcomeScreen: React.FC = () => {
       playTransitionSound();
       // Trigger living mural launch
       later(() => {
-        setGameState('living_mural');
+        useGameStore.getState().openSecret('sticker_board', 'welcome');
         setFAnimationState('unlocked');
       }, 1500); // Slightly faster for better feel
     }

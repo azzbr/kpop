@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { WOULD_YOU_RATHER, WYR_REACTIONS } from './wouldYouRather';
 import { REAL_OR_FAKE } from './realOrFake';
+import { TOD_CARDS, TOD_PACKS } from './truthOrDare';
+import { isClean } from '../utils/cleanText';
 
 describe('Would You Rather', () => {
   it('has 120 questions', () => {
@@ -59,5 +61,35 @@ describe('Real or Fake', () => {
     }
     const texts = REAL_OR_FAKE.map((x) => x.text.toLowerCase());
     expect(new Set(texts).size).toBe(texts.length);
+  });
+});
+
+describe('Truth or Dare', () => {
+  it('has unique ids and texts, each fitting on screen with one emoji', () => {
+    expect(new Set(TOD_CARDS.map(c => c.id)).size).toBe(TOD_CARDS.length);
+    expect(new Set(TOD_CARDS.map(c => c.text.toLowerCase())).size).toBe(TOD_CARDS.length);
+    for (const c of TOD_CARDS) {
+      expect(c.text.length, c.id).toBeLessThanOrEqual(120);
+      expect(c.text.length, c.id).toBeGreaterThan(10);
+      expect(c.emoji.length, c.id).toBeGreaterThan(0);
+      expect(isClean(c.text), c.id).toBe(true);
+    }
+  });
+
+  it('only times dares, everyone and double cards', () => {
+    for (const c of TOD_CARDS) if (c.timer) expect(c.kind, c.id).not.toBe('truth');
+  });
+
+  it('every pack has plenty of cards at every level', () => {
+    for (const p of TOD_PACKS) {
+      const cards = TOD_CARDS.filter(c => c.pack === p.id);
+      expect(cards.length, p.id).toBeGreaterThanOrEqual(35);
+      for (const lvl of [1, 2, 3]) expect(cards.filter(c => c.level === lvl).length, `${p.id} level ${lvl}`).toBeGreaterThan(0);
+    }
+  });
+
+  it('stays G-rated and kind (no K-Pop, food, phones or going outside)', () => {
+    const banned = /\b(k-?pop|kiss|crush|boyfriend|girlfriend|date|weight|fat|ugly|secret|embarrass|lick|eat|taste|phone|texting|go outside|run outside|kill|blood|scared?)\b/i;
+    for (const c of TOD_CARDS) expect(banned.test(c.text), `${c.id}: ${c.text}`).toBe(false);
   });
 });

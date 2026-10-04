@@ -91,6 +91,11 @@ export const GAME_BADGES: GameBadge[] = [
   plays('wyr_first', 'would_you_rather', 'Big Decider', '🤷', 1, 'Play a round of Would You Rather'),
   plays('wyr_10', 'would_you_rather', 'Choice Champion', '⚖️', 10, 'Play 10 rounds of Would You Rather'),
 
+  // 🎭 Truth or Dare (truth_or_dare_dares = all dares done, ever; truth_or_dare_super = a Super brave game)
+  plays('tod_first', 'truth_or_dare', 'Truth Teller', '🎭', 1, 'Finish a game of Truth or Dare'),
+  { id: 'tod_dares_10', name: 'Daredevil', icon: '⚡', description: 'Do 10 dares in Truth or Dare', game: 'truth_or_dare', test: c => (c.highScores.truth_or_dare_dares ?? 0) >= 10 },
+  { id: 'tod_super_brave', name: 'Super Brave', icon: '🤯', description: 'Finish a Super brave game of Truth or Dare', game: 'truth_or_dare', test: c => (c.highScores.truth_or_dare_super ?? 0) >= 1 },
+
   // 🏃 Rush Runner
   best('kr_300', 'kpop_rush', 'Quick Feet', '👟', 300, 'Score 300 in Rush Runner'),
   best('kr_1500', 'kpop_rush', 'Speed Star', '🏃', 1500, 'Score 1,500 in Rush Runner'),

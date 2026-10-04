@@ -71,6 +71,8 @@ export const QUESTS: Quest[] = [
   { id: 'q_15badges', title: 'Collect 15 game badges', icon: '🏆', reward: 45, check: s => s.gameBadges.length >= 15, screen: 'achievement_showcase' },
   { id: 'q_grow', title: 'Raise your pet to Big Pal (14 days)', icon: '🐔', reward: 50, check: s => !!s.pet && s.pet.growth >= 14, screen: 'pet_pal' },
   { id: 'q_level5', title: 'Become a Champion (level 5)', icon: '👑', reward: 60, check: s => s.level >= 4, screen: 'game_mode' },
+  // Added later — keep new quests at the end so nobody's open quest moves behind them.
+  { id: 'q_truth_dare', title: 'Play a game of Truth or Dare', icon: '🎭', reward: 30, check: s => (s.rounds.truth_or_dare ?? 0) >= 1, screen: 'truth_or_dare' },
 ];
 
 export type QuestStatus = 'claimed' | 'ready' | 'current' | 'locked';

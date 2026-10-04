@@ -7,7 +7,7 @@ import { GAME_BADGES } from './data/gameBadges';
 
 export type GameState =
   | 'welcome' | 'game_mode'
-  | 'team_maker' | 'secret_menu' | 'living_mural' | 'agent_hq' | 'kpop_rush'
+  | 'team_maker' | 'secret_menu' | 'doodle_pad' | 'sticker_board' | 'agent_hq' | 'kpop_rush'
   | 'word_scramble' | 'idol_personality_quiz' | 'dance_battle' | 'beat_maker'
   | 'huntrx_splash' | 'truth_or_dare' | 'trivia_battle' | 'talent_show' | 'zip_game' | 'mini_sudoku'
   | 'crossword_mini' | 'word_ladder' | 'memory_speed' | 'reaction_duel' | 'streak_calendar'
@@ -98,8 +98,25 @@ export type EventProgress = Record<string, string[]>;
 export interface SavedQuiz { id: string; title: string; emoji: string; questions: QuizQuestion[]; updatedAt: number }
 
 /** What the player has equipped from the Locker. */
-export interface Equipped { avatar: string; color: string; trail: string; title: string }
-export const DEFAULT_EQUIPPED: Equipped = { avatar: '😎', color: '#3b82f6', trail: '', title: '' };
+export interface Equipped {
+  avatar: string; color: string; trail: string; title: string;
+  /** Pixel Studio art id used as the Paper Clash token ('' = the avatar emoji). */
+  skin: string;
+}
+export const DEFAULT_EQUIPPED: Equipped = { avatar: '😎', color: '#3b82f6', trail: '', title: '', skin: '' };
+
+/** A Truth or Dare card the kids wrote themselves ("Our cards" pack). */
+export interface TodCustomCard { id: string; kind: 'truth' | 'dare'; text: string; emoji: string }
+export const MAX_TOD_CUSTOM = 50;
+
+/** Pixel Studio art: `size`×`size` colours, '' = empty. */
+export interface PixelArt { id: string; name: string; size: number; pixels: string[]; updatedAt: number }
+export const MAX_PIXEL_ART = 20;
+
+/** Agent HQ code-breaking progress. */
+export interface AgentProgress { solvedIds: string[]; solved: number }
+
+export interface PaperClashPrefs { style: 'new' | 'classic' }
 
 export interface WordGuessState {
   /** The daily puzzle in progress / finished (keyed by local date). */
@@ -146,6 +163,13 @@ interface GameStore {
   pet: PetState | null;
   events: EventProgress;
   datesPlayed: string[];
+  // v4
+  todCustom: TodCustomCard[];
+  pixelArt: PixelArt[];
+  agent: AgentProgress;
+  /** Hidden easter eggs found (ids from data/secrets.ts). */
+  secretsFound: string[];
+  paperClash: PaperClashPrefs;
 
   // Team maker
   teamMembers: string[];
@@ -164,8 +188,15 @@ interface GameStore {
     treasureFound: number;
   };
 
+  /** Where a Secret Club screen's Back goes (not saved). */
+  secretReturn: GameState | null;
+
   // Actions
   setGameState: (state: GameState) => void;
+  /** Opens a hidden screen and remembers where its Back button should return. */
+  openSecret: (screen: GameState, returnTo: GameState) => void;
+  /** Back from a hidden screen (to wherever it was opened from, else the Secret Club). */
+  leaveSecret: () => void;
   setUserName: (name: string) => void;
 
   setCurrentTrack: (track: number) => void;
@@ -211,6 +242,14 @@ interface GameStore {
   collectEventItem: (eventKey: string, itemId: string) => boolean;
   /** Clears all progress (Parent corner). */
   resetProgress: () => void;
+  saveTodCard: (card: TodCustomCard) => void;
+  deleteTodCard: (id: string) => void;
+  savePixelArt: (art: PixelArt) => void;
+  deletePixelArt: (id: string) => void;
+  setAgent: (patch: Partial<AgentProgress>) => void;
+  /** Marks an easter egg as found. Returns true the first time. */
+  findSecret: (id: string) => boolean;
+  setPaperClash: (patch: Partial<PaperClashPrefs>) => void;
   incrementDrawingsCreated: () => void;
   incrementBubblesPopped: () => void;
   incrementPatternsCreated: () => void;
@@ -218,6 +257,74 @@ interface GameStore {
 }
 
 const SAVE_KEY = 'funquest-save';
+
+export const SAVE_VERSION = 4;
+
+/** What gets saved: progress only — never the current screen, an in-progress game or secretReturn. */
+export function partializeSave(s: GameStore) {
+  return {
+    userName: s.userName,
+    xp: s.xp,
+    userCurrency: s.userCurrency,
+    highScores: s.highScores,
+    datesPlayed: s.datesPlayed,
+    earnedBadges: s.earnedBadges,
+    totalQuizzesCompleted: s.totalQuizzesCompleted,
+    totalCorrectAnswers: s.totalCorrectAnswers,
+    songsListened: s.songsListened,
+    inventory: s.inventory,
+    myQuizzes: s.myQuizzes,
+    equipped: s.equipped,
+    dailyDoneDate: s.dailyDoneDate,
+    wordGuess: s.wordGuess,
+    playLog: s.playLog,
+    rounds: s.rounds,
+    gameBadges: s.gameBadges,
+    parent: s.parent,
+    pet: s.pet,
+    events: s.events,
+    secretStats: s.secretStats,
+    huntrxUnlocked: s.huntrxUnlocked,
+    currentTheme: s.currentTheme,
+    volume: s.volume,
+    teamMembers: s.teamMembers,
+    todCustom: s.todCustom,
+    pixelArt: s.pixelArt,
+    agent: s.agent,
+    secretsFound: s.secretsFound,
+    paperClash: s.paperClash,
+  };
+}
+
+/**
+ * Upgrades an older save. Missing top-level keys fall back to the store defaults when the save is
+ * merged in, so only nested shapes need fixing here.
+ */
+export function migrateSave(persisted: unknown, version: number): Partial<GameStore> {
+  const s = (persisted ?? {}) as Partial<GameStore>;
+  // v1 → v2 added myQuizzes, equipped, dailyDoneDate and wordGuess.
+  if (version < 2) {
+    s.myQuizzes = s.myQuizzes ?? [];
+    s.dailyDoneDate = s.dailyDoneDate ?? '';
+  }
+  // v2 → v3 added playLog, rounds, gameBadges, parent, pet, events.
+  if (version < 3) s.parent = { ...DEFAULT_PARENT, ...(s.parent ?? {}) };
+  // v3 → v4 added todCustom, pixelArt, agent, secretsFound, paperClash and equipped.skin.
+  if (version < 4) {
+    s.todCustom = s.todCustom ?? [];
+    s.pixelArt = s.pixelArt ?? [];
+    s.agent = { solvedIds: [], solved: 0, ...(s.agent ?? {}) };
+    s.secretsFound = s.secretsFound ?? [];
+    s.paperClash = { style: 'new', ...(s.paperClash ?? {}) };
+  }
+  s.equipped = { ...DEFAULT_EQUIPPED, ...(s.equipped ?? {}) };
+  return s;
+}
+
+/** Content keys outside the main save that "Reset all progress" also clears. */
+const RESET_KEYS = ['cipher_*', 'ciphers_solved', 'jarvis_students', 'jarvis_seen_intro', 'style_saves', 'style_*', 'funquest-quests-claimed', 'diary_list', 'zip_best', 'wordladder_solved'];
+const RESET_DBS = ['funquest-doodles', 'TLDRAW_DOCUMENT_v2kpop-fun-quest-mural-v2'];
+
 
 // One-time import of the scattered pre-persist localStorage keys, so existing scores survive.
 const LEGACY_SCORES: Record<string, string> = {
@@ -302,9 +409,17 @@ export const useGameStore = create<GameStore>()(
       parent: DEFAULT_PARENT,
       pet: null,
       events: {},
+      todCustom: [],
+      pixelArt: [],
+      agent: { solvedIds: [], solved: 0 },
+      secretsFound: [],
+      paperClash: { style: 'new' },
       secretStats: { bubblesPopped: 0, patternsCreated: 0, drawingsCreated: 0, treasureFound: 0 },
 
       setGameState: (state) => set({ gameState: state }),
+      secretReturn: null,
+      openSecret: (screen, returnTo) => set({ gameState: screen, secretReturn: returnTo }),
+      leaveSecret: () => set({ gameState: get().secretReturn ?? 'secret_menu', secretReturn: null }),
       setUserName: (name) => set({ userName: name }),
 
       setCurrentTrack: (track) => set({ currentTrack: track }),
@@ -466,9 +581,34 @@ export const useGameStore = create<GameStore>()(
         return true;
       },
       resetProgress: () => {
-        try { localStorage.removeItem(SAVE_KEY); } catch { /* ignore */ }
+        try {
+          localStorage.removeItem(SAVE_KEY);
+          // Per-screen content keys outside the main save.
+          for (const k of Object.keys(localStorage)) if (RESET_KEYS.some(r => (r.endsWith('*') ? k.startsWith(r.slice(0, -1)) : k === r))) localStorage.removeItem(k);
+          for (const db of RESET_DBS) indexedDB.deleteDatabase(db);
+        } catch { /* ignore */ }
         window.location.reload();
       },
+      saveTodCard: (card) => {
+        const list = get().todCustom.filter(c => c.id !== card.id);
+        set({ todCustom: [...list, card].slice(-MAX_TOD_CUSTOM) });
+      },
+      deleteTodCard: (id) => set({ todCustom: get().todCustom.filter(c => c.id !== id) }),
+      savePixelArt: (art) => {
+        const list = get().pixelArt.filter(a => a.id !== art.id);
+        set({ pixelArt: [art, ...list].slice(0, MAX_PIXEL_ART) });
+      },
+      deletePixelArt: (id) => {
+        const { pixelArt, equipped } = get();
+        set({ pixelArt: pixelArt.filter(a => a.id !== id), equipped: equipped.skin === id ? { ...equipped, skin: '' } : equipped });
+      },
+      setAgent: (patch) => set({ agent: { ...get().agent, ...patch } }),
+      findSecret: (id) => {
+        if (get().secretsFound.includes(id)) return false;
+        set({ secretsFound: [...get().secretsFound, id] });
+        return true;
+      },
+      setPaperClash: (patch) => set({ paperClash: { ...get().paperClash, ...patch } }),
       incrementDrawingsCreated: () => bump(set, get, 'drawingsCreated'),
       incrementBubblesPopped: () => bump(set, get, 'bubblesPopped'),
       incrementPatternsCreated: () => bump(set, get, 'patternsCreated'),
@@ -476,49 +616,11 @@ export const useGameStore = create<GameStore>()(
     }),
     {
       name: SAVE_KEY,
-      version: 3,
+      version: SAVE_VERSION,
       storage: createJSONStorage(() => localStorage),
       // Only progress is saved — never the current screen or an in-progress quiz.
-      partialize: (s) => ({
-        userName: s.userName,
-        xp: s.xp,
-        userCurrency: s.userCurrency,
-        highScores: s.highScores,
-        datesPlayed: s.datesPlayed,
-        earnedBadges: s.earnedBadges,
-        totalQuizzesCompleted: s.totalQuizzesCompleted,
-        totalCorrectAnswers: s.totalCorrectAnswers,
-        songsListened: s.songsListened,
-        inventory: s.inventory,
-        myQuizzes: s.myQuizzes,
-        equipped: s.equipped,
-        dailyDoneDate: s.dailyDoneDate,
-        wordGuess: s.wordGuess,
-        playLog: s.playLog,
-        rounds: s.rounds,
-        gameBadges: s.gameBadges,
-        parent: s.parent,
-        pet: s.pet,
-        events: s.events,
-        secretStats: s.secretStats,
-        huntrxUnlocked: s.huntrxUnlocked,
-        currentTheme: s.currentTheme,
-        volume: s.volume,
-        teamMembers: s.teamMembers,
-      }),
-      // v1 → v2 added myQuizzes, equipped, dailyDoneDate and wordGuess. Missing keys fall back to
-      // the defaults above when the saved state is merged in, so only the shape needs fixing.
-      migrate: (persisted, version) => {
-        const s = (persisted ?? {}) as Partial<GameStore>;
-        if (version < 2) {
-          s.myQuizzes = s.myQuizzes ?? [];
-          s.equipped = { ...DEFAULT_EQUIPPED, ...(s.equipped ?? {}) };
-          s.dailyDoneDate = s.dailyDoneDate ?? '';
-        }
-        // v2 → v3 added playLog, rounds, gameBadges, parent, pet, events (all default to empty).
-        if (version < 3) s.parent = { ...DEFAULT_PARENT, ...(s.parent ?? {}) };
-        return s as GameStore;
-      },
+      partialize: partializeSave,
+      migrate: (persisted, version) => migrateSave(persisted, version) as unknown as GameStore,
       onRehydrateStorage: () => (state) => {
         try { LEGACY_KEYS.forEach(k => localStorage.removeItem(k)); } catch { /* ignore */ }
         if (state) document.documentElement.setAttribute('data-theme', state.currentTheme);

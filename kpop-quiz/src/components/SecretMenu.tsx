@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
-import DrawingCanvas from './DrawingCanvas';
 import PatternMaker from './PatternMaker';
 import AppStatsDashboard from './AppStatsDashboard';
 import ThemeSwitcher from './ThemeSwitcher';
@@ -54,20 +53,25 @@ const SecretMenu: React.FC = () => {
           >
             {tab === 'create' && (
               <>
-                <DrawingCanvas />
+                <button onClick={() => useGameStore.getState().openSecret('doodle_pad', 'secret_menu')}
+                  className="w-full rounded-2xl p-5 bg-purple-50 border-2 border-purple-200 text-left min-h-[88px]">
+                  <div className="text-4xl mb-1">🎨</div>
+                  <div className="font-fredoka text-xl text-purple-700">Doodle Pad</div>
+                  <div className="font-nunito text-base text-gray-600">Draw, paint, add stickers and keep a gallery.</div>
+                </button>
                 <div className="border-t-4 border-pink-200 pt-6"><PatternMaker /></div>
               </>
             )}
             {tab === 'hidden' && (
               <div className="grid sm:grid-cols-3 gap-4">
                 {[
-                  { id: 'living_mural' as const, icon: '🖼️', title: 'Living Mural', desc: 'A giant canvas to draw on together.' },
+                  { id: 'sticker_board' as const, icon: '🖼️', title: 'Sticker Board', desc: 'A giant board of stickers and doodles.' },
                   { id: 'agent_hq' as const, icon: '🕵️', title: 'Agent HQ', desc: 'Crack ciphers and run secret missions.' },
                   { id: 'locker' as const, icon: '🎒', title: 'Locker', desc: 'Spend your coins on avatars, colours and trails.' },
                 ].map(p => (
                   <button
                     key={p.id}
-                    onClick={() => setGameState(p.id)}
+                    onClick={() => useGameStore.getState().openSecret(p.id, 'secret_menu')}
                     className="rounded-2xl p-5 bg-purple-50 border-2 border-purple-200 hover:border-purple-400 text-left"
                   >
                     <div className="text-4xl mb-2">{p.icon}</div>

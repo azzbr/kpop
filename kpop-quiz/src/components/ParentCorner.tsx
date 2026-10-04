@@ -10,7 +10,7 @@ const NAMES: Record<string, string> = {
   rocket_launch: '🚀 Rocket Launch', battle_arena: '⚔️ Battle Arena', game_2048: '🧮 2048', block_blast: '🧱 Block Blast',
   word_guess: '🟩 Word Guess', quiz_arena: '❓ Quiz Arena', quiz_party: '🎉 Quiz Party', real_or_fake: '🤔 Real or Fake',
   emoji_guess: '🕵️ Emoji Guess', would_you_rather: '🤷 Would You Rather', pattern_memory: '🧠 Pattern Memory',
-  sparkle_match: '💎 Gem Match', tower_defense: '🏰 Tower Defense', heads_up: '🙆 Heads Up', imposter: '🤫 Imposter',
+  sparkle_match: '💎 Gem Match', tower_defense: '🏰 Tower Defense', heads_up: '🙆 Heads Up', imposter: '🤫 Imposter', truth_or_dare: '🎭 Truth or Dare',
   battle_arena_losses: '⚔️ Battle Arena',
 };
 const BREAKS = [0, 20, 30, 45, 60];

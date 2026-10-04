@@ -15,7 +15,8 @@ import { useEventTheme } from './events/useEventTheme';
 const SCREENS: Partial<Record<GameState, LazyExoticComponent<ComponentType>>> = {
   team_maker: lazy(() => import('./components/TeamMaker')),
   secret_menu: lazy(() => import('./components/SecretMenu')),
-  living_mural: lazy(() => import('./components/LivingMural')),
+  doodle_pad: lazy(() => import('./components/draw/DoodlePad')),
+  sticker_board: lazy(() => import('./components/draw/StickerBoard')),
   agent_hq: lazy(() => import('./components/AgentHQ')),
   kpop_rush: lazy(() => import('./components/KPopRushGame')),
   word_scramble: lazy(() => import('./components/WordScramble')),
@@ -97,7 +98,7 @@ function App() {
           {renderCurrentScreen()}
         </AnimatePresence>
       </Suspense>
-      <MusicPlayer hidden={gameState === 'living_mural' || gameState === 'fm_radio'} />
+      <MusicPlayer hidden={gameState === 'fm_radio'} />
       <PlayTimeTracker />
       <BadgeToast />
       <PumpkinHunt screen={gameState} />

@@ -1,0 +1,94 @@
+{
+  "state": {
+    "userName": "Mia",
+    "xp": 196,
+    "userCurrency": 461,
+    "highScores": {
+      "paper_clash": 123,
+      "game_2048": 2048,
+      "word_guess": 4
+    },
+    "datesPlayed": [
+      "2026-10-04"
+    ],
+    "earnedBadges": [],
+    "totalQuizzesCompleted": 0,
+    "totalCorrectAnswers": 0,
+    "songsListened": 0,
+    "inventory": [
+      "rare_star"
+    ],
+    "myQuizzes": [
+      {
+        "id": "q1",
+        "title": "Our pets",
+        "emoji": "🐶",
+        "created": 1,
+        "questions": [
+          {
+            "type": "truefalse",
+            "text": "Cats purr",
+            "options": [
+              "True",
+              "False"
+            ],
+            "correct": 0
+          }
+        ],
+        "updatedAt": 1791144057010
+      }
+    ],
+    "equipped": {
+      "avatar": "🦊",
+      "color": "#3b82f6",
+      "trail": "",
+      "title": ""
+    },
+    "dailyDoneDate": "",
+    "wordGuess": {
+      "daily": null,
+      "played": 0,
+      "won": 0,
+      "streak": 0,
+      "bestStreak": 0
+    },
+    "playLog": {
+      "2026-10-04": {
+        "seconds": 600,
+        "games": {
+          "paper_clash": 1,
+          "game_2048": 1,
+          "word_guess": 1
+        }
+      }
+    },
+    "rounds": {
+      "paper_clash": 1,
+      "game_2048": 1,
+      "word_guess": 1
+    },
+    "gameBadges": [
+      "pc_first",
+      "pc_10",
+      "g2048_1k",
+      "wg_solve"
+    ],
+    "parent": {
+      "breakMinutes": 30,
+      "sfxVolume": 1
+    },
+    "pet": null,
+    "events": {},
+    "secretStats": {
+      "bubblesPopped": 0,
+      "patternsCreated": 0,
+      "drawingsCreated": 0,
+      "treasureFound": 0
+    },
+    "huntrxUnlocked": false,
+    "currentTheme": "default",
+    "volume": 0.5,
+    "teamMembers": []
+  },
+  "version": 3
+}

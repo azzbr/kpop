@@ -7,7 +7,7 @@ import type { QuestState } from './quests';
 const KNOWN_GAMES = [
   'paper_clash', 'snake_arena', 'game_2048', 'block_blast', 'word_guess', 'quiz_arena', 'quiz_party',
   'real_or_fake', 'emoji_guess', 'would_you_rather', 'kpop_rush', 'ninja_slice', 'rocket_launch',
-  'battle_arena', 'pattern_memory', 'sparkle_match', 'tower_defense', 'heads_up', 'imposter',
+  'battle_arena', 'pattern_memory', 'sparkle_match', 'tower_defense', 'heads_up', 'imposter', 'truth_or_dare',
 ];
 
 /** A plausible good-but-not-amazing score per game, in finishRound units. */
@@ -90,7 +90,7 @@ describe('game badges', () => {
 // Quest Map data (kept here: quests.ts has no test file of its own).
 
 describe('quests', () => {
-  const eq = { avatar: '😎', color: '#3b82f6', trail: '', title: '' };
+  const eq = { avatar: '😎', color: '#3b82f6', trail: '', title: '', skin: '' };
   const fresh: QuestState = {
     userName: '', xp: 0, level: 0, userCurrency: 100, highScores: {}, rounds: {}, datesPlayed: [], gameBadges: [],
     pet: null, myQuizzes: [], equipped: eq, defaultEquipped: eq, inventory: [], dailyDoneDate: '',
@@ -118,7 +118,7 @@ describe('quests', () => {
   it('a player who has done everything can finish the whole map', () => {
     const pet = { name: 'Pip', species: 'chick', growth: 30, happiness: 90, lastVisitDate: 'x', lastFedDate: 'x', decor: ['pet_ball'], born: 'x' };
     const rounds: Record<string, number> = {};
-    ['a', 'b', 'c', 'd', 'e', 'f', 'quiz_party'].forEach(g => { rounds[g] = 5; });
+    ['a', 'b', 'c', 'd', 'e', 'f', 'quiz_party', 'truth_or_dare'].forEach(g => { rounds[g] = 5; });
     const all: QuestState = {
       ...fresh, userName: 'Mia', xp: 5000, level: 6, rounds, datesPlayed: Array.from({ length: 8 }, (_, i) => `d${i}`),
       gameBadges: Array.from({ length: 20 }, (_, i) => `b${i}`), pet, myQuizzes: [{ id: '1', title: 't', emoji: '❓', questions: [], updatedAt: 0 }],
