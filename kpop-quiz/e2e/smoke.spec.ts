@@ -38,9 +38,9 @@ for (const category of CATEGORIES) {
   test(`${category}: every tile opens cleanly and Back returns to the grid`, async ({ page }) => {
     test.setTimeout(180_000);
     const errors = watchErrors(page);
-    // Teacher tiles only show in Jarvis mode, so turn it on to cover them too.
-    await openApp(page, '/', { seed: { jarvis_mode: '1' } });
-    await enterName(page, 'Smoke');
+    // Teacher tiles only show in Jarvis mode (a Jarvis name, submitted), so play as the teacher.
+    await openApp(page, '/');
+    await enterName(page, 'Mr Jarvis');
 
     const section = () => page.locator('section').filter({ has: page.locator('h2', { hasText: category }) }).first();
     const titles = (await section().locator('button h3').allTextContents()).map(t => t.trim());
@@ -69,7 +69,7 @@ for (const category of CATEGORIES) {
           // Back went somewhere other than the grid — record it and get home the long way.
           wentElsewhere.push(title);
           await page.reload();
-          await enterName(page, 'Smoke');
+          await enterName(page, 'Mr Jarvis');
         }
         expect.soft(errors, `${title}: no page or console errors`).toEqual([]);
       });
@@ -80,8 +80,8 @@ for (const category of CATEGORIES) {
 }
 
 test('the grid lists every category, including the teacher tiles in Jarvis mode', async ({ page }) => {
-  await openApp(page, '/', { seed: { jarvis_mode: '1' } });
-  await enterName(page, 'Smoke');
+  await openApp(page, '/');
+  await enterName(page, 'Mr Jarvis');
   const titles = (await page.locator('section button h3').allTextContents()).map(t => t.trim());
   expect(titles.length).toBeGreaterThan(30);
   expect(titles).toContain("Mr. Jarvis's Lounge");

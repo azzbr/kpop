@@ -1,7 +1,8 @@
 /* Spooky-cute Halloween look. Active while <html data-event="halloween"> (useEventTheme). */
 
 /* Night sky: moon glow, twinkly stars, three tiny bats, orange/purple gradient. */
-[data-event="halloween"] .arcade-bg {
+/* Only on the default theme: a theme picked in the Theme Lab wins over the event background. */
+[data-event="halloween"]:is([data-theme="default"], :not([data-theme])) .arcade-bg {
   background:
     /* moon */
     radial-gradient(circle at 88% 9%, rgba(255, 237, 180, 0.9) 0 26px, rgba(255, 214, 120, 0.25) 27px, transparent 80px),

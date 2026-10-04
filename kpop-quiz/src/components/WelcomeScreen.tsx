@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
 import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playUnlock, playClick, playWin } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
+import { SECRETS } from '../data/secrets';
 
 const FUN_FACTS = [
   "🐙 An octopus has three hearts and blue blood!",
@@ -18,153 +19,142 @@ const FUN_FACTS = [
   "🧠 Your brain uses about 20% of your body's energy!",
 ]
 
+const VISITS_KEY = 'funquest-welcome-visits';
+type Letter = 'F' | 'Q' | 'A';
+const LETTER_SECRET: Record<Letter, string> = { F: 'f_board', Q: 'q_fact', A: 'a_club' };
+
+// Teacher mode unlocks on any spelling of the teacher's name (John Jarvis):
+// "Jarvis", "Mr Jarvis", "Mr. Jarvis", "John Jarvis", "J-Jarvis", "Mr J", "John J"...
+const isJarvisName = (raw: string) => {
+  const letters = raw.toLowerCase().replace(/[^a-z]/g, '');
+  return letters.includes('jarvis') || letters === 'mrj' || letters === 'johnj';
+};
+/** "HUNTRX", "HUNTR/X", "huntr x"… */
+const isHuntrxName = (raw: string) => raw.toUpperCase().replace(/[^A-Z]/g, '') === 'HUNTRX';
+
 const WelcomeScreen: React.FC = () => {
   const [inputName, setInputName] = useState(() => useGameStore.getState().userName);
-  const [pAnimationState, setPAnimationState] = useState<'idle' | 'discovering' | 'unlocked'>('idle');
-  const [fAnimationState, setFAnimationState] = useState<'idle' | 'discovering' | 'unlocked'>('idle');
-
-  // Easter egg 1: HUNTRX name
-  const [huntrxMode, setHuntrxMode] = useState(false);
-  // Easter egg 2: Q click — fact bubble
+  const [opening, setOpening] = useState<Letter | null>(null);
   const [factBubble, setFactBubble] = useState<string | null>(null);
-  const [qClicks, setQClicks] = useState(0);
-  // Easter egg 3: 🎵 tap 5× for DJ pulse
   const [noteClicks, setNoteClicks] = useState(0);
   const [djMode, setDjMode] = useState(false);
-  // Easter egg 4: JARVIS teacher mode
-  const [jarvisMode, setJarvisMode] = useState(false);
   const [jarvisSplash, setJarvisSplash] = useState(false);
   const [jarvisCountdown, setJarvisCountdown] = useState(3);
+  const [secretToast, setSecretToast] = useState<string | null>(null);
+  const [hint, setHint] = useState<Letter | null>(null);
 
-  const { setUserName, setGameState } = useGameStore();
+  const { setUserName, setGameState, findSecret, openSecret } = useGameStore();
   const later = useSafeTimeout();
-  const audioContextRef = React.useRef<AudioContext | null>(null);
+  const factTimer = useRef<number | undefined>(undefined);
+  const djTimer = useRef<number | undefined>(undefined);
 
-  // Initialize AudioContext lazily to comply with browser autoplay policies
-  const getAudioContext = () => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-    }
-    if (audioContextRef.current.state === 'suspended') {
-      audioContextRef.current.resume();
-    }
-    return audioContextRef.current;
+  // The name box shows the mode live; the mode only switches on when the name is submitted.
+  const huntrxMode = isHuntrxName(inputName);
+  const jarvisMode = !huntrxMode && isJarvisName(inputName);
+
+  const found = (id: string) => {
+    if (!findSecret(id)) return;
+    const n = useGameStore.getState().secretsFound.length;
+    setSecretToast(`🔓 Secret found! (${n}/${SECRETS.length})`);
+    later(() => setSecretToast(null), 2200);
   };
 
-  const playTransitionSound = () => {
-    try {
-      const ctx = getAudioContext();
-      // Generic "Sparkle" / "Twinkle" oscillator sequence
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(500, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(1000, ctx.currentTime + 0.5);
-      gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.5);
-    } catch (e) {
-      console.error("Audio error", e);
-    }
-  };
+  // After a few visits, a little ✨ hints at a letter secret not found yet.
+  useEffect(() => {
+    let visits = 0;
+    try { visits = Number(localStorage.getItem(VISITS_KEY) || 0) + 1; localStorage.setItem(VISITS_KEY, String(visits)); } catch { /* storage blocked */ }
+    if (visits < 3) return;
+    const id = window.setInterval(() => {
+      const left = (Object.keys(LETTER_SECRET) as Letter[]).filter(l => !useGameStore.getState().secretsFound.includes(LETTER_SECRET[l]));
+      if (!left.length) return;
+      setHint(left[Math.floor(Math.random() * left.length)]);
+      window.setTimeout(() => setHint(null), 2500);
+    }, 20000);
+    return () => window.clearInterval(id);
+  }, []);
 
-  // Teacher mode unlocks on any spelling of the teacher's name (John Jarvis):
-  // "Jarvis", "Mr Jarvis", "Mr. Jarvis", "John Jarvis", "J-Jarvis", "Mr J", "John J"...
-  const isJarvisName = (raw: string) => {
-    const letters = raw.toLowerCase().replace(/[^a-z]/g, '');
-    return letters.includes('jarvis') || letters === 'mrj' || letters === 'johnj';
-  };
-
-  // Easter egg 1: detect HUNTRX in name input
-  const handleNameChange = (val: string) => {
-    setInputName(val);
-    const upper = val.toUpperCase().trim();
-    const jarvisName = isJarvisName(val);
-    if (upper === 'HUNTRX' && !huntrxMode) {
-      setHuntrxMode(true);
-      setJarvisMode(false);
-      playWin();
-    } else if (upper !== 'HUNTRX') {
-      setHuntrxMode(false);
-    }
-    if (jarvisName && !jarvisMode) {
-      setJarvisMode(true);
-      localStorage.setItem('jarvis_mode', '1');
-      playUnlock();
-    } else if (!jarvisName) {
-      setJarvisMode(false);
-    }
-  };
+  useEffect(() => () => { window.clearTimeout(factTimer.current); window.clearTimeout(djTimer.current); }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (inputName.trim()) {
-      setUserName(inputName.trim());
-      if (huntrxMode) {
-        setGameState('huntrx_splash');
-      } else if (jarvisMode) {
-        setJarvisSplash(true);
-        setJarvisCountdown(3);
-        playWin();
-        const tick = (n: number) => {
-          if (n <= 0) { setJarvisSplash(false); setGameState('game_mode'); return; }
-          setJarvisCountdown(n);
-          later(() => tick(n - 1), 1000);
-        };
-        later(() => tick(2), 1000);
-      } else {
-        setGameState('game_mode');
-      }
+    const name = inputName.trim();
+    if (!name) return;
+    setUserName(name);
+    try {
+      if (jarvisMode) localStorage.setItem('jarvis_mode', '1');
+      else localStorage.removeItem('jarvis_mode');
+    } catch { /* storage blocked */ }
+    if (huntrxMode) {
+      found('huntrx');
+      setGameState('huntrx_splash');
+    } else if (jarvisMode) {
+      setJarvisSplash(true);
+      setJarvisCountdown(3);
+      playWin();
+      const tick = (n: number) => {
+        if (n <= 0) { setJarvisSplash(false); setGameState('game_mode'); return; }
+        setJarvisCountdown(n);
+        later(() => tick(n - 1), 1000);
+      };
+      later(() => tick(2), 1000);
+    } else {
+      setGameState('game_mode');
     }
   };
 
-  // Easter egg 2: click Q in Quest
-  const handleQClick = () => {
-    const next = qClicks + 1;
-    setQClicks(next);
+  const tapQ = () => {
     playClick();
-    const fact = FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)];
-    setFactBubble(fact);
-    later(() => setFactBubble(null), 4000);
+    found('q_fact');
+    setFactBubble(FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)]);
+    window.clearTimeout(factTimer.current);
+    factTimer.current = window.setTimeout(() => setFactBubble(null), 4000);
   };
 
-  // Easter egg 3: tap 🎵 5 times
-  const handleNoteClick = () => {
+  const tapJoystick = () => {
+    if (djMode) return;
+    playClick();
     const next = noteClicks + 1;
     setNoteClicks(next);
-    playClick();
     if (next >= 5) {
       setDjMode(true);
       playUnlock();
-      later(() => { setDjMode(false); setNoteClicks(0); }, 5000);
+      found('dj_mode');
+      window.clearTimeout(djTimer.current);
+      djTimer.current = window.setTimeout(() => { setDjMode(false); setNoteClicks(0); }, 5000);
     }
   };
 
-  const handlePClick = () => {
-    if (pAnimationState === 'idle') {
-      setPAnimationState('discovering');
-      // Trigger sparkle effect, screen shake, etc.
-      later(() => {
-        setGameState('secret_menu');
-        setPAnimationState('unlocked');
-      }, 2000);
-    }
+  const openLetter = (l: 'F' | 'A') => {
+    if (opening) return;
+    setOpening(l);
+    playUnlock();
+    found(LETTER_SECRET[l]);
+    later(() => {
+      if (l === 'A') setGameState('secret_menu');
+      else openSecret('sticker_board', 'welcome');
+    }, 600);
   };
 
-  const handleFClick = () => {
-    if (fAnimationState === 'idle') {
-      setFAnimationState('discovering');
-      playTransitionSound();
-      // Trigger living mural launch
-      later(() => {
-        useGameStore.getState().openSecret('sticker_board', 'welcome');
-        setFAnimationState('unlocked');
-      }, 1500); // Slightly faster for better feel
-    }
-  };
+  const letterBtn = (l: Letter, onTap: () => void, label: string) => (
+    <motion.button
+      type="button"
+      aria-label={label}
+      onClick={onTap}
+      whileTap={{ scale: 0.85 }}
+      animate={opening === l ? { scale: [1, 1.3, 1], rotate: [0, 8, -8, 0], color: ['#ffffff', '#ff00ff', '#00ffff', '#ffffff'] } : {}}
+      transition={{ duration: 0.5 }}
+      className="relative inline-flex items-center justify-center min-w-[48px] min-h-[48px] select-none align-baseline"
+      style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+    >
+      {l}
+      <AnimatePresence>
+        {hint === l && (
+          <motion.span initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: [1, 1.4, 1] }} exit={{ opacity: 0 }}
+            transition={{ duration: 1.2, repeat: 1 }} className="absolute -top-2 -right-3 text-2xl pointer-events-none" aria-hidden>✨</motion.span>
+        )}
+      </AnimatePresence>
+    </motion.button>
+  );
 
   return (
     <motion.div
@@ -174,15 +164,24 @@ const WelcomeScreen: React.FC = () => {
         ? { scale: [1, 1.02, 0.98, 1.02, 1], filter: ['hue-rotate(0deg)', 'hue-rotate(60deg)', 'hue-rotate(180deg)', 'hue-rotate(300deg)', 'hue-rotate(360deg)'] }
         : huntrxMode
         ? { scale: [1, 1.04, 1, 1.04, 1] }
-        : fAnimationState === 'discovering'
-        ? { scale: [1, 1.5, 20], opacity: [1, 0.8, 0] }
+        : opening === 'F'
+        ? { scale: [1, 1.4, 12], opacity: [1, 0.8, 0] }
         : { opacity: 1, y: 0, scale: 1 }
       }
       exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: djMode ? 5 : fAnimationState === 'discovering' ? 1.5 : 0.5, repeat: djMode ? Infinity : 0 }}
+      transition={{ duration: djMode ? 5 : opening === 'F' ? 0.6 : 0.5, repeat: djMode ? Infinity : 0 }}
       className="flex flex-col items-center justify-center min-h-screen-d px-4 text-center arcade-bg text-white"
     >
       {huntrxMode && <ConfettiBurst count={50} durationMs={3000} />}
+
+      <AnimatePresence>
+        {secretToast && (
+          <motion.div initial={{ y: -30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ opacity: 0 }} role="status"
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-50 rounded-full bg-yellow-300 text-violet-900 font-fredoka text-xl px-6 py-3 shadow-xl">
+            {secretToast}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Jarvis teacher splash overlay */}
       <AnimatePresence>
@@ -256,15 +255,16 @@ const WelcomeScreen: React.FC = () => {
           transition={{ delay: 0.2, duration: 0.5, type: "spring", stiffness: 200 }}
           className="mb-6"
         >
-          <motion.span
-            onClick={handleNoteClick}
-            whileHover={{ scale: 1.15, rotate: [0, -8, 8, 0] }}
+          <motion.button
+            type="button"
+            onClick={tapJoystick}
             whileTap={{ scale: 0.85 }}
-            className="text-6xl md:text-8xl cursor-pointer select-none inline-block"
-            title={noteClicks > 0 ? `${5 - noteClicks} more taps...` : '🎵'}
+            aria-label="Joystick"
+            className="text-6xl md:text-8xl select-none inline-block min-w-[48px] min-h-[48px]"
+            style={{ touchAction: 'manipulation' }}
           >
             {djMode ? '🎧' : '🕹️'}
-          </motion.span>
+          </motion.button>
           {noteClicks > 0 && noteClicks < 5 && (
             <div className="text-violet-300 text-sm font-fredoka mt-1">{5 - noteClicks} more…</div>
           )}
@@ -280,46 +280,13 @@ const WelcomeScreen: React.FC = () => {
           initial={{ scale: 0.8 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.3, duration: 0.5 }}
-          className="text-5xl md:text-7xl font-fredoka font-bold text-white mb-4 drop-shadow-[0_0_18px_rgba(217,70,239,0.8)]"
+          className="text-5xl md:text-7xl font-fredoka font-bold text-white mb-4 drop-shadow-[0_0_18px_rgba(217,70,239,0.8)] select-none"
         >
-          <motion.span
-            animate={fAnimationState === 'discovering' ? {
-              scale: [1, 1.2, 1],
-              rotate: [0, 5, -5, 0],
-              color: ['#a855f7', '#ff00ff', '#00ffff', '#a855f7']
-            } : {}}
-            transition={{ duration: 0.3, repeat: 3 }}
-            onClick={handleFClick}
-            className={`cursor-pointer hover:scale-110 inline-block transition-transform duration-200 ${
-              fAnimationState === 'discovering' ? 'animate-pulse' : ''
-            }`}
-          >
-            F
-          </motion.span>
+          {letterBtn('F', () => openLetter('F'), 'F')}
           <span>un </span>
-          <motion.span
-            onClick={handleQClick}
-            whileHover={{ scale: 1.15, color: '#f59e0b' }}
-            whileTap={{ scale: 0.85 }}
-            className="cursor-pointer hover:text-yellow-500 inline-block transition-colors duration-200"
-          >
-            Q
-          </motion.span>
+          {letterBtn('Q', tapQ, 'Q')}
           <span>uest </span>
-          <motion.span
-            animate={pAnimationState === 'discovering' ? {
-              scale: [1, 1.2, 1],
-              rotate: [0, -5, 5, 0],
-              color: ['#a855f7', '#ff00ff', '#00ffff', '#a855f7']
-            } : {}}
-            transition={{ duration: 0.3, repeat: 3 }}
-            onClick={handlePClick}
-            className={`cursor-pointer hover:scale-110 inline-block transition-transform duration-200 ${
-              pAnimationState === 'discovering' ? 'animate-pulse' : ''
-            }`}
-          >
-            A
-          </motion.span>
+          {letterBtn('A', () => openLetter('A'), 'A')}
           <span>rcade</span>
         </motion.h1>
 
@@ -359,7 +326,7 @@ const WelcomeScreen: React.FC = () => {
               id="player-name"
               type="text"
               value={inputName}
-              onChange={(e) => handleNameChange(e.target.value)}
+              onChange={(e) => setInputName(e.target.value)}
               placeholder="Enter your awesome name..."
               className={`w-full px-6 py-4 bg-white border-3 rounded-full text-gray-800 placeholder-purple-400 focus:outline-none focus:ring-4 transition-all duration-300 text-lg font-nunito shadow-lg ${
                 huntrxMode
@@ -374,7 +341,7 @@ const WelcomeScreen: React.FC = () => {
               {huntrxMode && (
                 <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                   className="text-yellow-600 font-fredoka font-bold text-center mt-2">
-                  ✨ You've unlocked the HUNTR/X secret! ✨
+                  ✨ Tap the button to unlock the HUNTR/X secret! ✨
                 </motion.p>
               )}
               {jarvisMode && (
@@ -409,13 +376,12 @@ const WelcomeScreen: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, scale: 0.5 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 1.5, duration: 0.5 }}
+          transition={{ delay: 0.9, duration: 0.4 }}
           className="mt-8"
         >
           <button
-            onClick={() => setGameState('agent_hq')}
-            className="flex items-center space-x-2 text-violet-300/70 hover:text-white transition-colors font-fredoka text-base"
-            title="Enter Agent Headquarters"
+            onClick={() => { playClick(); found('agent_hq'); openSecret('agent_hq', 'welcome'); }}
+            className="inline-flex items-center gap-2 min-h-[48px] px-5 rounded-full bg-white/10 text-violet-200 font-fredoka text-lg"
           >
             <span className="text-lg">🕵️‍♀️</span>
             <span>Secret HQ</span>

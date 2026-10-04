@@ -5,7 +5,6 @@ import { LOCKER_ITEMS, ownsItem } from '../data/lockerItems';
 import { eventLockerItems, isRewardOnly } from '../events/events';
 import { localDateKey } from '../utils/dates';
 import type { LockerItem, LockerKind } from '../data/lockerItems';
-import ThemeSwitcher from './ThemeSwitcher';
 import { playClick, playWrong, playUnlock } from '../utils/sounds';
 import { useSafeTimeout } from '../utils/useSafeTimeout';
 
@@ -78,7 +77,12 @@ export default function Locker() {
         </div>
 
         {tab === 'theme' ? (
-          <div className="rounded-3xl bg-white p-4 text-slate-900"><ThemeSwitcher /></div>
+          <div className="rounded-3xl bg-white/10 p-6 text-center">
+            <div className="text-5xl mb-2">🌈</div>
+            <p className="font-nunito text-lg text-violet-100 mb-4">Themes change the colours of the whole arcade.</p>
+            <button onClick={() => { playClick(); useGameStore.getState().openSecret('theme_lab', 'locker'); }}
+              className="min-h-[56px] px-8 rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-400 font-fredoka text-xl">Open the Theme Lab</button>
+          </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {[...LOCKER_ITEMS, ...eventLockerItems(localDateKey(), inventory)].filter(i => i.kind === tab).map(item => {

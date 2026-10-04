@@ -4,11 +4,11 @@ import { useGameStore } from '../store';
 import { playWin } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
-const POWERS = [
-  { name: 'Rumi', emoji: '⚡', power: 'Telekinesis', color: 'text-yellow-400' },
-  { name: 'Mira', emoji: '🌸', power: 'Healing Voice', color: 'text-pink-400' },
-  { name: 'Zoey', emoji: '🌙', power: 'Time Control', color: 'text-blue-400' },
-  { name: 'Celine', emoji: '🌟', power: 'Star Magic', color: 'text-purple-400' },
+// The three members of HUNTR/X (the band on the soundtrack). Celine is their mentor, not a member.
+const MEMBERS = [
+  { name: 'Rumi', emoji: '🎤', role: 'Leader & lead singer' },
+  { name: 'Mira', emoji: '💃', role: 'Main dancer' },
+  { name: 'Zoey', emoji: '✍️', role: 'Rapper & songwriter' },
 ];
 
 const PERKS = [
@@ -126,15 +126,16 @@ const HuntrxSplash: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.4 }}
-          className="grid grid-cols-4 gap-2 mb-6"
+          className="grid grid-cols-3 gap-2 mb-6"
         >
-          {POWERS.map((member) => (
+          {MEMBERS.map((member) => (
             <div
               key={member.name}
               className="bg-white bg-opacity-10 rounded-xl p-2 backdrop-blur-sm border border-white border-opacity-20"
             >
               <div className="text-2xl">{member.emoji}</div>
-              <p className="font-fredoka font-bold text-white text-xs">{member.name}</p>
+              <p className="font-fredoka font-bold text-white text-base">{member.name}</p>
+              <p className="font-nunito text-white/80 text-sm leading-tight">{member.role}</p>
             </div>
           ))}
         </motion.div>

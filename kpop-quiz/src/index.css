@@ -50,12 +50,16 @@
     text-shadow: 0 0 8px rgba(255, 105, 180, 0.5);
   }
 
-  /* Dark arcade backdrop used by the welcome screen, game grid and new games. */
-  .arcade-bg {
+  /* Dark arcade backdrop used by the welcome screen, game grid and new games.
+     Colours come from the --arcade-* variables, which each [data-theme] redefines (see "Theme
+     overrides" below). .theme-swatch is the same backdrop for Theme Lab previews; it is not
+     restyled by events (halloween.css only targets .arcade-bg). */
+  .arcade-bg,
+  .theme-swatch {
     background:
-      radial-gradient(circle at 20% 10%, rgba(217, 70, 239, 0.25) 0%, transparent 45%),
-      radial-gradient(circle at 85% 80%, rgba(56, 189, 248, 0.2) 0%, transparent 45%),
-      linear-gradient(160deg, #1e1b4b 0%, #312e81 55%, #1e1b4b 100%);
+      radial-gradient(circle at 20% 10%, var(--arcade-glow-1) 0%, transparent 45%),
+      radial-gradient(circle at 85% 80%, var(--arcade-glow-2) 0%, transparent 45%),
+      linear-gradient(160deg, var(--arcade-1) 0%, var(--arcade-2) 55%, var(--arcade-3) 100%);
   }
 
   /* Screen height that follows Safari's toolbar (100vh is too tall on iPad). */
@@ -80,6 +84,55 @@
 }
 
 /* Theme overrides */
+
+/* Arcade backdrop colours per theme. Bubblegum ('default') = the original indigo look.
+   Defined on any [data-theme] element so Theme Lab previews can show a theme on a card.
+   While an event is on, halloween.css ([data-event="halloween"] .arcade-bg, higher specificity)
+   replaces the whole .arcade-bg background, so the event look wins over every theme. */
+:root,
+[data-theme="default"] {
+  --arcade-glow-1: rgba(217, 70, 239, 0.25);
+  --arcade-glow-2: rgba(56, 189, 248, 0.2);
+  --arcade-1: #1e1b4b;
+  --arcade-2: #312e81;
+  --arcade-3: #1e1b4b;
+}
+[data-theme="neon"] {
+  --arcade-glow-1: rgba(34, 211, 238, 0.32);
+  --arcade-glow-2: rgba(236, 72, 153, 0.3);
+  --arcade-1: #0f0c29;
+  --arcade-2: #302b63;
+  --arcade-3: #24243e;
+}
+[data-theme="ocean"] {
+  --arcade-glow-1: rgba(45, 212, 191, 0.28);
+  --arcade-glow-2: rgba(56, 189, 248, 0.3);
+  --arcade-1: #082f49;
+  --arcade-2: #0e7490;
+  --arcade-3: #0c4a6e;
+}
+[data-theme="forest"] {
+  --arcade-glow-1: rgba(163, 230, 53, 0.22);
+  --arcade-glow-2: rgba(52, 211, 153, 0.25);
+  --arcade-1: #052e16;
+  --arcade-2: #166534;
+  --arcade-3: #064e3b;
+}
+[data-theme="sunset"] {
+  --arcade-glow-1: rgba(251, 191, 36, 0.32);
+  --arcade-glow-2: rgba(244, 63, 94, 0.3);
+  --arcade-1: #431407;
+  --arcade-2: #9a3412;
+  --arcade-3: #881337;
+}
+[data-theme="galaxy"] {
+  --arcade-glow-1: rgba(167, 139, 250, 0.32);
+  --arcade-glow-2: rgba(45, 212, 191, 0.22);
+  --arcade-1: #1a0533;
+  --arcade-2: #2d1b69;
+  --arcade-3: #0f766e;
+}
+
 [data-theme="neon"] body {
   background: linear-gradient(135deg, #0f0c29, #302b63, #24243e) !important;
   color: #f0f0ff;

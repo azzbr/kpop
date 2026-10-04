@@ -28,7 +28,7 @@ interface Mission { title: string; brief: string; equipment: string; minutes: nu
 const SCIENCE_MISSIONS: Mission[] = [
   { title: 'Static Hair Training', brief: 'Rub a balloon on your hair, then lift it slowly — your hair follows!', equipment: 'Balloon', minutes: 2, science: 'Static electricity — electrons jump between materials.' },
   { title: 'Lava Lamp Vocal Warmup', brief: 'Drop a fizzy tablet in water + oil. Watch the bubbles rise!', equipment: 'Cup, water, oil, fizzy tablet', minutes: 5, science: 'Gas bubbles carry oil up; oil and water don\'t mix.' },
-  { title: 'Idol Heart Rate Check', brief: 'Find your pulse on your wrist. Count beats for 15 sec, multiply by 4.', equipment: 'A clock', minutes: 1, science: 'Your heart pumps blood. Faster pulse = more oxygen needed.' },
+  { title: 'Superstar Heart Rate Check', brief: 'Find your pulse on your wrist. Count beats for 15 sec, multiply by 4.', equipment: 'A clock', minutes: 1, science: 'Your heart pumps blood. Faster pulse = more oxygen needed.' },
   { title: 'Rainbow Skittles Stage', brief: 'Arrange Skittles in a circle on a plate, pour warm water — rainbow!', equipment: 'Plate, Skittles, warm water', minutes: 3, science: 'Sugar dissolves at the same rate; colors don\'t mix instantly.' },
   { title: 'Paper Plane Concert Tour', brief: 'Fold 3 different paper planes. Time which flies longest.', equipment: 'Paper, stopwatch', minutes: 6, science: 'Lift, drag, and weight — same forces as real planes!' },
   { title: 'Salt Water Egg Float', brief: 'Make an egg float by adding salt. How many spoons does it take?', equipment: 'Glass, egg, salt, water', minutes: 4, science: 'Density! Salt water is denser than fresh water.' },
@@ -37,7 +37,7 @@ const SCIENCE_MISSIONS: Mission[] = [
   { title: 'Sound Cup Phone', brief: 'Two cups, one tight string. Whisper into one, friend hears the other.', equipment: '2 cups, string', minutes: 4, science: 'Sound = vibrations. String carries them between cups.' },
   { title: 'Volcano Vocalist', brief: 'Bicarb soda + vinegar in a cup. ERUPTION! (Outside, please.)', equipment: 'Vinegar, bicarb, cup', minutes: 3, science: 'Acid + base = CO₂ gas, which makes the fizz.' },
   { title: 'Floating Pencil Trick', brief: 'Hold a pencil loosely, shake your hand — it looks bendy!', equipment: 'A pencil', minutes: 1, science: 'Persistence of vision — your eyes blur fast motion.' },
-  { title: 'Idol Reaction Time', brief: 'Drop a ruler — partner catches it. cm = your reaction time!', equipment: '30cm ruler', minutes: 2, science: 'Your brain takes ~0.2 sec to react. Practice = faster!' },
+  { title: 'Superstar Reaction Time', brief: 'Drop a ruler — partner catches it. cm = your reaction time!', equipment: '30cm ruler', minutes: 2, science: 'Your brain takes ~0.2 sec to react. Practice = faster!' },
 ];
 
 interface QuizQ { q: string; options: string[]; correct: number; joke?: string; }
@@ -100,8 +100,8 @@ const CHEER_LINES = [
 interface Challenge { category: string; emoji: string; text: string; }
 const CHALLENGES: Challenge[] = [
   // Brain
-  { category: 'Brain', emoji: '🧠', text: 'Spell K-POP backwards out loud!' },
-  { category: 'Brain', emoji: '🧠', text: 'Name 3 K-Pop groups in 10 seconds!' },
+  { category: 'Brain', emoji: '🧠', text: 'Spell ARCADE backwards out loud!' },
+  { category: 'Brain', emoji: '🧠', text: 'Name 3 board games in 10 seconds!' },
   { category: 'Brain', emoji: '🧠', text: 'Count to 20 by 2s as fast as you can!' },
   { category: 'Brain', emoji: '🧠', text: 'Math relay: 7+5, 12+8, 20+15 — go!' },
   { category: 'Brain', emoji: '🧠', text: 'Name 5 countries that start with "S"!' },
@@ -114,10 +114,10 @@ const CHALLENGES: Challenge[] = [
   { category: 'Body', emoji: '🏃', text: 'Touch your toes 10 times!' },
   { category: 'Body', emoji: '🏃', text: 'Wall sit for 20 seconds!' },
   // Voice
-  { category: 'Voice', emoji: '🎤', text: 'Hum a K-Pop song — class guesses!' },
+  { category: 'Voice', emoji: '🎤', text: 'Hum a famous song — class guesses!' },
   { category: 'Voice', emoji: '🎤', text: 'Sing the alphabet — but only in whispers!' },
   { category: 'Voice', emoji: '🎤', text: 'Tongue twister: "She sells seashells…" x3!' },
-  { category: 'Voice', emoji: '🎤', text: 'Make up a 4-word K-Pop song title!' },
+  { category: 'Voice', emoji: '🎤', text: 'Make up a 4-word pop song title!' },
   // Silly
   { category: 'Silly', emoji: '🤪', text: 'Make the silliest face — others vote!' },
   { category: 'Silly', emoji: '🤪', text: 'Dance for 10 seconds without smiling!' },
@@ -137,7 +137,7 @@ const REWARDS = [
   { emoji: '✏️', text: 'Free draw time!' },
   { emoji: '🍪', text: 'Class picks tomorrow\'s snack!' },
   { emoji: '🎮', text: '10 mins extra recess!' },
-  { emoji: '🎵', text: 'Pick the next K-Pop game!' },
+  { emoji: '🎵', text: 'Pick the next arcade game!' },
   { emoji: '🎬', text: 'Short movie clip (5 min)!' },
   { emoji: '🏐', text: 'Silent ball game!' },
   { emoji: '🪑', text: 'Sit anywhere day!' },
@@ -408,7 +408,7 @@ const JarvisHQ: React.FC = () => {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="min-h-screen p-4 flex flex-col items-center"
+      className="min-h-screen-d p-4 flex flex-col items-center overflow-x-hidden"
       style={{ background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}
     >
       {confetti && <ConfettiBurst count={50} durationMs={2000} />}
@@ -428,15 +428,15 @@ const JarvisHQ: React.FC = () => {
               <p className="font-nunito text-amber-100 text-base mb-3 leading-relaxed">
                 This is <span className="font-bold text-amber-300">YOUR</span> teacher's secret menu. The class doesn't know it exists. 🤫
               </p>
-              <div className="bg-amber-100 text-stone-900 rounded-2xl p-4 mb-3 text-left font-nunito text-sm leading-relaxed border-2 border-amber-700">
+              <div className="bg-amber-100 text-stone-900 rounded-2xl p-4 mb-3 text-left font-nunito text-base leading-relaxed border-2 border-amber-700">
                 <p className="font-fredoka font-bold text-amber-700 text-base mb-2">📜 The Pact:</p>
                 <p>• If <span className="font-bold">YOU</span> get a Pop Quiz answer wrong, the class wins a <span className="font-bold">10-minute fun reward</span>.</p>
                 <p>• They choose: 🏃 PE · 💃 dance · ✏️ free draw · or anything else from the Reward Roulette.</p>
                 <p>• Roll 1v1 Battles · Spin Class Rewards · Big classroom Timer · Cheer Cannon.</p>
-                <p className="mt-2 text-xs italic text-stone-600">Sign here: <span className="font-bold">Mr. Jarvis ✍️</span></p>
+                <p className="mt-2 text-sm italic text-stone-600">Sign here: <span className="font-bold">Mr. Jarvis ✍️</span></p>
               </div>
               <button onClick={closeIntro}
-                className="w-full py-3 rounded-full bg-amber-500 hover:bg-amber-400 text-stone-900 font-fredoka font-bold text-lg">
+                className="w-full min-h-[48px] py-3 rounded-full bg-amber-500 hover:bg-amber-400 text-stone-900 font-fredoka font-bold text-lg">
                 🍎 Accept &amp; Enter the Lounge
               </button>
             </motion.div>
@@ -457,10 +457,10 @@ const JarvisHQ: React.FC = () => {
               className="bg-amber-400 text-stone-900 rounded-3xl p-6 max-w-sm w-full text-center border-8 border-red-500">
               <div className="text-5xl mb-2">🎉</div>
               <p className="font-fredoka font-bold text-2xl mb-2">CLASS WINS!</p>
-              <p className="font-nunito text-sm mb-3">Mr. Jarvis got that one wrong! 😂<br/>Your reward:</p>
+              <p className="font-nunito text-base mb-3">Mr. Jarvis got that one wrong! 😂<br/>Your reward:</p>
               <div className="bg-stone-900 text-amber-300 rounded-2xl p-4 font-fredoka text-xl mb-3">{classWins}</div>
               <button onClick={() => setClassWins(null)}
-                className="px-6 py-2 rounded-full bg-stone-900 text-amber-300 font-fredoka">Tap to claim 🎊</button>
+                className="min-h-[48px] px-6 py-2 rounded-full bg-stone-900 text-amber-300 font-fredoka text-lg">Tap to claim 🎊</button>
             </motion.div>
           </motion.div>
         )}
@@ -472,7 +472,7 @@ const JarvisHQ: React.FC = () => {
           <motion.div
             initial={{ scale: 0, rotate: -10 }} animate={{ scale: 1, rotate: 0 }} exit={{ scale: 0, opacity: 0 }}
             className="fixed inset-0 flex items-center justify-center pointer-events-none z-50">
-            <div className="bg-amber-400 text-stone-900 font-fredoka font-bold text-4xl md:text-6xl px-8 py-6 rounded-3xl shadow-2xl border-8 border-amber-600 text-center">
+            <div className="bg-amber-400 text-stone-900 font-fredoka font-bold text-3xl md:text-6xl px-6 py-6 max-w-[90vw] break-words rounded-3xl shadow-2xl border-8 border-amber-600 text-center">
               {cheer}
             </div>
           </motion.div>
@@ -480,25 +480,25 @@ const JarvisHQ: React.FC = () => {
       </AnimatePresence>
 
       <div className="max-w-2xl w-full mx-auto">
-        <div className="flex gap-2 mb-3">
+        <div className="flex flex-wrap gap-2 mb-3">
           <button onClick={() => { playClick(); setGameState('game_mode'); }}
-            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-stone-900 rounded-full font-fredoka text-sm">← Back</button>
+            className="min-h-[48px] min-w-[48px] px-5 py-2 bg-amber-500 hover:bg-amber-400 text-stone-900 rounded-full font-fredoka text-base">← Back</button>
           <button onClick={() => setShowIntro(true)}
-            className="px-3 py-2 bg-stone-800 hover:bg-stone-700 text-amber-300 rounded-full font-fredoka text-xs border border-amber-700">📜 Pact</button>
+            className="min-h-[48px] min-w-[48px] px-4 py-2 bg-stone-800 hover:bg-stone-700 text-amber-300 rounded-full font-fredoka text-base border border-amber-700">📜 Pact</button>
         </div>
 
         {/* Header */}
         <div className="text-center mb-4 p-5 rounded-3xl border-4 border-amber-700" style={PANEL_BG}>
           <div className="text-5xl mb-1">👨‍🏫</div>
           <h1 className="text-3xl md:text-4xl font-fredoka font-bold text-amber-200">Mr. Jarvis's Lounge</h1>
-          <p className="font-nunito text-amber-100/80 text-sm">Class is in session 🍎📋⭐</p>
+          <p className="font-nunito text-amber-100/80 text-base">Class is in session 🍎📋⭐</p>
         </div>
 
         {/* Tabs */}
-        <div className="grid grid-cols-4 md:grid-cols-7 gap-1 mb-4 bg-stone-800 rounded-2xl p-1 border-2 border-amber-700">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(4.5rem,1fr))] gap-1 mb-4 bg-stone-800 rounded-2xl p-1 border-2 border-amber-700">
           {TABS.map(t => (
             <button key={t.id} onClick={() => { playClick(); setTab(t.id); }}
-              className={`py-2 px-1 rounded-xl font-fredoka text-xs transition-colors ${tab === t.id ? 'bg-amber-500 text-stone-900' : 'text-amber-200 hover:bg-stone-700'}`}>
+              className={`min-h-[56px] min-w-[44px] py-2 px-1 rounded-xl font-fredoka text-sm transition-colors ${tab === t.id ? 'bg-amber-500 text-stone-900' : 'text-amber-200 hover:bg-stone-700'}`}>
               <div className="text-lg">{t.emoji}</div>
               <div>{t.label}</div>
             </button>
@@ -508,11 +508,11 @@ const JarvisHQ: React.FC = () => {
         {/* POP QUIZ */}
         {tab === 'quiz' && (
           <div className="rounded-3xl p-5 border-4 border-amber-700" style={PANEL_BG}>
-            <div className="flex justify-between items-center mb-2 text-amber-100 font-fredoka text-sm">
+            <div className="flex justify-between items-center mb-2 text-amber-100 font-fredoka text-base">
               <span>Question {qIdx + 1} / {POP_QUIZ.length}</span>
               <span>✅ {classScore} · ❌ {classMisses}</span>
             </div>
-            <p className="text-amber-300/80 font-nunito text-xs mb-2 text-center italic">
+            <p className="text-amber-300/80 font-nunito text-base mb-2 text-center italic">
               ⚠️ Get this wrong → Class wins a reward!
             </p>
             <div className="bg-stone-900/60 border-2 border-dashed border-amber-300 rounded-2xl p-4 mb-4">
@@ -530,7 +530,7 @@ const JarvisHQ: React.FC = () => {
                 }
                 return (
                   <motion.button key={i} whileTap={{ scale: 0.96 }} onClick={() => answer(i)} disabled={revealed}
-                    className={`py-3 px-3 rounded-xl font-fredoka text-sm md:text-base transition-colors ${style}`}>
+                    className={`min-h-[52px] py-3 px-3 rounded-xl font-fredoka text-base md:text-lg transition-colors ${style}`}>
                     <span className="font-bold mr-1">{['A','B','C','D'][i]}.</span> {opt}
                   </motion.button>
                 );
@@ -538,17 +538,17 @@ const JarvisHQ: React.FC = () => {
             </div>
             {revealed && q.joke && (
               <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                className="bg-amber-100 text-stone-800 font-nunito text-sm rounded-xl p-3 mb-3 text-center">
+                className="bg-amber-100 text-stone-800 font-nunito text-base rounded-xl p-3 mb-3 text-center">
                 💬 Mr. Jarvis says: <span className="font-bold">{q.joke}</span>
               </motion.div>
             )}
             <div className="flex gap-2">
               <button onClick={() => { setRevealed(true); playUnlock(); }} disabled={revealed}
-                className="flex-1 py-2 rounded-full font-fredoka text-sm bg-amber-500 text-stone-900 disabled:opacity-40 hover:bg-amber-400">🔍 Reveal</button>
+                className="flex-1 min-h-[48px] py-2 rounded-full font-fredoka text-base bg-amber-500 text-stone-900 disabled:opacity-40 hover:bg-amber-400">🔍 Reveal</button>
               <button onClick={nextQ}
-                className="flex-1 py-2 rounded-full font-fredoka text-sm bg-stone-700 text-amber-100 hover:bg-stone-600">➡️ Next</button>
+                className="flex-1 min-h-[48px] py-2 rounded-full font-fredoka text-base bg-stone-700 text-amber-100 hover:bg-stone-600">➡️ Next</button>
               <button onClick={resetQuiz}
-                className="px-3 py-2 rounded-full font-fredoka text-xs bg-red-700 text-white hover:bg-red-600">Reset</button>
+                className="min-h-[48px] min-w-[48px] px-4 py-2 rounded-full font-fredoka text-base bg-red-700 text-white hover:bg-red-600">Reset</button>
             </div>
           </div>
         )}
@@ -561,25 +561,25 @@ const JarvisHQ: React.FC = () => {
               <input value={studentInput} onChange={e => setStudentInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') addStudent(); }}
                 placeholder="Add student name…"
-                className="flex-1 px-3 py-2 rounded-full bg-stone-900 text-amber-100 placeholder-stone-500 border-2 border-amber-700 focus:outline-none focus:border-amber-400 font-nunito text-sm"/>
+                className="flex-1 min-w-0 min-h-[48px] px-4 py-2 rounded-full bg-stone-900 text-amber-100 placeholder-stone-500 border-2 border-amber-700 focus:outline-none focus:border-amber-400 font-nunito text-base"/>
               <button onClick={addStudent}
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-stone-900 rounded-full font-fredoka text-sm">+ Add</button>
+                className="min-h-[48px] min-w-[48px] px-4 py-2 bg-amber-500 hover:bg-amber-400 text-stone-900 rounded-full font-fredoka text-base">+ Add</button>
             </div>
             {students.length === 0 ? (
-              <p className="text-amber-100/70 font-nunito text-sm text-center py-3">Add a few students to start!</p>
+              <p className="text-amber-100/70 font-nunito text-base text-center py-3">Add a few students to start!</p>
             ) : (
-              <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+              <div className="flex flex-wrap gap-2 max-h-56 overflow-y-auto">
                 {students.map(s => (
-                  <span key={s.name} className="bg-stone-900 text-amber-100 rounded-full pl-3 pr-1 py-1 font-nunito text-sm border border-amber-700 flex items-center gap-1">
+                  <span key={s.name} className="bg-stone-900 text-amber-100 rounded-full pl-4 pr-0 py-0 font-nunito text-base border border-amber-700 flex items-center gap-1">
                     {s.name}
-                    <button onClick={() => removeStudent(s.name)} className="text-red-400 hover:text-red-300 px-1">×</button>
+                    <button onClick={() => removeStudent(s.name)} aria-label={`Remove ${s.name}`} className="min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center text-xl text-red-400 hover:text-red-300">×</button>
                   </span>
                 ))}
               </div>
             )}
             <div className="border-t border-amber-700/50 pt-3">
               <button onClick={spinPick} disabled={students.length < 2 || spinning}
-                className="w-full py-3 rounded-2xl font-fredoka text-lg bg-gradient-to-r from-amber-500 to-orange-500 text-stone-900 disabled:opacity-40 hover:from-amber-400">
+                className="w-full min-h-[48px] py-3 rounded-2xl font-fredoka text-lg bg-gradient-to-r from-amber-500 to-orange-500 text-stone-900 disabled:opacity-40 hover:from-amber-400">
                 🎯 Pick a Student!
               </button>
               <AnimatePresence mode="wait">
@@ -592,22 +592,22 @@ const JarvisHQ: React.FC = () => {
               </AnimatePresence>
             </div>
             <div className="border-t border-amber-700/50 pt-3">
-              <div className="flex gap-2 items-center mb-2">
-                <span className="font-fredoka text-amber-200 text-sm">Teams of</span>
+              <div className="flex flex-wrap gap-2 items-center mb-2">
+                <span className="font-fredoka text-amber-200 text-base">Teams of</span>
                 {[2, 3, 4].map(n => (
                   <button key={n} onClick={() => setTeamCount(n)}
-                    className={`w-8 h-8 rounded-full font-fredoka text-sm ${teamCount === n ? 'bg-amber-500 text-stone-900' : 'bg-stone-700 text-amber-100'}`}>{n}</button>
+                    className={`w-12 h-12 rounded-full font-fredoka text-lg ${teamCount === n ? 'bg-amber-500 text-stone-900' : 'bg-stone-700 text-amber-100'}`}>{n}</button>
                 ))}
                 <button onClick={makeTeams} disabled={students.length < teamCount}
-                  className="flex-1 py-2 px-3 bg-stone-700 hover:bg-stone-600 text-amber-100 rounded-full font-fredoka text-sm disabled:opacity-40">Split into teams!</button>
+                  className="flex-1 min-h-[48px] py-2 px-4 bg-stone-700 hover:bg-stone-600 text-amber-100 rounded-full font-fredoka text-base whitespace-nowrap disabled:opacity-40">Split into teams!</button>
               </div>
               {teams && (
                 <div className="grid grid-cols-2 gap-2">
                   {teams.map((t, i) => (
                     <motion.div key={i} initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: i * 0.08 }}
                       className="bg-stone-900 border-2 border-amber-700 rounded-xl p-2">
-                      <p className="font-fredoka text-amber-300 text-xs mb-1">Team {i + 1}</p>
-                      <div className="text-amber-100 font-nunito text-sm">{t.join(', ')}</div>
+                      <p className="font-fredoka text-amber-300 text-sm mb-1">Team {i + 1}</p>
+                      <div className="text-amber-100 font-nunito text-base">{t.join(', ')}</div>
                     </motion.div>
                   ))}
                 </div>
@@ -621,16 +621,16 @@ const JarvisHQ: React.FC = () => {
           <div className="rounded-3xl p-5 border-4 border-amber-700" style={PANEL_BG}>
             <h3 className="font-fredoka text-amber-200 text-lg mb-2">⭐ Gold Star Awards</h3>
             {students.length === 0 ? (
-              <p className="text-amber-100/70 font-nunito text-sm text-center py-3">Add students in the Roll Call tab first!</p>
+              <p className="text-amber-100/70 font-nunito text-base text-center py-3">Add students in the Roll Call tab first!</p>
             ) : (
               <div className="space-y-2">
                 {sortedByStars.map((s, i) => (
                   <div key={s.name} className="flex items-center gap-2 bg-stone-900 rounded-xl p-2 border border-amber-700">
                     <span className="font-fredoka text-amber-300 w-6 text-center">{i === 0 && s.stars > 0 ? '👑' : `#${i + 1}`}</span>
-                    <span className="flex-1 font-fredoka text-amber-100 text-sm">{s.name}</span>
-                    <span className="font-fredoka text-amber-300 text-sm min-w-[2rem] text-right">{s.stars}⭐</span>
-                    <button onClick={() => removeStar(s.name)} className="w-7 h-7 bg-stone-700 text-amber-100 rounded-full text-sm">−</button>
-                    <button onClick={() => awardStar(s.name)} className="w-7 h-7 bg-amber-500 hover:bg-amber-400 text-stone-900 rounded-full font-bold">+</button>
+                    <span className="flex-1 min-w-0 break-words font-fredoka text-amber-100 text-base">{s.name}</span>
+                    <span className="font-fredoka text-amber-300 text-base min-w-[2rem] text-right">{s.stars}⭐</span>
+                    <button onClick={() => removeStar(s.name)} aria-label={`Take a star from ${s.name}`} className="w-11 h-11 shrink-0 bg-stone-700 text-amber-100 rounded-full text-xl">−</button>
+                    <button onClick={() => awardStar(s.name)} aria-label={`Give ${s.name} a star`} className="w-12 h-12 shrink-0 bg-amber-500 hover:bg-amber-400 text-stone-900 rounded-full font-bold text-2xl">+</button>
                   </div>
                 ))}
               </div>
@@ -642,17 +642,17 @@ const JarvisHQ: React.FC = () => {
         {tab === 'battle' && (
           <div className="rounded-3xl p-5 border-4 border-amber-700" style={PANEL_BG}>
             <h3 className="font-fredoka text-amber-200 text-lg mb-2">🏆 Class Battle</h3>
-            <p className="font-nunito text-amber-100/80 text-sm mb-3">
+            <p className="font-nunito text-amber-100/80 text-base mb-3">
               Pick 2 students + a random challenge. Whoever wins gets a Gold Star! ⭐
             </p>
-            <div className="flex flex-wrap gap-1 mb-3">
+            <div className="flex flex-wrap gap-2 mb-3">
               {['Any', 'Brain', 'Body', 'Voice', 'Silly', 'Team'].map(c => (
                 <button key={c} onClick={() => { setFilterCategory(c); playClick(); }}
-                  className={`px-3 py-1 rounded-full font-fredoka text-xs ${filterCategory === c ? 'bg-amber-500 text-stone-900' : 'bg-stone-700 text-amber-100'}`}>{c}</button>
+                  className={`min-h-[44px] min-w-[44px] px-4 py-2 rounded-full font-fredoka text-base ${filterCategory === c ? 'bg-amber-500 text-stone-900' : 'bg-stone-700 text-amber-100'}`}>{c}</button>
               ))}
             </div>
             <button onClick={rollBattle}
-              className="w-full py-3 rounded-2xl bg-gradient-to-r from-red-500 via-orange-500 to-amber-500 text-white font-fredoka text-lg shadow-lg mb-3">
+              className="w-full min-h-[48px] py-3 rounded-2xl bg-gradient-to-r from-red-500 via-orange-500 to-amber-500 text-white font-fredoka text-lg shadow-lg mb-3">
               🎲 ROLL BATTLE!
             </button>
             <AnimatePresence mode="wait">
@@ -662,12 +662,12 @@ const JarvisHQ: React.FC = () => {
                   className="space-y-3">
                   {battlePair ? (
                     <div className="flex items-center gap-2 justify-center">
-                      <div className="flex-1 bg-blue-600 text-white rounded-2xl p-3 font-fredoka text-center text-lg">{battlePair[0]}</div>
+                      <div className="flex-1 min-w-0 break-words bg-blue-600 text-white rounded-2xl p-3 font-fredoka text-center text-lg">{battlePair[0]}</div>
                       <div className="text-amber-300 font-fredoka text-2xl">VS</div>
-                      <div className="flex-1 bg-red-600 text-white rounded-2xl p-3 font-fredoka text-center text-lg">{battlePair[1]}</div>
+                      <div className="flex-1 min-w-0 break-words bg-red-600 text-white rounded-2xl p-3 font-fredoka text-center text-lg">{battlePair[1]}</div>
                     </div>
                   ) : (
-                    <p className="text-center text-amber-200 font-nunito text-sm italic">
+                    <p className="text-center text-amber-200 font-nunito text-base italic">
                       (Add 2+ students in Roll Call to pick fighters!)
                     </p>
                   )}
@@ -688,7 +688,7 @@ const JarvisHQ: React.FC = () => {
         {tab === 'reward' && (
           <div className="rounded-3xl p-5 border-4 border-amber-700 text-center" style={PANEL_BG}>
             <h3 className="font-fredoka text-amber-200 text-xl mb-2">🎁 Reward Roulette</h3>
-            <p className="font-nunito text-amber-100/80 text-sm mb-3">
+            <p className="font-nunito text-amber-100/80 text-base mb-3">
               Class earned a treat? Spin the wheel of fun!
             </p>
             <motion.button whileTap={{ scale: 0.95 }} onClick={rollReward} disabled={rewardSpin}
@@ -704,7 +704,7 @@ const JarvisHQ: React.FC = () => {
                 <p className={`font-fredoka text-2xl ${rewardSpin ? 'text-amber-200' : 'text-stone-900'}`}>
                   {REWARDS[rewardIdx].text}
                 </p>
-                {!rewardSpin && <p className="font-nunito text-stone-700 text-xs mt-2 italic">🎉 Class winners — enjoy!</p>}
+                {!rewardSpin && <p className="font-nunito text-stone-700 text-base mt-2 italic">🎉 Class winners — enjoy!</p>}
               </motion.div>
             )}
           </div>
@@ -724,22 +724,22 @@ const JarvisHQ: React.FC = () => {
                   animate={{ width: `${timerPct}%` }} transition={{ duration: 0.3 }}/>
               </div>
             </div>
-            <div className="grid grid-cols-5 gap-1 mb-3">
+            <div className="grid grid-cols-5 gap-2 mb-3">
               {[30, 60, 120, 300, 600].map(s => (
                 <button key={s} onClick={() => resetTimer(s)}
-                  className={`py-2 rounded-xl font-fredoka text-xs ${timerSec === s ? 'bg-amber-500 text-stone-900' : 'bg-stone-700 text-amber-100'}`}>
+                  className={`min-h-[48px] min-w-[44px] py-2 rounded-xl font-fredoka text-base ${timerSec === s ? 'bg-amber-500 text-stone-900' : 'bg-stone-700 text-amber-100'}`}>
                   {s < 60 ? `${s}s` : `${s / 60}m`}
                 </button>
               ))}
             </div>
             <div className="flex gap-2">
               {timerRun ? (
-                <button onClick={pauseTimer} className="flex-1 py-3 rounded-full bg-stone-700 text-amber-100 font-fredoka">⏸ Pause</button>
+                <button onClick={pauseTimer} className="flex-1 min-h-[52px] py-3 rounded-full bg-stone-700 text-amber-100 font-fredoka text-lg">⏸ Pause</button>
               ) : (
                 <button onClick={startTimer} disabled={timerLeft === 0}
-                  className="flex-1 py-3 rounded-full bg-green-600 hover:bg-green-500 text-white font-fredoka disabled:opacity-40">▶ Start</button>
+                  className="flex-1 min-h-[52px] py-3 rounded-full bg-green-600 hover:bg-green-500 text-white font-fredoka text-lg disabled:opacity-40">▶ Start</button>
               )}
-              <button onClick={() => resetTimer(timerSec)} className="px-4 py-3 rounded-full bg-amber-500 text-stone-900 font-fredoka">↺ Reset</button>
+              <button onClick={() => resetTimer(timerSec)} className="min-h-[52px] px-5 py-3 rounded-full bg-amber-500 text-stone-900 font-fredoka text-lg">↺ Reset</button>
             </div>
           </div>
         )}
@@ -748,7 +748,7 @@ const JarvisHQ: React.FC = () => {
         {tab === 'noise' && (
           <div className="rounded-3xl p-5 border-4 border-amber-700 text-center" style={PANEL_BG}>
             <h3 className="font-fredoka text-amber-200 text-xl mb-2">🔔 Class Cheer Cannon</h3>
-            <p className="font-nunito text-amber-100/80 text-sm mb-4">Hit it whenever the class earns a celebration!</p>
+            <p className="font-nunito text-amber-100/80 text-base mb-4">Hit it whenever the class earns a celebration!</p>
             <motion.button whileTap={{ scale: 0.92 }} whileHover={{ scale: 1.05 }} onClick={fireCheer}
               className="w-full py-6 rounded-3xl bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 text-white font-fredoka text-3xl shadow-xl">
               🎉 FIRE THE CONFETTI! 🎉
@@ -759,7 +759,7 @@ const JarvisHQ: React.FC = () => {
         {tab === 'power' && (
           <div className="rounded-3xl p-5 border-4 border-amber-700" style={PANEL_BG}>
             <h3 className="font-fredoka text-amber-200 text-xl mb-1 text-center">🃏 Power Cards</h3>
-            <p className="font-nunito text-amber-100/80 text-sm mb-4 text-center">
+            <p className="font-nunito text-amber-100/80 text-base mb-4 text-center">
               Flip a card mid-game to keep teams close. Mr. Jarvis decides when to play one!
             </p>
             <motion.button whileTap={{ scale: 0.95 }} onClick={drawPowerCard} disabled={drawing}
@@ -780,7 +780,7 @@ const JarvisHQ: React.FC = () => {
                     'bg-gradient-to-br from-blue-400 to-cyan-500 border-blue-200 text-white'
                   }`}
                 >
-                  <div className="text-xs font-nunito uppercase tracking-widest opacity-80 mb-1">
+                  <div className="text-sm font-nunito uppercase tracking-widest opacity-80 mb-1">
                     {drawnCard.rarity === 'legendary' ? '★ LEGENDARY ★' : drawnCard.rarity === 'rare' ? '◆ RARE ◆' : '● COMMON ●'}
                   </div>
                   <div className="text-6xl mb-2">{drawnCard.emoji}</div>
@@ -789,7 +789,7 @@ const JarvisHQ: React.FC = () => {
                 </motion.div>
               )}
             </AnimatePresence>
-            <p className="font-nunito text-amber-100/60 text-xs mt-4 text-center">
+            <p className="font-nunito text-amber-100/60 text-base mt-4 text-center">
               💡 Save legendaries for the closest matches.
             </p>
           </div>
@@ -798,14 +798,14 @@ const JarvisHQ: React.FC = () => {
         {tab === 'boss' && (
           <div className="rounded-3xl p-5 border-4 border-red-700" style={PANEL_BG}>
             <h3 className="font-fredoka text-red-300 text-xl mb-1 text-center">👹 Boss Battle</h3>
-            <p className="font-nunito text-amber-100/80 text-sm mb-4 text-center">
-              Class vs the Anti-Fan Boss! Correct answers deal damage — wrong answers heal the Boss.
+            <p className="font-nunito text-amber-100/80 text-base mb-4 text-center">
+              Class vs the Homework Monster! Correct answers deal damage — wrong answers heal the Boss.
             </p>
 
             {!bossActive && !bossWon && !bossLost && (
               <motion.button whileTap={{ scale: 0.95 }} onClick={startBoss}
                 className="w-full py-5 rounded-2xl bg-gradient-to-br from-red-600 to-rose-800 text-white font-fredoka text-2xl shadow-xl">
-                👹 Summon the Anti-Fan Boss!
+                👹 Summon the Homework Monster!
               </motion.button>
             )}
 
@@ -813,8 +813,8 @@ const JarvisHQ: React.FC = () => {
               <>
                 {/* Boss health bar */}
                 <div className="mb-4">
-                  <div className="flex justify-between font-nunito text-sm text-amber-200 mb-1">
-                    <span>👹 Anti-Fan Boss HP</span>
+                  <div className="flex justify-between font-nunito text-base text-amber-200 mb-1">
+                    <span>👹 Homework Monster HP</span>
                     <span className="font-bold">{bossHP} / {BOSS_HP_MAX}</span>
                   </div>
                   <div className="h-6 bg-stone-900 rounded-full overflow-hidden border-2 border-red-700">
@@ -837,8 +837,8 @@ const JarvisHQ: React.FC = () => {
                     className="text-center py-6">
                     <div className="text-6xl mb-2">🏆</div>
                     <div className="font-fredoka text-3xl text-yellow-300 mb-2">CLASS WINS!</div>
-                    <div className="font-nunito text-amber-100 mb-4">The Anti-Fan Boss is defeated! 🎉</div>
-                    <button onClick={resetBoss} className="px-6 py-3 rounded-2xl bg-amber-500 text-stone-900 font-fredoka text-lg">Play Again</button>
+                    <div className="font-nunito text-amber-100 mb-4">The Homework Monster is defeated! 🎉</div>
+                    <button onClick={resetBoss} className="min-h-[48px] px-6 py-3 rounded-2xl bg-amber-500 text-stone-900 font-fredoka text-lg">Play Again</button>
                   </motion.div>
                 )}
 
@@ -846,16 +846,16 @@ const JarvisHQ: React.FC = () => {
                   <motion.div initial={{ scale: 0.7 }} animate={{ scale: 1 }}
                     className="text-center py-6">
                     <div className="text-6xl mb-2">💀</div>
-                    <div className="font-fredoka text-3xl text-red-400 mb-2">BOSS WINS... THIS TIME!</div>
+                    <div className="font-fredoka text-3xl text-red-400 mb-2">MONSTER WINS... THIS TIME!</div>
                     <div className="font-nunito text-amber-100 mb-4">The class needs more training! Try again 💪</div>
-                    <button onClick={resetBoss} className="px-6 py-3 rounded-2xl bg-red-700 text-white font-fredoka text-lg">Rematch!</button>
+                    <button onClick={resetBoss} className="min-h-[48px] px-6 py-3 rounded-2xl bg-red-700 text-white font-fredoka text-lg">Rematch!</button>
                   </motion.div>
                 )}
 
                 {bossActive && bossQ && (
                   <>
                     <div className="bg-stone-900 rounded-2xl p-4 mb-3 border border-stone-700">
-                      <div className="font-nunito text-xs text-amber-400 uppercase mb-2">Question {bossQIdx + 1}</div>
+                      <div className="font-nunito text-sm text-amber-400 uppercase mb-2">Question {bossQIdx + 1}</div>
                       <div className="font-fredoka text-amber-100 text-lg leading-snug">{bossQ.questionText}</div>
                     </div>
                     <div className="grid grid-cols-1 gap-2 mb-3">
@@ -868,7 +868,7 @@ const JarvisHQ: React.FC = () => {
                             whileTap={{ scale: bossRevealed ? 1 : 0.96 }}
                             onClick={() => answerBoss(i)}
                             disabled={bossRevealed}
-                            className={`p-3 rounded-xl font-nunito text-sm text-left border-2 transition-colors ${
+                            className={`min-h-[52px] p-3 rounded-xl font-nunito text-base text-left border-2 transition-colors ${
                               isRight ? 'bg-green-800 border-green-400 text-green-100' :
                               isWrong ? 'bg-red-900 border-red-500 text-red-200' :
                               'bg-stone-800 border-stone-600 text-amber-100 hover:border-amber-500'
@@ -883,7 +883,7 @@ const JarvisHQ: React.FC = () => {
                       <motion.button
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                         onClick={nextBossQ}
-                        className="w-full py-3 rounded-2xl bg-amber-500 text-stone-900 font-fredoka text-lg">
+                        className="w-full min-h-[48px] py-3 rounded-2xl bg-amber-500 text-stone-900 font-fredoka text-lg">
                         Next Question →
                       </motion.button>
                     )}
@@ -896,9 +896,9 @@ const JarvisHQ: React.FC = () => {
 
         {tab === 'science' && (
           <div className="rounded-3xl p-5 border-4 border-amber-700" style={PANEL_BG}>
-            <h3 className="font-fredoka text-amber-200 text-xl mb-1 text-center">🧪 Idol Training Missions</h3>
-            <p className="font-nunito text-amber-100/80 text-sm mb-4 text-center">
-              Real science experiments — reframed as K-Pop idol training. Pick one for class!
+            <h3 className="font-fredoka text-amber-200 text-xl mb-1 text-center">🧪 Superstar Training Missions</h3>
+            <p className="font-nunito text-amber-100/80 text-base mb-4 text-center">
+              Real science experiments — dressed up as superstar training. Pick one for class!
             </p>
             <motion.button whileTap={{ scale: 0.95 }} onClick={drawMission}
               className="w-full py-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-fredoka text-2xl shadow-xl mb-4">
@@ -914,26 +914,26 @@ const JarvisHQ: React.FC = () => {
                   className="bg-amber-50 text-stone-900 rounded-2xl p-5 border-4 border-amber-400 shadow-xl"
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <div className="text-xs font-nunito uppercase tracking-wider text-amber-700">Mission Card</div>
-                    <div className="text-xs font-fredoka text-amber-700">⏱️ {mission.minutes} min</div>
+                    <div className="text-sm font-nunito uppercase tracking-wider text-amber-700">Mission Card</div>
+                    <div className="text-sm font-fredoka text-amber-700">⏱️ {mission.minutes} min</div>
                   </div>
                   <h4 className="font-fredoka text-2xl text-stone-900 mb-2">🎯 {mission.title}</h4>
                   <div className="bg-white rounded-xl p-3 mb-3 border-2 border-amber-200">
                     <div className="font-nunito text-base">{mission.brief}</div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
+                  <div className="grid grid-cols-2 gap-2 mb-3 text-base">
                     <div className="bg-stone-100 rounded-xl p-2">
-                      <div className="text-xs uppercase text-stone-500 font-nunito">Equipment</div>
+                      <div className="text-sm uppercase text-stone-500 font-nunito">Equipment</div>
                       <div className="font-fredoka">{mission.equipment}</div>
                     </div>
                     <div className="bg-stone-100 rounded-xl p-2">
-                      <div className="text-xs uppercase text-stone-500 font-nunito">Duration</div>
+                      <div className="text-sm uppercase text-stone-500 font-nunito">Duration</div>
                       <div className="font-fredoka">{mission.minutes} minutes</div>
                     </div>
                   </div>
                   <div className="bg-blue-50 border-l-4 border-blue-400 rounded-r-xl p-3">
-                    <div className="text-xs uppercase text-blue-700 font-nunito font-bold mb-1">🔬 The Science</div>
-                    <div className="font-nunito text-sm text-stone-700">{mission.science}</div>
+                    <div className="text-sm uppercase text-blue-700 font-nunito font-bold mb-1">🔬 The Science</div>
+                    <div className="font-nunito text-base text-stone-700">{mission.science}</div>
                   </div>
                 </motion.div>
               )}

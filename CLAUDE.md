@@ -88,6 +88,9 @@ The old scattered localStorage keys (`kpop_xp`, `ninja_best`, …) are imported 
 ### Truth or Dare (`truth_or_dare`)
 Cards in `data/truthOrDare.ts` (8 packs × 64, levels 1–3; the level is a ceiling and chosen packs are pooled). Rules in `components/games/truthOrDareLogic.ts` (+ test): fair laps (everyone once per lap, never twice in a row), the wheel lands on the picked player (`wheelRotation`), no repeats until a deck runs out, kind judging only (✅ Did it / 🐔 Chicken, 3 skips each, optional 😂). "Our cards" are kids' own cards (`todCustom`, through `cleanText`). Every card needs a tone review before shipping (see content rules).
 
+### Secrets (`data/secrets.ts`)
+Seven easter eggs, found ids saved in `secretsFound` via `findSecret` (welcome-screen letters F/Q/A are real 48px buttons; 🕹️×5 = DJ mode; Secret HQ; HUNTRX; wearing Pixel Studio art in Paper Clash). The Secret Club lists them with riddle hints. Every Secret Club room is opened with `openSecret(screen, 'secret_menu')` and leaves with `leaveSecret()`. Theme Lab themes set CSS variables used by `.arcade-bg` (`index.css`); a picked theme wins over a seasonal event's background. Agent HQ rules: `components/secretAgentLogic.ts`; Pixel Studio rules: `components/secret/pixelLogic.ts` (`drawPixelArt` draws a skin).
+
 ### Badges, quests, pet, events, parents
 - **Per-game badges**: `data/gameBadges.ts` — `finishRound` tests every badge after each round (+10 coins each); `BadgeToast` (mounted in App) announces them. Never rename a badge id.
 - **Quest Map** (`quest_map`): `data/quests.ts`, claimed ids in localStorage `funquest-quests-claimed`.
@@ -107,7 +110,7 @@ Cards in `data/truthOrDare.ts` (8 packs × 64, levels 1–3; the level is a ceil
 - **Quiz Party** (`online/quiz/`): rules are pure in `quizLogic.ts` (+ tests) — scoring with streaks, typed-answer matching, order questions, Gold Quest chests, Racing, Cash Climb upgrades, teams. `useQuizParty.ts` is the host-authoritative sync: the host broadcasts a full `qp_state` snapshot (never containing unrevealed answers), coalesced to ≤ ~7/s; players send `qp_ans` / `qp_chest` / `qp_target` / `qp_buy`; late joiners say `qp_hello`. Host can be a big screen or play too. Question sources (`sources.ts`): `data/quiz` banks, school questions, music, and the player's own quizzes (`myQuizzes`, made in Quiz Maker — they're only ever sent one question at a time, never stored online).
 
 ### Music
-`MusicPlayer` is always mounted as a small floating button at the right edge that expands into controls; `hidden` keeps the audio playing without the controls (FM Radio, Living Mural). Tracks are listed in `TRACKS` in `store.ts`; `trackInfo(file)` gives the title/artist. To add one: drop an `.m4a` (AAC) with a plain slug name in `public/musickpop/` and add it to `TRACKS`.
+`MusicPlayer` is always mounted as a small floating button at the right edge that expands into controls; `hidden` keeps the audio playing without the controls (FM Radio). Tracks are listed in `TRACKS` in `store.ts`; `trackInfo(file)` gives the title/artist. To add one: drop an `.m4a` (AAC) with a plain slug name in `public/musickpop/` and add it to `TRACKS`.
 
 ---
 
@@ -122,8 +125,8 @@ Cards in `data/truthOrDare.ts` (8 packs × 64, levels 1–3; the level is a ceil
 | Create & Music | `beat_maker`, `guess_intro`, `fm_radio`, `dance_battle`, `style_studio`, `idol_profile` (Superstar Card), `idol_diary` (Secret Diary) |
 | My Stuff | `pet_pal`, `quest_map`, `locker`, `streak_calendar`, `achievement_showcase` (Trophy Room) |
 | Grown-ups | `parent_corner` |
-| Teacher (hidden) | `jarvis_hq`, `freeze_dance`, `chaotic_backstage` — tiles appear after typing **JARVIS** as the player name |
-| Hidden | `secret_menu` (tap the **A** in "Arcade" on the welcome screen), `sticker_board` (tap the **F**), `doodle_pad`, `agent_hq`, `huntrx_splash` (name **HUNTRX**) |
+| Teacher (hidden) | `jarvis_hq`, `freeze_dance`, `chaotic_backstage` — tiles appear after submitting **JARVIS** (or Mr Jarvis…) as the player name; submitting any other name turns teacher mode off |
+| Hidden | `secret_menu` = the Secret Club (tap the **A** in "Arcade"): `doodle_pad`, `sticker_board` (also the **F**), `pixel_studio`, `agent_hq` (also "Secret HQ" under Start), `theme_lab`, `my_stats`; `huntrx_splash` (name **HUNTRX** / HUNTR/X) |
 
 ---
 

@@ -7,7 +7,7 @@ import { GAME_BADGES } from './data/gameBadges';
 
 export type GameState =
   | 'welcome' | 'game_mode'
-  | 'team_maker' | 'secret_menu' | 'doodle_pad' | 'sticker_board' | 'agent_hq' | 'kpop_rush'
+  | 'team_maker' | 'secret_menu' | 'doodle_pad' | 'sticker_board' | 'pixel_studio' | 'theme_lab' | 'my_stats' | 'agent_hq' | 'kpop_rush'
   | 'word_scramble' | 'idol_personality_quiz' | 'dance_battle' | 'beat_maker'
   | 'huntrx_splash' | 'truth_or_dare' | 'trivia_battle' | 'talent_show' | 'zip_game' | 'mini_sudoku'
   | 'crossword_mini' | 'word_ladder' | 'memory_speed' | 'reaction_duel' | 'streak_calendar'
