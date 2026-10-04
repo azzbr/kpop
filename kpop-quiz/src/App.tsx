@@ -49,6 +49,8 @@ const SCREENS: Partial<Record<GameState, LazyExoticComponent<ComponentType>>> = 
   freeze_dance: lazy(() => import('./components/FreezeDance')),
   chaotic_backstage: lazy(() => import('./components/ChaoticBackstage')),
   paper_clash: lazy(() => import('./components/games/PaperClash')),
+  tug_of_war: lazy(() => import('./components/TugOfWar')),
+  online_hub: lazy(() => import('./components/online/OnlineHub')),
 };
 
 const Loading = () => (

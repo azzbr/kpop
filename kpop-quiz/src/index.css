@@ -119,11 +119,9 @@
   to { filter: hue-rotate(360deg); }
 }
 
-/* Reserve space at the bottom of every screen so the fixed music player
-   never covers back buttons or other content. The music player div has the
-   .fixed class, so :not(.fixed) targets only the active screen wrapper. */
+/* A little breathing room under every screen (the music player floats at the right edge). */
 .App > div:not(.fixed) {
-  padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
 }
 
 /* 100vh on iPad Safari includes the hidden toolbar; prefer the dynamic height everywhere. */

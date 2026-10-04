@@ -54,6 +54,8 @@ const TILES: Tile[] = [
   { id: 'idol_personality_quiz', title: 'Which Star Are You?', description: 'A personality quiz with a surprise result.', icon: '🌟', color: 'from-pink-500 to-violet-600', category: 'quiz' },
 
   // Party
+  { id: 'online_hub', title: 'Friends Arena — Online', description: 'Make a room, share the 4-letter code and play together on different devices: quiz show, doodles, Monopoly Deal & lots more.', icon: '🌐', color: 'from-emerald-500 to-cyan-600', category: 'party', isNew: true },
+  { id: 'tug_of_war', title: 'Tug-of-War', description: 'Two players mash buttons to drag the rope to their side. Best of 3!', icon: '🪢', color: 'from-amber-500 to-pink-600', category: 'party' },
   { id: 'truth_or_dare', title: 'Truth or Dare', description: 'Silly truths and hilarious dares for 2–4.', icon: '🎯', color: 'from-orange-500 to-red-600', category: 'party' },
   { id: 'trivia_battle', title: 'Buzzer Battle', description: 'Two players race to hit the right answer.', icon: '🛎️', color: 'from-rose-500 to-pink-600', category: 'party' },
   { id: 'reaction_duel', title: 'Reaction Duel', description: 'Tap your side first when the signal flashes.', icon: '👆', color: 'from-red-500 to-pink-500', category: 'party' },

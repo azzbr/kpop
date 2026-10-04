@@ -57,8 +57,7 @@ export default function GameShell(props: GameShellProps) {
 
   return (
     <div className="arcade-bg game-surface fixed inset-0 z-40 flex flex-col text-white"
-      // Leave room at the bottom for the music bar (fixed, z-50) so it never covers the game.
-      style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'calc(68px + env(safe-area-inset-bottom))' }}>
+      style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {result?.isBest && score > 0 && <ConfettiBurst count={80} durationMs={3000} />}
 
       <header className="flex items-center gap-3 px-3 py-2 bg-black/30">

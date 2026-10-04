@@ -68,15 +68,18 @@ The old scattered localStorage keys (`kpop_xp`, `ninja_best`, …) are imported 
 - `useGameLoop({ tickHz, update, draw, running, onHidden })` — logic runs on a **fixed tick** (so 120 Hz iPads aren't double speed), drawing runs on requestAnimationFrame with an interpolation `alpha`, and it calls `onHidden` when she switches apps (pause there).
 - `useCanvasSize(ref)` — keeps a canvas sharp at the device pixel ratio and resizes on rotation.
 - `useSwipeInput(ref, onDir)` — Pointer-Events swipe steering (turns can be chained without lifting the finger) plus arrow keys/WASD.
-- `GameShell` — full-screen frame: Back, Pause, ready / paused / game-over cards, best score, confetti, rewards. Leaves room at the bottom for the music bar.
+- `GameShell` — full-screen frame: Back, Pause, ready / paused / game-over cards, best score, confetti, rewards.
 - `rng.ts` — seeded random (`createRng(seed)`), for tests and debug runs.
 
 **Pattern for a new real-time game:** put the rules in a pure `xxxLogic.ts` (no React, no canvas) with a vitest `xxxLogic.test.ts`; the component only handles input, drawing and the HUD. See `components/games/PaperClash.tsx` + `paperClashLogic.ts`.
 
 **Debug hook:** with `?debug` in the URL, Paper Clash exposes `window.__game` (`start`, `hold`, `step`, `steer`, `world`, `percent`); `?seed=42` makes a run repeatable. Use this for Playwright tests instead of real-time play.
 
+### Online rooms (Friends Arena)
+`src/online/useRoom.ts` joins a Supabase Realtime channel named after the room code. The host's device holds the authoritative game state and broadcasts it; other devices send inputs. Question/puzzle banks live in `src/online/*.ts`.
+
 ### Music
-`MusicPlayer` is always mounted (fixed bar at the bottom); `hidden` keeps the audio playing without the bar (FM Radio, Living Mural). Tracks are listed in `TRACKS` in `store.ts`; `trackInfo(file)` gives the title/artist. To add one: drop an `.m4a` (AAC) with a plain slug name in `public/musickpop/` and add it to `TRACKS`.
+`MusicPlayer` is always mounted as a small floating button at the right edge that expands into controls; `hidden` keeps the audio playing without the controls (FM Radio, Living Mural). Tracks are listed in `TRACKS` in `store.ts`; `trackInfo(file)` gives the title/artist. To add one: drop an `.m4a` (AAC) with a plain slug name in `public/musickpop/` and add it to `TRACKS`.
 
 ---
 
@@ -87,7 +90,7 @@ The old scattered localStorage keys (`kpop_xp`, `ninja_best`, …) are imported 
 | Arcade | `paper_clash`, `kpop_rush` (Rush Runner), `ninja_slice`, `rocket_launch`, `battle_arena` |
 | Puzzles | `mini_sudoku`, `zip_game`, `word_ladder`, `crossword_mini`, `word_scramble`, `pattern_memory`, `memory_speed`, `sparkle_match` (Gem Match) |
 | Quiz | `difficulty` → `quiz` → `result` (Music Quiz), `lightning_quiz`, `idol_personality_quiz` |
-| Party | `truth_or_dare`, `trivia_battle` (Buzzer Battle), `reaction_duel`, `talent_show`, `team_maker` |
+| Party | `online_hub` (Friends Arena — online rooms, ~30 games in `components/online/`), `tug_of_war`, `truth_or_dare`, `trivia_battle` (Buzzer Battle), `reaction_duel`, `talent_show`, `team_maker` |
 | Create & Music | `beat_maker`, `guess_intro`, `fm_radio`, `dance_battle`, `style_studio`, `idol_profile` (Superstar Card), `idol_diary` (Secret Diary) |
 | My Stuff | `streak_calendar`, `achievement_showcase` (Trophy Room) |
 | Teacher (hidden) | `jarvis_hq`, `freeze_dance`, `chaotic_backstage` — tiles appear after typing **JARVIS** as the player name |
@@ -121,7 +124,7 @@ The old scattered localStorage keys (`kpop_xp`, `ninja_best`, …) are imported 
 ## Content rules (kids 8–12)
 
 1. **No external links**, no embeds (YouTube etc.), no third-party sites
-2. **No personal data leaves the device** — everything is local (store + localStorage)
+2. **No personal data leaves the device** — progress is local (store + localStorage). The one exception is Friends Arena: `src/online/` uses Supabase Realtime *broadcast* (publishable key in `supabaseClient.ts`) to send a player's display name and game moves to others in the same 4-letter room. Nothing is written to a database. Keep it that way: no accounts, no stored chat, first names only
 3. **Positive tone** — wrong answers get encouragement, never shame
 4. **Readable** — body text `text-base`/`text-lg`+, instructions `text-xl`+
 5. **Emoji icons** — no icon libraries

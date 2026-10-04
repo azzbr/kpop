@@ -12,7 +12,7 @@ export type GameState =
   | 'crossword_mini' | 'word_ladder' | 'memory_speed' | 'reaction_duel' | 'streak_calendar'
   | 'achievement_showcase' | 'pattern_memory' | 'ninja_slice' | 'battle_arena' | 'rocket_launch'
   | 'style_studio' | 'sparkle_match' | 'idol_diary' | 'jarvis_hq' | 'guess_intro' | 'idol_profile'
-  | 'fm_radio' | 'freeze_dance' | 'chaotic_backstage' | 'paper_clash';
+  | 'fm_radio' | 'freeze_dance' | 'chaotic_backstage' | 'paper_clash' | 'tug_of_war' | 'online_hub';
 export type Difficulty = 'easy' | 'normal' | 'hard' | 'lyrics' | 'demon';
 
 export type Theme = 'default' | 'neon' | 'ocean' | 'forest' | 'sunset' | 'galaxy';
