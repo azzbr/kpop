@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playPop, playCoin, playWrong, playWin, playUnlock } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -95,6 +96,7 @@ function mixC(a: number[], b: number[], t: number) {
 
 const KPopRushGame: React.FC = () => {
   const { setGameState } = useGameStore();
+  const later = useSafeTimeout();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<GameData | null>(null);
   const controlsRef = useRef<{ start: () => void; jump: () => void; duckDown: () => void; duckUp: () => void } | null>(null);
@@ -249,7 +251,7 @@ const KPopRushGame: React.FC = () => {
       if (isHigh) {
         setHighScore(finalScore);
         setConfetti(true);
-        setTimeout(() => setConfetti(false), 3000);
+        later(() => setConfetti(false), 3000);
         playWin();
       }
       setOver({ score: finalScore, coins: g.coinCount, high: newHigh, isHigh, xp });
@@ -697,14 +699,24 @@ const KPopRushGame: React.FC = () => {
     }
 
     /* ---------- loop ---------- */
+    // Physics are tuned per 1/60 s step. Run them on a fixed 60 Hz clock so the game is the
+    // same speed on a 120 Hz iPad as on a 60 Hz screen.
+    const STEP_MS = 1000 / 60;
     let hudTick = 0;
-    function loop() {
-      update();
-      draw();
-      const g = gameRef.current!;
-      if (g.running && ++hudTick % 6 === 0) {
-        setHud({ score: Math.floor(g.score), coins: g.coinCount, combo: g.combo });
+    let last = performance.now();
+    let acc = 0;
+    function loop(now: number) {
+      acc += Math.min(now - last, 250);
+      last = now;
+      while (acc >= STEP_MS) {
+        update();
+        acc -= STEP_MS;
+        const g = gameRef.current!;
+        if (g.running && ++hudTick % 6 === 0) {
+          setHud({ score: Math.floor(g.score), coins: g.coinCount, combo: g.combo });
+        }
       }
+      draw();
       raf = requestAnimationFrame(loop);
     }
 
@@ -726,7 +738,7 @@ const KPopRushGame: React.FC = () => {
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
 
-    loop();
+    raf = requestAnimationFrame(loop);
 
     return () => {
       cancelAnimationFrame(raf);

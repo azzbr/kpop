@@ -48,6 +48,7 @@ const SCREENS: Partial<Record<GameState, LazyExoticComponent<ComponentType>>> = 
   fm_radio: lazy(() => import('./components/FMRadio')),
   freeze_dance: lazy(() => import('./components/FreezeDance')),
   chaotic_backstage: lazy(() => import('./components/ChaoticBackstage')),
+  paper_clash: lazy(() => import('./components/games/PaperClash')),
 };
 
 const Loading = () => (

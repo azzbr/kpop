@@ -32,6 +32,7 @@ const CATEGORIES: { id: Category; title: string; subtitle: string }[] = [
 
 const TILES: Tile[] = [
   // Arcade
+  { id: 'paper_clash', title: 'Paper Clash', description: 'Grab land, cut trails, rule the map. Swipe to steer!', icon: '🗺️', color: 'from-sky-500 to-fuchsia-600', category: 'arcade', isNew: true },
   { id: 'kpop_rush', title: 'Rush Runner', description: 'Endless runner — jump, duck, grab power-ups.', icon: '🏃', color: 'from-fuchsia-500 to-purple-600', category: 'arcade' },
   { id: 'ninja_slice', title: 'Ninja Slice', description: 'Swipe to slice fruit. Dodge the bombs!', icon: '🥷', color: 'from-red-500 to-orange-500', category: 'arcade' },
   { id: 'rocket_launch', title: 'Rocket Launch', description: 'Aim, set power, hit the planets.', icon: '🚀', color: 'from-sky-500 to-indigo-600', category: 'arcade' },
