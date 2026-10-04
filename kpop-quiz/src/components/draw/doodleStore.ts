@@ -1,5 +1,7 @@
 // Saved doodles live in IndexedDB on this device only (images are too big for localStorage).
 // The sticker board autosaves into the fixed id MURAL_ID; the gallery keeps up to MAX_DOODLES.
+// Images are stored as ArrayBuffers, not Blobs: WebKit (Safari) can refuse to put a Blob into
+// IndexedDB ("Error preparing Blob/File data"), which made saving fail in the iPad e2e run.
 
 export interface SavedDoodle {
   id: string;
@@ -28,6 +30,14 @@ function open(): Promise<IDBDatabase> {
   });
 }
 
+/** What is actually stored. */
+interface StoredDoodle extends Omit<SavedDoodle, 'image'> { png: ArrayBuffer }
+
+const toSaved = (d: StoredDoodle): SavedDoodle => {
+  const { png, ...rest } = d;
+  return { ...rest, image: new Blob([png], { type: 'image/png' }) };
+};
+
 async function run<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
   const db = await open();
   try {
@@ -44,20 +54,24 @@ async function run<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRe
 
 export async function listDoodles(): Promise<SavedDoodle[]> {
   try {
-    const all = await run<SavedDoodle[]>('readonly', s => s.getAll() as IDBRequest<SavedDoodle[]>);
-    return all.filter(d => d.id !== MURAL_ID).sort((a, b) => b.updated - a.updated);
+    const all = await run<StoredDoodle[]>('readonly', s => s.getAll() as IDBRequest<StoredDoodle[]>);
+    return all.filter(d => d.id !== MURAL_ID && d.png).sort((a, b) => b.updated - a.updated).map(toSaved);
   } catch { return []; }
 }
 
 export async function getDoodle(id: string): Promise<SavedDoodle | null> {
-  try { return (await run<SavedDoodle | undefined>('readonly', s => s.get(id) as IDBRequest<SavedDoodle | undefined>)) ?? null; }
-  catch { return null; }
+  try {
+    const d = await run<StoredDoodle | undefined>('readonly', s => s.get(id) as IDBRequest<StoredDoodle | undefined>);
+    return d?.png ? toSaved(d) : null;
+  } catch { return null; }
 }
 
 /** Saves (or replaces) a doodle, then trims the gallery to the newest MAX_DOODLES. */
 export async function saveDoodle(d: SavedDoodle): Promise<boolean> {
   try {
-    await run('readwrite', s => s.put(d));
+    const { image, ...rest } = d;
+    const stored: StoredDoodle = { ...rest, png: await image.arrayBuffer() };
+    await run('readwrite', s => s.put(stored));
     if (d.id !== MURAL_ID) {
       const all = await listDoodles();
       for (const old of all.slice(MAX_DOODLES)) await deleteDoodle(old.id);
