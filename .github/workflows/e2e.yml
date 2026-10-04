@@ -1,0 +1,50 @@
+name: Tests (unit + iPad Safari e2e)
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: kpop-quiz
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: kpop-quiz/package-lock.json
+
+      - run: npm ci
+
+      - name: Install Playwright browsers (WebKit = Safari's engine, plus Chromium)
+        run: npx playwright install --with-deps webkit chromium
+
+      - name: Unit tests (vitest)
+        run: npm test
+
+      - name: Type-check
+        run: npx tsc -b
+
+      - name: End-to-end tests (ipad-webkit, ipad-chromium, desktop-chromium)
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            kpop-quiz/playwright-report/
+            kpop-quiz/test-results/
+          retention-days: 14
