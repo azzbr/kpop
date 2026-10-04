@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playClick } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -117,6 +118,7 @@ function playDrumSound(type: TrackType, ctx: AudioContext) {
 
 const BeatMaker: React.FC = () => {
   const { setGameState } = useGameStore();
+  const later = useSafeTimeout();
   const [grid, setGrid] = useState<boolean[][]>(PRESETS['Empty'].map(r => [...r]));
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState(-1);
@@ -163,9 +165,9 @@ const BeatMaker: React.FC = () => {
   useEffect(() => {
     if (stepCount === 32 && isPlaying) {
       setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 2000);
+      later(() => setShowConfetti(false), 2000);
     }
-  }, [stepCount, isPlaying]);
+  }, [stepCount, isPlaying, later]);
 
   const toggleCell = (trackIdx: number, stepIdx: number) => {
     playClick();
@@ -220,7 +222,7 @@ const BeatMaker: React.FC = () => {
         <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="text-center mb-6">
           <div className="text-5xl mb-2">🎛️</div>
           <h1 className="text-4xl font-fredoka font-bold text-purple-600 text-kid-glow mb-1">Beat Maker</h1>
-          <p className="font-nunito text-gray-600">Build your own K-pop beat! Tap the grid to add sounds 🎵</p>
+          <p className="font-nunito text-gray-600">Build your own beat! Tap the grid to add sounds 🎵</p>
         </motion.div>
 
         {/* Controls */}

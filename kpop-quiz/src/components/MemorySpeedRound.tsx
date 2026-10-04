@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playClick, playPop, playCorrect, playWrong, playWin } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -28,6 +29,7 @@ const makeCards = (): Card[] =>
 
 const MemorySpeedRound: React.FC = () => {
   const { setGameState, addXP } = useGameStore();
+  const later = useSafeTimeout();
   const [cards, setCards] = useState<Card[]>([]);
   const [selected, setSelected] = useState<number[]>([]);
   const [seconds, setSeconds] = useState(TIME_LIMIT);
@@ -69,12 +71,12 @@ const MemorySpeedRound: React.FC = () => {
     return () => clearInterval(timerRef.current!);
   }, [started, done]);
 
-  const showComboLabel = (c: number) => {
+  const showComboLabel = useCallback((c: number) => {
     if (c >= 5) setComboLabel('🔥 ON FIRE!');
     else if (c >= 3) setComboLabel('⚡ COMBO!');
     else if (c >= 2) setComboLabel('✨ Nice!');
-    setTimeout(() => setComboLabel(''), 800);
-  };
+    later(() => setComboLabel(''), 800);
+  }, [later]);
 
   const handleTap = useCallback((idx: number) => {
     if (!started || done || lockRef.current) return;
@@ -109,16 +111,22 @@ const MemorySpeedRound: React.FC = () => {
       } else {
         playWrong();
         setCombo(0);
-        setTimeout(() => {
+        later(() => {
           setCards(c => c.map((cd, i) => (i === a || i === b) ? { ...cd, flipped: false } : cd));
           setSelected([]);
           lockRef.current = false;
         }, 700);
       }
     }
-  }, [cards, selected, started, done, combo, maxCombo, matchCount]);
+  }, [cards, selected, started, done, combo, maxCombo, matchCount, later, showComboLabel]);
 
   const xpEarned = done === 'win' ? 50 + maxCombo * 5 : matchCount * 3;
+
+  // Award once when the round ends, so leaving via Back doesn't lose the XP.
+  useEffect(() => {
+    if (done) addXP(xpEarned);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [done]);
   const timerPct = (seconds / TIME_LIMIT) * 100;
   const timerColor = seconds > 30 ? 'bg-green-400' : seconds > 10 ? 'bg-yellow-400' : 'bg-red-400';
 
@@ -219,8 +227,8 @@ const MemorySpeedRound: React.FC = () => {
                 {matchCount}/{PAIR_COUNT} pairs • Best combo x{maxCombo}
               </p>
               <p className="font-nunito text-purple-600 mb-4">+{xpEarned} XP!</p>
-              <button onClick={() => { addXP(xpEarned); startGame(); }} className="btn-kid mr-2">🔄 Play Again</button>
-              <button onClick={() => { addXP(xpEarned); setGameState('game_mode'); }} className="btn-kid-secondary">🏠 Home</button>
+              <button onClick={startGame} className="btn-kid mr-2">🔄 Play Again</button>
+              <button onClick={() => setGameState('game_mode')} className="btn-kid-secondary">🏠 Home</button>
             </motion.div>
           )}
         </AnimatePresence>

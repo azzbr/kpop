@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { easyQuestions, normalQuestions, hardQuestions } from '../quizData';
 import { playClick, playCorrect, playWrong, playWin, playTick, playTimeOut } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
@@ -24,6 +25,7 @@ type Phase = 'setup' | 'countdown' | 'battle' | 'round_result' | 'final';
 
 const TriviaBattle: React.FC = () => {
   const { setGameState } = useGameStore();
+  const later = useSafeTimeout();
   const [phase, setPhase] = useState<Phase>('setup');
   const [names, setNames] = useState(['', '']);
   const [scores, setScores] = useState([0, 0]);
@@ -110,7 +112,7 @@ const TriviaBattle: React.FC = () => {
       setScores(prev => prev.map((s, i) => i === winner ? s + 1 : s) as [number, number]);
     }
     setPhase('round_result');
-    setTimeout(() => {
+    later(() => {
       const nextRound = round + 1;
       if (nextRound >= TOTAL_ROUNDS) {
         const newScores = scores.map((s, i) => i === winner ? s + 1 : s);

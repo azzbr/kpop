@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playClick, playCorrect, playWin } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -154,6 +155,7 @@ const QUESTIONS: Question[] = [
 
 const IdolPersonalityQuiz: React.FC = () => {
   const { setGameState } = useGameStore();
+  const later = useSafeTimeout();
   const [phase, setPhase] = useState<'intro' | 'quiz' | 'result'>('intro');
   const [currentQ, setCurrentQ] = useState(0);
   const [scores, setScores] = useState([0, 0, 0, 0]);
@@ -169,7 +171,7 @@ const IdolPersonalityQuiz: React.FC = () => {
     const newScores = scores.map((s, i) => s + addition[i]);
     setScores(newScores);
 
-    setTimeout(() => {
+    later(() => {
       if (currentQ + 1 < QUESTIONS.length) {
         setCurrentQ(prev => prev + 1);
         setSelectedIdx(null);
@@ -179,7 +181,7 @@ const IdolPersonalityQuiz: React.FC = () => {
         setPhase('result');
         setShowConfetti(true);
         playWin();
-        setTimeout(() => setShowConfetti(false), 3000);
+        later(() => setShowConfetti(false), 3000);
       }
     }, 700);
   };

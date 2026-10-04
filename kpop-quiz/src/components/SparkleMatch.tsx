@@ -44,6 +44,24 @@ function findMatches(grid: Cell[][]): Set<string> {
   return m;
 }
 
+// True if at least one swap of neighbours would make a match
+function hasValidMove(grid: Cell[][]): boolean {
+  const g = grid.map(row => [...row]);
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      for (const [dr, dc] of [[0, 1], [1, 0]]) {
+        const r2 = r + dr, c2 = c + dc;
+        if (r2 >= SIZE || c2 >= SIZE) continue;
+        [g[r][c], g[r2][c2]] = [g[r2][c2], g[r][c]];
+        const ok = findMatches(g).size > 0;
+        [g[r][c], g[r2][c2]] = [g[r2][c2], g[r][c]];
+        if (ok) return true;
+      }
+    }
+  }
+  return false;
+}
+
 let idCounter = 0;
 function freshGrid(): Cell[][] {
   let grid: Cell[][];
@@ -51,12 +69,26 @@ function freshGrid(): Cell[][] {
     grid = Array.from({ length: SIZE }, () =>
       Array.from({ length: SIZE }, () => makeCell(++idCounter))
     );
-  } while (findMatches(grid).size > 0);
+  } while (findMatches(grid).size > 0 || !hasValidMove(grid));
   return grid;
 }
 
+// Shuffle the same charms into a board with no ready-made matches but at least one move
+function shuffleGrid(grid: Cell[][]): Cell[][] {
+  const cells = grid.flat();
+  for (let attempt = 0; attempt < 200; attempt++) {
+    for (let i = cells.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [cells[i], cells[j]] = [cells[j], cells[i]];
+    }
+    const next = Array.from({ length: SIZE }, (_, r) => cells.slice(r * SIZE, (r + 1) * SIZE));
+    if (findMatches(next).size === 0 && hasValidMove(next)) return next;
+  }
+  return freshGrid(); // very unlikely: these charms can't make a playable board
+}
+
 const SparkleMatch: React.FC = () => {
-  const { setGameState, addXP } = useGameStore();
+  const { setGameState } = useGameStore();
   const [grid, setGrid] = useState<Cell[][]>(() => freshGrid());
   const [selected, setSelected] = useState<[number, number] | null>(null);
   const [score, setScore] = useState(0);
@@ -64,41 +96,51 @@ const SparkleMatch: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState(TIME);
   const [running, setRunning] = useState(false);
   const [done, setDone] = useState(false);
-  const [highScore, setHighScore] = useState(() => parseInt(localStorage.getItem('sparkle_best') || '0'));
+  const [highScore, setHighScore] = useState(() => useGameStore.getState().highScores.sparkle_match ?? 0);
   const [confetti, setConfetti] = useState(false);
   const [matchedKeys, setMatchedKeys] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [floats, setFloats] = useState<{ id: number; x: number; y: number; text: string }[]>([]);
   const floatId = useRef(0);
+  const timeoutsRef = useRef<number[]>([]);
+
+  // Track every timeout so nothing fires after leaving the screen or restarting
+  const later = useCallback((fn: () => void, ms: number) => {
+    timeoutsRef.current.push(window.setTimeout(fn, ms));
+  }, []);
+  const clearTimeouts = () => {
+    timeoutsRef.current.forEach(clearTimeout);
+    timeoutsRef.current = [];
+  };
+  useEffect(() => () => { timeoutsRef.current.forEach(clearTimeout); }, []);
 
   // Timer
   useEffect(() => {
     if (!running || done) return;
-    const t = setInterval(() => setTimeLeft(s => s - 1), 1000);
+    const t = setInterval(() => setTimeLeft(s => Math.max(0, s - 1)), 1000);
     return () => clearInterval(t);
   }, [running, done]);
 
+  // Wait for any cascade still running (busy) so its points count before saving the score
   useEffect(() => {
-    if (timeLeft <= 0 && running && !done) {
+    if (timeLeft <= 0 && running && !done && !busy) {
       setRunning(false);
       setDone(true);
-      const isHigh = score > highScore;
+      const isHigh = useGameStore.getState().finishRound('sparkle_match', score, 8).isBest;
       if (isHigh) {
         setHighScore(score);
-        localStorage.setItem('sparkle_best', String(score));
         setConfetti(true);
-        setTimeout(() => setConfetti(false), 2500);
+        later(() => setConfetti(false), 2500);
         playWin();
       } else playWrong();
-      addXP(Math.floor(score / 8));
     }
-  }, [timeLeft, running, done, score, highScore, addXP]);
+  }, [timeLeft, running, done, busy, score, later]);
 
-  const addFloat = (r: number, c: number, text: string) => {
+  const addFloat = useCallback((r: number, c: number, text: string) => {
     const id = ++floatId.current;
     setFloats(f => [...f, { id, x: c * 100 / SIZE, y: r * 100 / SIZE, text }]);
-    setTimeout(() => setFloats(f => f.filter(fl => fl.id !== id)), 900);
-  };
+    later(() => setFloats(f => f.filter(fl => fl.id !== id)), 900);
+  }, [later]);
 
   const adjacent = (a: [number, number], b: [number, number]) =>
     (a[0] === b[0] && Math.abs(a[1] - b[1]) === 1) || (a[1] === b[1] && Math.abs(a[0] - b[0]) === 1);
@@ -190,7 +232,7 @@ const SparkleMatch: React.FC = () => {
   }, []);
 
   const handleTap = useCallback((r: number, c: number) => {
-    if (busy || done) return;
+    if (busy || done || timeLeft <= 0) return;
     if (!running) { setRunning(true); }
     playPop();
 
@@ -211,7 +253,7 @@ const SparkleMatch: React.FC = () => {
       // Invalid swap → wiggle and revert
       playWrong();
       setGrid(swapped);
-      setTimeout(() => { setGrid(grid); setBusy(false); }, 300);
+      later(() => { setGrid(grid); setBusy(false); }, 300);
       return;
     }
 
@@ -222,7 +264,13 @@ const SparkleMatch: React.FC = () => {
     const cascade = (delay: number) => {
       const result = applyMatches(cur, depth + 1);
       if (result.scored === 0) {
-        setGrid(cur);
+        if (hasValidMove(cur)) {
+          setGrid(cur);
+        } else {
+          // No moves left: reshuffle so the player is never stuck
+          setGrid(shuffleGrid(cur));
+          addFloat(Math.floor(SIZE / 2), 1, '🔀 Shuffle!');
+        }
         setMatchedKeys(new Set());
         setBusy(false);
         if (totalEarned > 0) {
@@ -238,13 +286,16 @@ const SparkleMatch: React.FC = () => {
       totalEarned += result.scored;
       cur = result.grid;
       setGrid(cur);
-      setTimeout(() => cascade(delay + 30), 380);
+      later(() => cascade(delay + 30), 380);
     };
-    setTimeout(() => cascade(0), 250);
-  }, [busy, done, running, selected, grid, applyMatches]);
+    later(() => cascade(0), 250);
+  }, [busy, done, running, selected, grid, applyMatches, timeLeft, later, addFloat]);
 
   const startOver = () => {
     playClick();
+    clearTimeouts();
+    setConfetti(false);
+    setFloats([]);
     setGrid(freshGrid());
     setSelected(null);
     setScore(0);
@@ -267,9 +318,9 @@ const SparkleMatch: React.FC = () => {
       {confetti && <ConfettiBurst count={70} durationMs={2500} />}
 
       <div className="max-w-md w-full mx-auto">
-        <button onClick={() => { playClick(); setGameState('girls_zone'); }}
+        <button onClick={() => { playClick(); setGameState('game_mode'); }}
           className="mb-3 px-4 py-2 bg-white/70 hover:bg-white text-purple-700 rounded-full font-fredoka text-sm border-2 border-purple-200">
-          ← Girls Zone
+          ← Back
         </button>
 
         <div className="text-center mb-3">
@@ -388,7 +439,7 @@ const SparkleMatch: React.FC = () => {
               <p className="font-fredoka text-2xl text-pink-500 mb-1">⭐ {score}</p>
               <p className="font-nunito text-purple-500 mb-3">+{Math.floor(score / 8)} XP earned!</p>
               <button onClick={startOver} className="btn-kid mr-2">🔄 Again</button>
-              <button onClick={() => setGameState('girls_zone')} className="btn-kid-secondary">← Zone</button>
+              <button onClick={() => setGameState('game_mode')} className="btn-kid-secondary">← Zone</button>
             </motion.div>
           )}
         </AnimatePresence>

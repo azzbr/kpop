@@ -1,71 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
 import { playClick, playCorrect, playWrong, playWin } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
-
-// Valid 3-letter words (subset for validation)
-const VALID_WORDS = new Set([
-  'cat','bat','hat','mat','rat','sat','fat','pat','tap','top','tip','tin','tan','ran',
-  'run','sun','gun','fun','bun','bud','bad','bag','ban','bay','bee','bed','big','bit',
-  'box','boy','bug','bus','but','cab','can','cap','car','cob','cod','cog','cop','cot',
-  'cow','cry','cub','cup','cut','dab','dam','dip','dog','dot','dry','dug','dye','ear',
-  'eat','egg','elf','elk','elm','end','era','eve','ewe','eye','fad','fan','far','fig',
-  'fit','fix','fly','fog','for','fox','fry','gap','gas','get','gin','gob','god','got',
-  'gum','gut','guy','ham','has','hay','hen','her','hid','him','hip','his','hit','hob',
-  'hog','hop','hot','how','hub','hug','hum','hut','ice','ill','imp','ink','inn','ion',
-  'ivy','jab','jag','jam','jar','jaw','jay','jet','jig','job','jog','jot','joy','jug',
-  'jut','keg','key','kid','kin','kit','lab','lad','lag','lap','law','lay','led','leg',
-  'let','lid','lip','lit','log','lot','low','lug','map','may','men','met','mid','mix',
-  'mob','mod','mom','mop','mud','mug','nab','nag','nap','net','nip','nit','nob','nod',
-  'nor','not','now','nun','nut','oak','oar','oat','odd','off','oil','old','one','opt',
-  'orb','ore','our','out','own','pad','pal','pan','paw','pay','peg','pen','pet','pie',
-  'pig','pin','pit','pod','pop','pot','pow','pro','pub','pun','pup','pus','put','rag',
-  'ram','rap','raw','ray','red','ref','rep','rib','rid','rig','rim','rip','rob','rod',
-  'rot','row','rub','rug','rum','rut','rye','sag','sap','saw','say','sea','set','sew',
-  'shy','sip','sir','sit','six','ski','sky','sly','sob','sod','son','sop','sot','sow',
-  'soy','spa','spy','sub','sue','sum','sup','tab','tag','tar','tax','tea','ten','the',
-  'tie','tom','too','tot','tow','toy','try','tub','tug','two','urn','use','van','vat',
-  'via','vim','vow','wag','war','was','way','web','wed','wet','who','why','wig','win',
-  'wit','woe','wok','won','woo','wow','yak','yam','yap','yaw','yes','yet','yew','yip',
-  'you','yow','zag','zap','zen','zig','zip','zoo',
-  // 4-letter words
-  'star','kpop','idol','song','band','beat','love','dare','pink','blue','gold','bold',
-  'cool','fire','jump','kick','wild','glow','sing','spin','show','fame','wave','fans',
-  'care','dare','fare','hare','mare','pare','rare','bare','ware','barn','born','burn',
-  'corn','earn','fern','firm','form','fork','harm','horn','lore','more','norm','port',
-  'sort','torn','wore','yarn','cake','fake','lake','make','rake','sake','take','wake',
-  'bake','bike','dike','hike','like','mike','pike','time','lime','mime','dime','grime',
-  'game','came','dame','fame','lame','name','same','tame','bone','cone','done','gone',
-  'lone','none','tone','zone','hone','tune','June','dune','rune','cute','mute','lute',
-  'blue','clue','due','glue','hue','sue','true',
-]);
-
-const PUZZLES = [
-  { start: 'cat', end: 'dog', hint: 'cat → ? → ? → dog', steps: 3 },
-  { start: 'hot', end: 'fog', hint: 'hot → ? → ? → fog', steps: 3 },
-  { start: 'fan', end: 'sun', hint: 'fan → ? → sun', steps: 2 },
-  { start: 'hat', end: 'bug', hint: 'hat → ? → ? → bug', steps: 3 },
-  { start: 'pin', end: 'log', hint: 'pin → ? → ? → log', steps: 3 },
-  { start: 'cake', end: 'bike', hint: 'cake → ? → bike', steps: 2 },
-  { start: 'star', end: 'scar', hint: 'star → ? → scar', steps: 2 },
-  { start: 'love', end: 'live', hint: 'love → live', steps: 1 },
-];
-
-function differsBy1(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diffs = 0;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) diffs++;
-    if (diffs > 1) return false;
-  }
-  return diffs === 1;
-}
+import { PUZZLES, VALID_WORDS, differsBy1, ladderHint } from '../data/wordLadder';
 
 const WordLadder: React.FC = () => {
   const { setGameState, addXP } = useGameStore();
   const [puzzleIdx, setPuzzleIdx] = useState(0);
-  const [chain, setChain] = useState<string[]>([]);
+  const [chain, setChain] = useState<string[]>(() => [PUZZLES[0].start]);
   const [input, setInput] = useState('');
   const [error, setError] = useState('');
   const [won, setWon] = useState(false);
@@ -73,6 +16,9 @@ const WordLadder: React.FC = () => {
   const [solved, setSolved] = useState<Set<number>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem('wordladder_solved') || '[]')); } catch { return new Set(); }
   });
+
+  const confettiTimer = useRef<number | null>(null);
+  useEffect(() => () => { if (confettiTimer.current) clearTimeout(confettiTimer.current); }, []);
 
   const puzzle = PUZZLES[puzzleIdx];
 
@@ -83,8 +29,6 @@ const WordLadder: React.FC = () => {
     setError('');
     setWon(false);
   };
-
-  useMemo(() => { setChain([puzzle.start]); }, [puzzleIdx]);
 
   const last = chain[chain.length - 1];
 
@@ -123,7 +67,8 @@ const WordLadder: React.FC = () => {
       playWin();
       setWon(true);
       setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 2500);
+      if (confettiTimer.current) clearTimeout(confettiTimer.current);
+      confettiTimer.current = window.setTimeout(() => setShowConfetti(false), 2500);
       addXP(25 + Math.max(0, (puzzle.steps + 2 - newChain.length) * 5));
       const newSolved = new Set([...solved, puzzleIdx]);
       setSolved(newSolved);
@@ -255,7 +200,7 @@ const WordLadder: React.FC = () => {
         {/* Hint */}
         {!won && (
           <div className="bg-yellow-50 border-2 border-yellow-200 rounded-2xl p-3 mt-3 text-center">
-            <p className="font-nunito text-yellow-700 text-sm">💡 Hint: {puzzle.hint}</p>
+            <p className="font-nunito text-yellow-700 text-sm">💡 Hint: {ladderHint(puzzle)}</p>
           </div>
         )}
 

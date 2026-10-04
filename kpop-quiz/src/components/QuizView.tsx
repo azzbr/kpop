@@ -11,12 +11,14 @@ const QuizView: React.FC = () => {
     selectAnswer,
     nextQuestion,
     score,
+    resetGame,
   } = useGameStore();
 
   const [showFeedback, setShowFeedback] = useState(false);
   const [timeLeft, setTimeLeft] = useState(1.5);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const advanceRef = useRef<NodeJS.Timeout | null>(null);
   const isProcessingRef = useRef(false);
 
   const currentQuestion = questions[currentQuestionIndex];
@@ -37,18 +39,17 @@ const QuizView: React.FC = () => {
   // Handle question progression
   const handleNextQuestion = () => {
     if (isProcessingRef.current) {
-      console.log('Already processing, skipping...');
       return;
     }
     
     isProcessingRef.current = true;
-    console.log(`Moving from question ${currentQuestionIndex + 1} to ${currentQuestionIndex + 2}`);
     
     cleanupTimers();
     setShowFeedback(false);
     
     // Use setTimeout to ensure state updates are processed
-    setTimeout(() => {
+    advanceRef.current = setTimeout(() => {
+      advanceRef.current = null;
       nextQuestion();
       isProcessingRef.current = false;
     }, 100);
@@ -57,8 +58,6 @@ const QuizView: React.FC = () => {
   // Handle answer selection and feedback timer
   useEffect(() => {
     if (selectedAnswer !== null && !isProcessingRef.current) {
-      console.log(`Answer selected: ${selectedAnswer}, starting feedback timer`);
-      
       // Clean up any existing timers first
       cleanupTimers();
       
@@ -85,6 +84,18 @@ const QuizView: React.FC = () => {
     // Cleanup on unmount or when dependencies change
     return cleanupTimers;
   }, [selectedAnswer, currentQuestionIndex]);
+
+  // Don't let a pending "next question" fire after leaving the quiz
+  useEffect(() => () => { if (advanceRef.current) clearTimeout(advanceRef.current); }, []);
+
+  const handleBack = () => {
+    cleanupTimers();
+    if (advanceRef.current) {
+      clearTimeout(advanceRef.current);
+      advanceRef.current = null;
+    }
+    resetGame();
+  };
 
   // Reset processing state when question changes
   useEffect(() => {
@@ -129,6 +140,13 @@ const QuizView: React.FC = () => {
       className="flex flex-col items-center justify-center min-h-screen px-4 py-8 bg-kid-pattern"
     >
       <div className="max-w-2xl mx-auto w-full">
+        <button
+          onClick={handleBack}
+          className="btn-kid-secondary min-h-[44px] mb-4 font-fredoka"
+        >
+          ← Back
+        </button>
+
         {/* Progress Bar */}
         <motion.div
           initial={{ opacity: 0, scaleX: 0 }}

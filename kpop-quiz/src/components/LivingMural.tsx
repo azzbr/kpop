@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Tldraw, useEditor } from 'tldraw';
 import 'tldraw/tldraw.css';
 import { useGameStore } from '../store';
+import { trackInfo } from '../store';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Mock avatars for 'Sleeping Ghosts'
@@ -174,7 +175,7 @@ const DJStation = ({ onClose }: { onClose: () => void }) => {
   const { isPlaying, setIsPlaying, nextTrack, prevTrack, currentTrack, playlist } = useGameStore();
   
   // Mock song title based on index if not available in store props (store has playlist strings)
-  const currentSongName = playlist[currentTrack]?.replace('.flac', '') || "Unknown Track";
+  const currentSongName = trackInfo(playlist[currentTrack]).title;
 
   return (
     <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-auto" onClick={onClose}>

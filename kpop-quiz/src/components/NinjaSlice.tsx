@@ -9,6 +9,8 @@ const GRAVITY = 0.32;
 const GAME_TIME = 45;
 const MAX_LIVES = 3;
 
+// Item odds (when the spawn isn't a bomb) — these add up to exactly 1.00.
+// Bombs are rolled separately (16% of spawns) in spawnItem.
 const ITEMS = [
   { emoji: '🎤', pts: 10, prob: 0.24 },
   { emoji: '⭐', pts: 15, prob: 0.20 },
@@ -16,7 +18,7 @@ const ITEMS = [
   { emoji: '🎵', pts: 6,  prob: 0.16 },
   { emoji: '🎁', pts: 30, prob: 0.06 },
   { emoji: '🪩', pts: 20, prob: 0.08 },
-  { emoji: '🎶', pts: 7,  prob: 0.14 },
+  { emoji: '🎶', pts: 7,  prob: 0.04 }, // rare
 ];
 
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
@@ -39,7 +41,7 @@ interface FloatTxt { x: number; y: number; vy: number; life: number; text: strin
 interface SlashSeg { x1: number; y1: number; x2: number; y2: number; life: number; }
 
 const NinjaSlice: React.FC = () => {
-  const { setGameState, addXP } = useGameStore();
+  const { setGameState } = useGameStore();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef({
     items: [] as SliceItem[],
@@ -66,15 +68,17 @@ const NinjaSlice: React.FC = () => {
     const ctx = canvas.getContext('2d')!;
     let raf = 0;
     let tickSec = 0;
+    let confettiTimer = 0;
 
     function spawnItem() {
       const s = stateRef.current;
       const isBomb = Math.random() < 0.16;
       let emoji = '💣', pts = 0;
       if (!isBomb) {
-        let r = Math.random(), cum = 0;
+        const r = Math.random();
+        let cum = 0;
+        emoji = ITEMS[0].emoji; pts = ITEMS[0].pts; // fallback for float rounding
         for (const it of ITEMS) { cum += it.prob; if (r < cum) { emoji = it.emoji; pts = it.pts; break; } }
-        if (!emoji) { emoji = '🎤'; pts = 10; }
       }
       const spawnX = rnd(80, W - 80);
       s.items.push({
@@ -137,12 +141,8 @@ const NinjaSlice: React.FC = () => {
     function endGame() {
       const s = stateRef.current;
       const finalScore = s.score;
-      const prev = parseInt(localStorage.getItem('ninja_best') || '0');
-      const isHigh = finalScore > prev;
-      if (isHigh) { localStorage.setItem('ninja_best', String(finalScore)); }
-      const xp = Math.floor(finalScore / 10) + s.lives * 5;
-      addXP(xp);
-      if (isHigh) { playWin(); setConfetti(true); setTimeout(() => setConfetti(false), 2500); }
+      const { isBest: isHigh, xp } = useGameStore.getState().finishRound('ninja_slice', finalScore, 10);
+      if (isHigh) { playWin(); setConfetti(true); clearTimeout(confettiTimer); confettiTimer = window.setTimeout(() => setConfetti(false), 2500); }
       else playWrong();
       setOverInfo({ score: finalScore, isHigh, xp });
       setStatus('over');
@@ -340,8 +340,16 @@ const NinjaSlice: React.FC = () => {
       }
     }
 
-    function loop() {
-      update(); draw();
+    // Physics are tuned per 1/60 s step; run them on a fixed 60 Hz clock so a 120 Hz iPad
+    // isn't double speed.
+    const STEP_MS = 1000 / 60;
+    let last = performance.now();
+    let acc = 0;
+    function loop(now: number) {
+      acc += Math.min(now - last, 250);
+      last = now;
+      while (acc >= STEP_MS) { update(); acc -= STEP_MS; }
+      draw();
       raf = requestAnimationFrame(loop);
     }
 
@@ -380,9 +388,10 @@ const NinjaSlice: React.FC = () => {
     canvas.addEventListener('touchmove', onMove, { passive: false });
     canvas.addEventListener('touchend', onUp);
 
-    loop();
+    raf = requestAnimationFrame(loop);
     return () => {
       cancelAnimationFrame(raf);
+      clearTimeout(confettiTimer);
       canvas.removeEventListener('mousedown', onDown);
       canvas.removeEventListener('mousemove', onMove);
       canvas.removeEventListener('mouseup', onUp);
@@ -404,9 +413,9 @@ const NinjaSlice: React.FC = () => {
       {confetti && <ConfettiBurst count={70} durationMs={2500} />}
 
       <div className="w-full max-w-3xl mx-auto">
-        <button onClick={() => { playClick(); setGameState('boys_zone'); }}
+        <button onClick={() => { playClick(); setGameState('game_mode'); }}
           className="mb-3 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full font-fredoka text-sm border border-white/20">
-          ← Boys Zone
+          ← Back
         </button>
 
         <div className="text-center mb-3">
@@ -441,7 +450,7 @@ const NinjaSlice: React.FC = () => {
                   <p className="font-fredoka text-2xl text-yellow-300 mb-1">⭐ {overInfo.score}</p>
                   <p className="font-nunito text-purple-200 text-sm mb-4">+{overInfo.xp} XP earned!</p>
                   <button onClick={() => controlsRef.current?.start()} className="btn-kid mr-2">🔄 Again</button>
-                  <button onClick={() => setGameState('boys_zone')} className="btn-kid-secondary">← Zone</button>
+                  <button onClick={() => setGameState('game_mode')} className="btn-kid-secondary">← Zone</button>
                 </motion.div>
               </motion.div>
             )}

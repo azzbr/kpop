@@ -20,13 +20,20 @@ const ReactionDuel: React.FC = () => {
   const [fakeFlash, setFakeFlash] = useState(false);
   const [names, setNames] = useState(['Player 1', 'Player 2']);
   const timeoutRef = useRef<number | null>(null);
+  const fakeTimeoutsRef = useRef<number[]>([]);
   const goRef = useRef(false);
 
   const clearT = () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
+  const clearFake = () => { fakeTimeoutsRef.current.forEach(clearTimeout); fakeTimeoutsRef.current = []; };
+  const clearAll = () => { clearT(); clearFake(); };
 
-  useEffect(() => () => clearT(), []);
+  useEffect(() => () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    fakeTimeoutsRef.current.forEach(clearTimeout);
+  }, []);
 
   const startRound = () => {
+    clearAll();
     setRoundWinner(null);
     setFakeFlash(false);
     goRef.current = false;
@@ -50,12 +57,12 @@ const ReactionDuel: React.FC = () => {
     // Random fake flash
     const fakeDelay = 400 + Math.random() * (delay - 600);
     if (fakeDelay < delay - 200) {
-      setTimeout(() => {
+      fakeTimeoutsRef.current.push(window.setTimeout(() => {
         if (!goRef.current) {
           setFakeFlash(true);
-          setTimeout(() => setFakeFlash(false), 120);
+          fakeTimeoutsRef.current.push(window.setTimeout(() => setFakeFlash(false), 120));
         }
-      }, fakeDelay);
+      }, fakeDelay));
     }
   };
 
@@ -64,13 +71,14 @@ const ReactionDuel: React.FC = () => {
       playWrong();
       setRoundWinner(player === 0 ? 1 : 0);
       setScores(s => { const n = [...s]; n[player === 0 ? 1 : 0]++; return n; });
-      clearT();
+      clearAll();
+      setFakeFlash(false);
       goRef.current = false;
       setPhase('result');
       return;
     }
     if (phase !== 'go') return;
-    clearT();
+    clearAll();
     goRef.current = false;
     playPop();
     setRoundWinner(player);

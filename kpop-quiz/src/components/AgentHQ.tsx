@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore, getLevel, LEVEL_NAMES } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playClick, playPop, playWin, playWrong, playUnlock } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -42,6 +43,7 @@ const norm = (s: string) => s.toUpperCase().replace(/[^A-Z]/g, '');
 
 const AgentHQ: React.FC = () => {
   const { userName, setGameState, addXP, xp } = useGameStore();
+  const later = useSafeTimeout();
   const agentName = userName ? `${userName.toUpperCase()}` : 'ROOKIE';
   const agentID = useMemo(() => Math.floor(10000000 + Math.random() * 90000000).toString(), []);
   const level = getLevel(xp);
@@ -93,11 +95,11 @@ const AgentHQ: React.FC = () => {
       const newSolved = [...solvedIds, currentIdx];
       setSolvedIds(newSolved);
       localStorage.setItem('cipher_solved_ids', JSON.stringify(newSolved));
-      setTimeout(() => { setConfetti(false); nextChallenge(currentIdx); }, 1900);
+      later(() => { setConfetti(false); nextChallenge(currentIdx); }, 1900);
     } else {
       playWrong();
       setFeedback('wrong');
-      setTimeout(() => setFeedback(''), 1200);
+      later(() => setFeedback(''), 1200);
     }
   };
 
@@ -111,12 +113,11 @@ const AgentHQ: React.FC = () => {
 
   // Missions tracked from existing localStorage progress
   const missions = useMemo(() => {
-    const arenaWins = parseInt(localStorage.getItem('arena_wins') || '0');
+    const { highScores, datesPlayed: dp } = useGameStore.getState();
+    const arenaWins = highScores.battle_arena ?? 0;
     const styleSaves = parseInt(localStorage.getItem('style_saves') || '0');
-    const ninjaBest = parseInt(localStorage.getItem('ninja_best') || '0');
-    const datesPlayed = (() => {
-      try { return JSON.parse(localStorage.getItem('kpop_dates_played') || '[]').length; } catch { return 0; }
-    })();
+    const ninjaBest = highScores.ninja_slice ?? 0;
+    const datesPlayed = dp.length;
     return [
       { id: 'dec3', emoji: '🔓', label: 'Decode 3 secret ciphers',    done: solvedCount >= 3,   prog: `${Math.min(solvedCount, 3)}/3` },
       { id: 'lvl1', emoji: '⭐', label: `Reach ${LEVEL_NAMES[1]} rank`, done: level >= 1,          prog: `${xp} XP` },

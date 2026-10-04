@@ -4,7 +4,7 @@ import { useGameStore, getLevel, xpToNextLevel, LEVEL_NAMES, LEVEL_THRESHOLDS } 
 import { playClick } from '../utils/sounds';
 
 const THEME_INFO: Record<string, { name: string; icon: string; desc: string; unlockLevel: number }> = {
-  default: { name: 'Classic', icon: '🌸', desc: 'The original K-Pop pink!', unlockLevel: 0 },
+  default: { name: 'Classic', icon: '🌸', desc: 'The original pastel look', unlockLevel: 0 },
   neon: { name: 'Neon', icon: '💜', desc: 'Electric purple vibes', unlockLevel: 2 },
   ocean: { name: 'Ocean', icon: '🌊', desc: 'Cool blue waves', unlockLevel: 3 },
   forest: { name: 'Forest', icon: '🌿', desc: 'Fresh green energy', unlockLevel: 4 },
@@ -12,17 +12,16 @@ const THEME_INFO: Record<string, { name: string; icon: string; desc: string; unl
   galaxy: { name: 'Galaxy', icon: '🌌', desc: 'Cosmic superstar', unlockLevel: 5 },
 };
 
-const STAT_ITEMS = [
-  { key: 'kpop_xp', label: 'Total XP', icon: '⚡', format: (v: string) => `${parseInt(v) || 0} XP` },
-  { key: 'simon_best', label: 'Simon Best Round', icon: '🧠', format: (v: string) => `Round ${v || '0'}` },
-  { key: 'zip_best', label: 'Zip Puzzles', icon: '🔗', format: (v: string) => { try { return `${Object.keys(JSON.parse(v || '{}')).length} sizes beaten`; } catch { return '0 sizes'; } } },
-  { key: 'kpop_dates_played', label: 'Days Played', icon: '🔥', format: (v: string) => { try { return `${JSON.parse(v || '[]').length} days`; } catch { return '0 days'; } } },
-];
+const SCORE_NAMES: Record<string, string> = {
+  paper_clash: '🗺️ Paper Clash', kpop_rush: '🏃 Rush Runner', ninja_slice: '🥷 Ninja Slice', rocket_launch: '🚀 Rocket Launch',
+  battle_arena: '⚔️ Arena wins', pattern_memory: '🧠 Pattern Memory', sparkle_match: '💎 Gem Match',
+  quiz_easy: '🎼 Quiz (Easy)', quiz_normal: '🎼 Quiz (Normal)', quiz_hard: '🎼 Quiz (Hard)', quiz_lyrics: '🎼 Quiz (Lyrics)', quiz_demon: '🎼 Quiz (Demon)',
+};
 
 const TABS = ['🏅 Overview', '🎨 Themes', '📊 Stats'];
 
 const AchievementShowcase: React.FC = () => {
-  const { setGameState, xp, huntrxUnlocked, currentTheme } = useGameStore();
+  const { setGameState, xp, huntrxUnlocked, currentTheme, highScores, datesPlayed, userCurrency } = useGameStore();
   const [tab, setTab] = useState(0);
   const level = getLevel(xp);
   const { current, needed } = xpToNextLevel(xp);
@@ -160,18 +159,29 @@ const AchievementShowcase: React.FC = () => {
         {/* Stats tab */}
         {tab === 2 && (
           <div className="space-y-3">
-            {STAT_ITEMS.map(item => {
-              const raw = localStorage.getItem(item.key) || '';
-              return (
-                <div key={item.key} className="bg-white rounded-2xl px-4 py-3 shadow border-2 border-purple-100 flex items-center gap-3">
-                  <div className="text-3xl">{item.icon}</div>
-                  <div>
-                    <p className="font-nunito text-gray-500 text-sm">{item.label}</p>
-                    <p className="font-fredoka font-bold text-gray-800 text-lg">{item.format(raw)}</p>
-                  </div>
+            {[
+              { label: 'Total XP', icon: '⚡', value: `${xp} XP` },
+              { label: 'Coins', icon: '🪙', value: `${userCurrency}` },
+              { label: 'Days Played', icon: '🔥', value: `${datesPlayed.length} days` },
+            ].map(item => (
+              <div key={item.label} className="bg-white rounded-2xl px-4 py-3 shadow border-2 border-purple-100 flex items-center gap-3">
+                <div className="text-3xl">{item.icon}</div>
+                <div>
+                  <p className="font-nunito text-gray-500 text-sm">{item.label}</p>
+                  <p className="font-fredoka font-bold text-gray-800 text-lg">{item.value}</p>
                 </div>
-              );
-            })}
+              </div>
+            ))}
+            <div className="bg-white rounded-2xl px-4 py-3 shadow border-2 border-purple-100">
+              <p className="font-fredoka text-gray-700 text-lg mb-2">🏅 Best Scores</p>
+              {Object.keys(highScores).length === 0 && <p className="font-nunito text-gray-500">Play some games to set your first records!</p>}
+              {Object.entries(highScores).filter(([k]) => SCORE_NAMES[k]).map(([k, v]) => (
+                <div key={k} className="flex justify-between font-nunito text-base py-1 border-b border-gray-100 last:border-0">
+                  <span className="text-gray-700">{SCORE_NAMES[k]}</span>
+                  <span className="font-bold text-purple-700">{v.toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
             <div className="bg-white rounded-2xl px-4 py-3 shadow border-2 border-purple-100 flex items-center gap-3">
               <div className="text-3xl">🎯</div>
               <div>

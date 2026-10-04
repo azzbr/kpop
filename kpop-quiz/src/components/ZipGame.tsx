@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playClick, playPop, playWrong, playWin } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -22,6 +23,7 @@ const PUZZLES: Puzzle[] = [
 
 const ZipGame: React.FC = () => {
   const { setGameState, addXP } = useGameStore();
+  const later = useSafeTimeout();
   const [puzzleIdx, setPuzzleIdx] = useState(0);
   const [path, setPath] = useState<number[]>([]);
   const [seconds, setSeconds] = useState(0);
@@ -64,7 +66,7 @@ const ZipGame: React.FC = () => {
   const triggerShake = () => {
     playWrong();
     setShake(true);
-    setTimeout(() => setShake(false), 350);
+    later(() => setShake(false), 350);
   };
 
   const handleCellTap = (cell: number) => {

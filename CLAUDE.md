@@ -1,6 +1,6 @@
-# K-Pop Fun Quest — CLAUDE.md
+# Fun Quest Arcade — CLAUDE.md
 
-A K-pop themed educational web platform for kids aged 5–12. It combines music, mini-games, creative tools, and learning activities around a K-pop idol group called HUNTR/X.
+A games site for kids aged about 8–12: arcade games, brain puzzles, party games (2+ players on one device), and creative/music toys. The main player is a 10-year-old on an **iPad**, so touch is the primary input. The background music is the HUNTR/X soundtrack, but the site is no longer K-Pop themed.
 
 ---
 
@@ -10,328 +10,131 @@ A K-pop themed educational web platform for kids aged 5–12. It combines music,
 cd kpop-quiz
 npm install
 npm run dev        # http://localhost:5173
-npm run build      # production build
-npm run lint       # ESLint check
+npm run build      # production build (tsc -b && vite build)
+npm run lint       # ESLint
+npm test           # vitest — pure game logic and content checks
 ```
 
-**Deployed on Netlify.** `netlify.toml` lives at the repo root; build base is `kpop-quiz/`.
+**Deployed on Netlify.** `netlify.toml` lives at the repo root; build base is `kpop-quiz/`, Node 22.
 
 ---
 
 ## Repo Layout
 
 ```
-kpop/
-├── CLAUDE.md
-├── netlify.toml                  # Netlify deployment + headers + SPA redirect
-└── kpop-quiz/                    # Entire application lives here
-    ├── index.html
-    ├── vite.config.ts
-    ├── tailwind.config.js
-    ├── tsconfig.json
-    ├── src/
-    │   ├── main.tsx              # React root mount
-    │   ├── App.tsx               # Top-level screen router (switch on gameState)
-    │   ├── store.ts              # Zustand global store — ALL state lives here
-    │   ├── index.css             # Tailwind directives + kid-specific utility classes
-    │   ├── quizData.ts           # K-pop quiz questions (Easy→Demon, 5 difficulties)
-    │   ├── friendsQuestionsData.ts
-    │   └── components/           # One file per screen/feature (31 components)
-    ├── public/
-    │   ├── musickpop/            # 8 FLAC audio tracks
-    │   └── images/               # K-pop group photos (WebP/JPEG)
-    ├── netlify/functions/        # Serverless: counter, increment, health
-    └── backend/                  # Optional Express server (local dev only)
+kpop-quiz/
+├── index.html                # iPad meta tags (viewport-fit, apple-mobile-web-app-*), manifest link
+├── public/
+│   ├── manifest.webmanifest  # Home Screen install, full-screen
+│   ├── icons/                # app icons (svg + 180/192/512 png)
+│   └── musickpop/            # 8 AAC .m4a tracks (plain slug names — no spaces/apostrophes)
+└── src/
+    ├── App.tsx               # Screen router: lazy-loaded screens keyed by gameState
+    ├── store.ts              # Zustand store (persisted) — all shared state
+    ├── index.css             # Tailwind + utility classes (see Design System)
+    ├── quizData.ts           # Music/K-Pop quiz questions (5 difficulties)
+    ├── utils/                # sounds.ts (Web Audio effects), dates.ts (local dates, streaks)
+    ├── games/engine/         # Shared game engine (see below)
+    ├── components/           # One file per screen
+    │   └── games/            # New-style games built on the engine (+ *Logic.ts, *.test.ts)
+    └── data/                 # Puzzle/content data with tests
 ```
-
----
-
-## Tech Stack
-
-| Layer | Library | Version |
-|---|---|---|
-| UI | React | 19.1 |
-| Types | TypeScript | 5.8 |
-| Build | Vite | 7.1 |
-| Styling | Tailwind CSS | 3.4 |
-| Animation | Framer Motion | 12 |
-| State | Zustand | 5 |
-| Canvas | tldraw | 4.2 |
 
 ---
 
 ## Architecture
 
-### Screen Router (`App.tsx`)
+### Screens
+Every screen is a `gameState` string. `App.tsx` renders Welcome and the game grid directly and lazy-loads everything else (`SCREENS` map), so the iPad only downloads what she opens. The tldraw-based Living Mural is ~1.6 MB on its own — keep it lazy.
 
-Every top-level screen is a `gameState` string. The router is a `switch` in `renderCurrentScreen()`. To add a new screen:
-1. Add the state key to the `GameState` union type in `store.ts`
-2. Import and add the component to the switch in `App.tsx`
-3. Add a button/navigation path that calls `setGameState('your_key')`
+To add a screen:
+1. Add the key to the `GameState` union in `store.ts`
+2. Add `my_key: lazy(() => import('./components/...'))` to `SCREENS` in `App.tsx`
+3. Add a tile to `TILES` in `GameModeSelection.tsx` with a `category` (`arcade | puzzle | quiz | party | create | me | teacher`). Set `isNew: true` for a while. Each icon is used once.
+4. Every screen needs a clear Back button → `setGameState('game_mode')`
 
-### Global Store (`store.ts`)
+### Store (`store.ts`)
+Zustand with `persist` (save key `funquest-save`, `version: 1`). `partialize` saves **progress only** (name, XP, coins, high scores, days played, badges, stats, theme, volume) — never the current screen or an in-progress game. Bump `version` and add a `migrate` step when changing the saved shape.
 
-Built with Zustand. All game state (scores, badges, streaks, music, mini-game progress) is in one flat store. Import with:
+The old scattered localStorage keys (`kpop_xp`, `ninja_best`, …) are imported once by `readLegacy()` and deleted after hydration. Some per-game content keys still live in components (`zip_best`, `wordladder_solved`, `diary_list`, `style_*`, `cipher_*`, `jarvis_*`) — fine for content, but **scores go through the store**.
 
-```ts
-import { useGameStore } from '../store';
-const { playerName, score, setGameState } = useGameStore();
-```
+### Scoring & rewards — one rule
+- `finishRound(gameId, score, xpScale)` — call once when a round ends. It saves the best score, marks today as played (daily streak), and gives XP = `clamp(round(score / xpScale), 5, 50)` (+25 for a new best), coins = `floor(XP / 5)`. It returns `{ isBest, best, xp, coins }`.
+- `GameShell` calls it for you. Pick an `xpScale` so a good round lands near 40 XP.
+- `submitScore` saves the score without a reward. `addXP` is for small one-off rewards (puzzle solved) and also counts as a day played.
+- Never give XP just for opening a screen or tapping a tile.
 
-Key state sections:
-- **Game flow:** `gameState`, `difficulty`, `currentQuestions`
-- **Player:** `playerName`, `score`, `earnedBadges`, `dailyStreak`
-- **Music:** `currentTrack`, `isPlaying`, `volume`, `playlist`
-- **Achievements:** `badgesEarned`, `songsListened`, `correctAnswers`
-- **Mini-games:** memory cards, rhythm notes, trivia cards, teams, friends trivia
-- **Secret menu:** inventory, stats, unlocked hidden badges
+### Game engine (`src/games/engine/`)
+- `useGameLoop({ tickHz, update, draw, running, onHidden })` — logic runs on a **fixed tick** (so 120 Hz iPads aren't double speed), drawing runs on requestAnimationFrame with an interpolation `alpha`, and it calls `onHidden` when she switches apps (pause there).
+- `useCanvasSize(ref)` — keeps a canvas sharp at the device pixel ratio and resizes on rotation.
+- `useSwipeInput(ref, onDir)` — Pointer-Events swipe steering (turns can be chained without lifting the finger) plus arrow keys/WASD.
+- `GameShell` — full-screen frame: Back, Pause, ready / paused / game-over cards, best score, confetti, rewards.
+- `rng.ts` — seeded random (`createRng(seed)`), for tests and debug runs.
 
-### Navigation
+**Pattern for a new real-time game:** put the rules in a pure `xxxLogic.ts` (no React, no canvas) with a vitest `xxxLogic.test.ts`; the component only handles input, drawing and the HUD. See `components/games/PaperClash.tsx` + `paperClashLogic.ts`.
 
-To go to a screen: `setGameState('screen_name')`
-To go back to game selection: `setGameState('game_mode')`
-To go to welcome: `setGameState('welcome')`
+**Debug hook:** with `?debug` in the URL, Paper Clash exposes `window.__game` (`start`, `hold`, `step`, `steer`, `world`, `percent`); `?seed=42` makes a run repeatable. Use this for Playwright tests instead of real-time play.
+
+### Online rooms (Friends Arena)
+`src/online/useRoom.ts` joins a Supabase Realtime channel named after the room code. The host's device holds the authoritative game state and broadcasts it; other devices send inputs. Question/puzzle banks live in `src/online/*.ts`.
+
+### Music
+`MusicPlayer` is always mounted as a small floating button at the right edge that expands into controls; `hidden` keeps the audio playing without the controls (FM Radio, Living Mural). Tracks are listed in `TRACKS` in `store.ts`; `trackInfo(file)` gives the title/artist. To add one: drop an `.m4a` (AAC) with a plain slug name in `public/musickpop/` and add it to `TRACKS`.
 
 ---
 
-## All Game Screens
+## Game Screens
 
-| `gameState` | Component | Description |
-|---|---|---|
-| `welcome` | `WelcomeScreen` | Landing screen, name entry, easter egg trigger |
-| `game_mode` | `GameModeSelection` | 12-mode selection grid |
-| `difficulty` | `DifficultyScreen` | Easy/Normal/Hard/Lyrics/Demon picker |
-| `quiz` | `QuizView` | K-pop quiz gameplay |
-| `result` | `ResultScreen` | Score summary + badge awards |
-| `memory_game` | `MemoryGame` | Card matching (4×4 or 6×6) |
-| `rhythm_game` | `RhythmGame` | Tap-to-beat with K-pop tracks |
-| `trivia_cards` | `TriviaCards` | Collectible idol cards + market |
-| `instruments_tutorial` | `InstrumentsTutorial` | Piano and recorder learning |
-| `team_maker` | `TeamMaker` | Random team generator + tag game |
-| `friends_trivia` | `FriendsTrivia` | Friend-specific trivia questions |
-| `math_challenge` | `MathChallenge` | Timed math (4 operations + word problems) |
-| `spelling_bee` | `SpellingBee` | Letter-by-letter spelling practice |
-| `reading_comprehension` | `ReadingComprehension` | Story + comprehension questions |
-| `science_quiz` | `ScienceQuiz` | Animals, planets, weather facts |
-| `secret_menu` | `SecretMenu` | Hidden menu (12+ bonus activities) |
-| `living_mural` | `LivingMural` | tldraw collaborative drawing canvas |
-| `agent_hq` | `AgentHQ` | Secret agent mission control |
-| `shop` | `Shop` | Cosmetic shop with in-game currency |
-| `kpop_rush` | `KPopRushGame` | Chrome-dino-style runner game |
+| Category | Games (`gameState`) |
+|---|---|
+| Arcade | `paper_clash`, `kpop_rush` (Rush Runner), `ninja_slice`, `rocket_launch`, `battle_arena` |
+| Puzzles | `mini_sudoku`, `zip_game`, `word_ladder`, `crossword_mini`, `word_scramble`, `pattern_memory`, `memory_speed`, `sparkle_match` (Gem Match) |
+| Quiz | `difficulty` → `quiz` → `result` (Music Quiz), `lightning_quiz`, `idol_personality_quiz` |
+| Party | `online_hub` (Friends Arena — online rooms, ~30 games in `components/online/`), `tug_of_war`, `truth_or_dare`, `trivia_battle` (Buzzer Battle), `reaction_duel`, `talent_show`, `team_maker` |
+| Create & Music | `beat_maker`, `guess_intro`, `fm_radio`, `dance_battle`, `style_studio`, `idol_profile` (Superstar Card), `idol_diary` (Secret Diary) |
+| My Stuff | `streak_calendar`, `achievement_showcase` (Trophy Room) |
+| Teacher (hidden) | `jarvis_hq`, `freeze_dance`, `chaotic_backstage` — tiles appear after typing **JARVIS** as the player name |
+| Hidden | `secret_menu` (tap the **A** in "Arcade" on the welcome screen), `living_mural` (tap the **F**), `agent_hq`, `shop`, `huntrx_splash` (name **HUNTRX**) |
 
-### Secret Menu Easter Egg
+---
 
-Click the **second "P"** in "K-Pop Fun Quest" on the welcome screen. Contains 4 tabs:
-- **Creative Corner:** Drawing canvas, sticker gallery, pattern maker
-- **Game Paradise:** K-Pop Rush, bubble popper, face generator, treasure hunt
-- **Fun Zone:** Living mural, sound board, confetti cannon
-- **Behind Scenes:** App stats dashboard, developer cameos, badge gallery
+## iPad rules
+
+- Touch first. Buttons at least 44×44 px (48+ for primary actions). No hover-only UI.
+- Wrap real-time game areas in `.game-surface` (no scrolling, zoom, text selection or long-press menu) and use Pointer Events.
+- Avoid the on-screen keyboard: prefer tap choices or an in-game keyboard. Never `autoFocus` inputs.
+- Use `.min-h-screen-d` (dvh) rather than 100vh, and respect `env(safe-area-inset-*)`.
+- Audio only starts after a tap (MusicPlayer unlocks on the first tap). Safari ignores `<audio>` volume changes — pause other audio instead of fading it.
+- Pause games when the page is hidden (`useGameLoop`'s `onHidden`).
+- Saved progress: Safari can wipe site data after ~7 days without a visit, **except** for sites added to the Home Screen. Tell users to add it to the Home Screen.
+- Draw dragged pieces above the finger so the hand doesn't hide them.
 
 ---
 
 ## Design System
 
-### Kid-Friendly CSS Classes (`index.css`)
-
-```css
-.btn-kid            /* Primary pink/purple gradient button */
-.btn-kid-secondary  /* Outlined secondary button */
-.card-kid           /* Rounded white card with soft shadow */
-.text-kid-glow      /* Glowing text for headings */
-.bg-kid-pattern     /* Pastel polka-dot background */
-```
-
-### Fonts
-
-- **Fredoka One** — headings, titles (rounded, playful)
-- **Nunito** — body text (clean, readable for young readers)
-- **Comfortaa** — accent text
-
-### Colors
-
-Stick to the Tailwind palette already defined in `tailwind.config.js`. Key hues: pink, purple, blue (primary); yellow, green, orange, cyan (accents). Use pastel shades for backgrounds, saturated shades for interactive elements.
-
-### Animation Principles
-
-Use Framer Motion for all transitions. Preferred patterns:
-```tsx
-// Screen entrance
-<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-
-// Hover feedback (buttons)
-whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-
-// Staggered list reveal
-variants={{ container: { staggerChildren: 0.1 } }}
-```
-
-Keep animations short (200–400ms). Kids love bounce/spring, not slow fades.
+- `.arcade-bg` — dark purple/indigo backdrop for the welcome screen, grid and engine games
+- `.btn-kid`, `.btn-kid-secondary`, `.card-kid`, `.text-kid-glow`, `.bg-kid-pattern` — older light-theme classes used by most existing screens
+- Fonts: **Fredoka One** (headings), **Nunito** (body)
+- Themes (`data-theme` on `<html>`) live in `index.css`; the Theme switcher is in the Secret Menu
+- Framer Motion for UI transitions; keep them short (200–400 ms)
 
 ---
 
-## Adding a New Game Mode
+## Content rules (kids 8–12)
 
-1. **Create the component** in `src/components/MyNewGame.tsx`
-2. **Add state key** to `GameState` type in `store.ts`
-3. **Register in router** — import and add `case 'my_new_game': return <MyNewGame key="my_new_game" />;` in `App.tsx`
-4. **Add to game mode grid** in `GameModeSelection.tsx` (each card needs icon, title, description, color, and `onClick` calling `setGameState`)
-5. **Back button** — every screen must include a back button calling `setGameState('game_mode')`
-6. **Score/badge** — if the game awards points, dispatch to the store's `addScore()` and check `checkBadgeUnlock()`
-
----
-
-## Adding Quiz Questions (`quizData.ts`)
-
-Questions are plain objects:
-```ts
-{
-  question: "What is Rumi's special power?",
-  options: ["Telekinesis", "Time freeze", "Invisibility", "Fire control"],
-  correct: 0,   // index into options[]
-  explanation: "Rumi can move objects with her mind!"
-}
-```
-
-Five arrays by difficulty: `easyQuestions`, `normalQuestions`, `hardQuestions`, `lyricsQuestions`, `demonQuestions`.
-
----
-
-## Badge System
-
-Badges are defined in `store.ts`. Each badge has:
-- `id`, `name`, `emoji`, `description`
-- `unlockCondition` — a function checked after each game action
-
-To add a new badge, append to the `badges` array and add unlock logic to `checkBadgeUnlock()`.
-
----
-
-## Music Player
-
-Eight FLAC tracks in `public/musickpop/`. The `MusicPlayer` component is always rendered (fixed bottom bar). Track list is defined in `store.ts` under `playlist`. To add a track:
-1. Drop the file in `public/musickpop/`
-2. Add an entry to the `playlist` array in `store.ts`
-
----
-
-## Kids-First Content Rules
-
-These rules keep the site age-appropriate and fun:
-
-1. **No external links** — never link out to social media, YouTube, or third-party sites
-2. **No personal data collection** — all state is client-side (Zustand); nothing is sent to a server
-3. **Positive reinforcement only** — wrong answers get encouragement ("Almost! Try again!"), never shame
-4. **Large touch targets** — all buttons must be at least 44×44px; test on mobile
-5. **Readable text** — minimum `text-lg` (18px) for body; `text-xl`+ for instructions
-6. **Emoji-first icons** — use emoji rather than icon libraries; they render everywhere and kids love them
-7. **Short sessions** — each game mode should be completable in under 5 minutes
-8. **Clear back navigation** — every screen must have a clearly labeled back or home button
-9. **Safe language** — no scary, violent, or adult themes; keep humor G-rated
-10. **Celebration moments** — use confetti, sound effects, and big congratulations on completions
-
----
-
-## Ideas for Making the Site Even More Fun
-
-### High-Impact Additions
-
-- **🎤 Sing-Along Mode** — display lyrics with a bouncing ball synced to the music player
-- **🎨 Avatar Creator** — kids design a custom K-pop idol avatar saved in localStorage
-- **🌟 Star Chart** — visual constellation of achievements replacing the badge list
-- **📖 Story Mode** — comic-style HUNTR/X adventure story with branching choices
-- **🎲 Random Fun Button** — one button on the home screen that launches a random mini-game
-- **🏆 Weekly Leaderboard** — cached top scores with fun player nicknames
-- **🎵 Karaoke Game** — type the next lyric before the timer runs out
-- **💃 Dance Tutorial** — step-by-step dance move instructions with animated stick figures
-- **🌈 Theme Switcher** — let kids pick a color theme (pastel pink, neon, ocean blue, forest green)
-- **🎁 Daily Gift Box** — open a surprise reward each day to boost streak motivation
-- **🔤 Korean Word of the Day** — teach one simple Korean word or phrase with pronunciation
-- **🤝 Pass-and-Play Multiplayer** — two players take turns on one device for trivia/quiz
-
-### Quick Wins (Small Effort, Big Smile)
-
-- Add sound effects on every button click (a short pop or chime)
-- Animate the score counter incrementing (not just snapping to new value)
-- Show a random fun fact about K-pop between quiz questions
-- Add a "Lucky Star" power-up that removes one wrong answer option
-- Easter egg: entering the player name as "HUNTRX" unlocks a special welcome animation
-- Shake animation on wrong answers instead of just turning red
-- Firework burst effect on achieving a new personal best
+1. **No external links**, no embeds (YouTube etc.), no third-party sites
+2. **No personal data leaves the device** — progress is local (store + localStorage). The one exception is Friends Arena: `src/online/` uses Supabase Realtime *broadcast* (publishable key in `supabaseClient.ts`) to send a player's display name and game moves to others in the same 4-letter room. Nothing is written to a database. Keep it that way: no accounts, no stored chat, first names only
+3. **Positive tone** — wrong answers get encouragement, never shame
+4. **Readable** — body text `text-base`/`text-lg`+, instructions `text-xl`+
+5. **Emoji icons** — no icon libraries
+6. **Short rounds** — a game round fits in about 5 minutes
+7. **G-rated humour**; no scary, violent or adult themes ("knocked out", not "killed")
+8. **Facts must be correct.** Any file with facts (quiz banks, "real or fake" facts, puzzle answers) needs a fact-check pass before shipping, and puzzles need a test proving they're solvable (see `data/*.test.ts`)
+9. **Celebrate** finishes with confetti and sound
 
 ---
 
 ## Deployment
 
-Deployed to Netlify. Push to `main` triggers a build automatically.
-
-**Environment variables** (set in Netlify dashboard):
-- `KPOP_QUIZ_TOTAL_TESTS` — counter for serverless test endpoint (optional)
-
-**Serverless functions** (in `netlify/functions/`):
-- `GET /api/health` — health check
-- `GET /api/counter` — read test counter
-- `POST /api/increment` — increment counter
-
-**Security headers** are configured in `netlify.toml`:
-- `X-Frame-Options: DENY`
-- `X-XSS-Protection: 1; mode=block`
-- `X-Content-Type-Options: nosniff`
-
-Static assets under `/assets/` are cached immutably for 1 year.
-
----
-
-## Common Patterns
-
-### Screen wrapper (use this structure for every new screen)
-```tsx
-import { motion } from 'framer-motion';
-import { useGameStore } from '../store';
-
-export default function MyScreen() {
-  const { setGameState } = useGameStore();
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="min-h-screen bg-kid-pattern flex flex-col items-center p-4"
-    >
-      <button
-        onClick={() => setGameState('game_mode')}
-        className="btn-kid-secondary self-start mb-4"
-      >
-        ← Back
-      </button>
-
-      <h1 className="text-kid-glow text-4xl font-bold mb-6">My Screen 🎉</h1>
-
-      {/* content here */}
-    </motion.div>
-  );
-}
-```
-
-### Celebration effect
-```tsx
-import { useState } from 'react';
-
-const [showConfetti, setShowConfetti] = useState(false);
-
-const handleWin = () => {
-  setShowConfetti(true);
-  setTimeout(() => setShowConfetti(false), 3000);
-};
-```
-
-### Adding to the store
-```ts
-// In store.ts, add to the interface:
-myNewValue: number;
-setMyNewValue: (v: number) => void;
-
-// And in the create() call:
-myNewValue: 0,
-setMyNewValue: (v) => set({ myNewValue: v }),
-```
+Netlify builds `kpop-quiz/` on push to `main` (Node 22 — Vite 7 needs 20+). Security headers and SPA redirect are in `netlify.toml`; `/assets/*` is cached immutably. Serverless functions in `netlify/functions/` (`/api/health`, `/api/counter`, `/api/increment`) are optional.

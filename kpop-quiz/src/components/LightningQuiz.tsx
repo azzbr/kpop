@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { easyQuestions, normalQuestions } from '../quizData';
 import { playCorrect, playWrong, playWin, playTick, playTimeOut, playCoin } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
@@ -8,15 +9,24 @@ import ConfettiBurst from './ConfettiBurst';
 const SECS = 8;
 const TOTAL_Q = 12;
 
-const ALL_Q = [...easyQuestions, ...normalQuestions]
+// Picked fresh for each game (not once at app load), so rounds don't repeat.
+const pickQuestions = () => [...easyQuestions, ...normalQuestions]
   .sort(() => Math.random() - 0.5)
   .slice(0, TOTAL_Q)
   .map(q => ({ ...q, answers: [...q.answers].sort(() => Math.random() - 0.5) }));
 
 type Phase = 'intro' | 'playing' | 'done';
 
-export default function LightningQuiz() {
+// "Play again" remounts the game with a new key instead of reloading the whole page.
+export default function LightningQuizScreen() {
+  const [game, setGame] = useState(0);
+  return <LightningQuiz key={game} onRestart={() => setGame(g => g + 1)} />;
+}
+
+function LightningQuiz({ onRestart }: { onRestart: () => void }) {
   const { setGameState } = useGameStore();
+  const later = useSafeTimeout();
+  const [ALL_Q] = useState(pickQuestions);
 
   const [phase, setPhase] = useState<Phase>('intro');
   const [qi, setQi] = useState(0);
@@ -37,13 +47,13 @@ export default function LightningQuiz() {
       playTimeOut();
       setPicked(-1); // -1 = timed out
       setCombo(0);
-      setTimeout(() => advance(), 1400);
+      later(() => advance(), 1400);
       return;
     }
     if (timeLeft <= 3) playTick();
     const id = setTimeout(() => setTimeLeft(t => t - 1), 1000);
     return () => clearTimeout(id);
-  }, [timeLeft, phase, picked]);
+  }, [timeLeft, phase, picked, later]);
 
   function handleAnswer(idx: number) {
     if (picked !== null) return;
@@ -65,7 +75,7 @@ export default function LightningQuiz() {
       playWrong();
       setCombo(0);
     }
-    setTimeout(() => advance(), 1300);
+    later(() => advance(), 1300);
   }
 
   function advance() {
@@ -141,7 +151,7 @@ export default function LightningQuiz() {
             </div>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => window.location.reload()} className="btn-kid flex-1">⚡ Again!</button>
+            <button onClick={onRestart} className="btn-kid flex-1">⚡ Again!</button>
             <button onClick={() => setGameState('game_mode')} className="btn-kid-secondary flex-1">🏠 Home</button>
           </div>
         </div>

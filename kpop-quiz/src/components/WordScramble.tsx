@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playCorrect, playWrong, playWin, playClick, playTick, playTimeOut } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -11,33 +12,39 @@ interface WordItem {
 }
 
 const WORDS: WordItem[] = [
-  { word: 'KPOP', hint: 'Korean pop music genre', emoji: '🎵' },
-  { word: 'IDOL', hint: 'A famous K-pop performer', emoji: '⭐' },
-  { word: 'DEBUT', hint: 'First time performing publicly', emoji: '🌟' },
-  { word: 'FANDOM', hint: 'Group of super fans', emoji: '💜' },
-  { word: 'COMEBACK', hint: 'When a group releases new music', emoji: '🎤' },
+  { word: 'PLANET', hint: 'Earth is one', emoji: '🪐' },
+  { word: 'VOLCANO', hint: 'A mountain that can erupt', emoji: '🌋' },
+  { word: 'DOLPHIN', hint: 'A very clever sea mammal', emoji: '🐬' },
+  { word: 'PYRAMID', hint: 'Ancient Egyptian tomb', emoji: '🔺' },
+  { word: 'GALAXY', hint: 'A huge group of stars', emoji: '🌌' },
+  { word: 'JUNGLE', hint: 'Thick tropical forest', emoji: '🌴' },
+  { word: 'PENGUIN', hint: "A bird that can't fly but swims", emoji: '🐧' },
+  { word: 'MYSTERY', hint: 'Something unexplained', emoji: '🕵️' },
+  { word: 'TREASURE', hint: 'Pirates bury it', emoji: '💰' },
+  { word: 'DRAGON', hint: 'A fire-breathing legend', emoji: '🐉' },
+  { word: 'ROCKET', hint: 'It blasts off into space', emoji: '🚀' },
+  { word: 'CASTLE', hint: 'A king or queen might live here', emoji: '🏰' },
+  { word: 'THUNDER', hint: 'The boom after lightning', emoji: '⛈️' },
+  { word: 'PUZZLE', hint: 'You are solving one right now', emoji: '🧩' },
+  { word: 'CHAMPION', hint: 'The winner of a competition', emoji: '🏆' },
+  { word: 'SKATEBOARD', hint: 'A board with four wheels', emoji: '🛹' },
+  { word: 'CHOCOLATE', hint: 'A sweet treat made from cocoa', emoji: '🍫' },
+  { word: 'ADVENTURE', hint: 'An exciting journey', emoji: '🗺️' },
+  { word: 'GRAVITY', hint: 'What keeps your feet on the ground', emoji: '🍎' },
+  { word: 'TORNADO', hint: 'A spinning windstorm', emoji: '🌪️' },
   { word: 'MELODY', hint: 'A musical tune', emoji: '🎶' },
-  { word: 'RHYTHM', hint: 'The beat of music', emoji: '🥁' },
-  { word: 'STAGE', hint: 'Where performers perform', emoji: '🎭' },
-  { word: 'CONCERT', hint: 'Live music show', emoji: '🎸' },
-  { word: 'LYRICS', hint: 'Words of a song', emoji: '📝' },
-  { word: 'DANCE', hint: 'Move to the music', emoji: '💃' },
-  { word: 'SINGER', hint: 'Person who sings', emoji: '🎙️' },
-  { word: 'ALBUM', hint: 'Collection of songs', emoji: '💿' },
-  { word: 'GOLDEN', hint: 'HUNTR/X hit song', emoji: '🏆' },
-  { word: 'HUNTER', hint: 'What HUNTR/X members are', emoji: '🔎' },
-  { word: 'MAGIC', hint: 'Something amazing and unreal', emoji: '✨' },
-  { word: 'POWER', hint: 'Strength and energy', emoji: '💪' },
-  { word: 'SPARK', hint: 'A tiny flash of light', emoji: '⚡' },
-  { word: 'SHINE', hint: 'To glow brightly', emoji: '☀️' },
-  { word: 'HEART', hint: 'Symbol of love', emoji: '❤️' },
-  { word: 'BRAVE', hint: 'Courageous and fearless', emoji: '🦁' },
-  { word: 'CHEER', hint: 'Shout of support', emoji: '🎉' },
-  { word: 'DREAM', hint: 'What you hope for', emoji: '🌙' },
-  { word: 'SQUAD', hint: 'A team of friends', emoji: '👯' },
-];
+  { word: 'RAINBOW', hint: 'Seven colours after rain', emoji: '🌈' },
+  { word: 'INVENTOR', hint: 'Someone who creates new things', emoji: '💡' },
+  { word: 'ASTRONAUT', hint: 'A person who travels to space', emoji: '👩‍🚀' },
+  { word: 'KANGAROO', hint: 'An animal that hops, with a pouch', emoji: '🦘' },
+  { word: 'BLIZZARD', hint: 'A huge snowstorm', emoji: '❄️' },
+  { word: 'NINJA', hint: 'A sneaky Japanese warrior', emoji: '🥷' },
+  { word: 'ORCHESTRA', hint: 'A big group of musicians', emoji: '🎻' },
+  { word: 'SUPERHERO', hint: 'Saves the day with powers', emoji: '🦸' },
+  { word: 'ELECTRIC', hint: 'Powered by electricity', emoji: '⚡' },
+]
 
-const TIME_PER_WORD = 15;
+const TIME_PER_WORD = 20;
 
 function scramble(word: string): string[] {
   const arr = word.split('');
@@ -52,8 +59,15 @@ function scramble(word: string): string[] {
   return arr;
 }
 
-export default function WordScramble() {
+// "Play again" remounts the game with a new key instead of reloading the whole page.
+export default function WordScrambleScreen() {
+  const [game, setGame] = useState(0);
+  return <WordScramble key={game} onRestart={() => setGame(g => g + 1)} />;
+}
+
+function WordScramble({ onRestart }: { onRestart: () => void }) {
   const { setGameState } = useGameStore();
+  const later = useSafeTimeout();
 
   const [pool] = useState(() => [...WORDS].sort(() => Math.random() - 0.5));
   const [wordIndex, setWordIndex] = useState(0);
@@ -85,13 +99,13 @@ export default function WordScramble() {
       playTimeOut();
       setFeedback('timeout');
       setStreak(0);
-      setTimeout(() => advance(false), 1500);
+      later(() => advance(false), 1500);
       return;
     }
     if (timeLeft <= 4) playTick();
     const id = setTimeout(() => setTimeLeft(t => t - 1), 1000);
     return () => clearTimeout(id);
-  }, [timeLeft, feedback, gameOver]);
+  }, [timeLeft, feedback, gameOver, later]);
 
   const guessedWord = selected.map(i => scrambled[i]).join('');
 
@@ -105,15 +119,15 @@ export default function WordScramble() {
       setScore(s => s + pts);
       setStreak(s => s + 1);
       setFeedback('correct');
-      setTimeout(() => advance(true), 1200);
+      later(() => advance(true), 1200);
     } else {
       playWrong();
       setStreak(0);
       setFeedback('wrong');
-      setTimeout(() => setSelected([]), 600);
-      setTimeout(() => setFeedback(null), 600);
+      later(() => setSelected([]), 600);
+      later(() => setFeedback(null), 600);
     }
-  }, [selected]);
+  }, [selected, later]);
 
   function advance(wasCorrect: boolean) {
     const next = wordIndex + 1;
@@ -158,7 +172,7 @@ export default function WordScramble() {
           <div className="text-4xl font-fredoka font-bold text-purple-700 mb-2">{score} pts</div>
           <div className="text-gray-500 mb-6">out of {totalWords} words</div>
           <div className="flex gap-3">
-            <button onClick={() => { setGameState('word_scramble' as any); window.location.reload(); }}
+            <button onClick={onRestart}
               className="btn-kid flex-1">🔄 Play Again</button>
             <button onClick={() => setGameState('game_mode')} className="btn-kid-secondary flex-1">🏠 Home</button>
           </div>
@@ -199,7 +213,7 @@ export default function WordScramble() {
             : 'border-purple-200'
           }`}>
           <div className="text-5xl mb-2">{currentItem.emoji}</div>
-          <p className="text-gray-600 font-nunito text-lg mb-1">Unscramble this K-pop word!</p>
+          <p className="text-gray-600 font-nunito text-lg mb-1">Unscramble this word!</p>
           <p className="text-purple-500 font-fredoka text-base">Hint: {currentItem.hint}</p>
 
           {/* Timer */}

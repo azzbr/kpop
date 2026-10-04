@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playClick, playCorrect, playWrong, playWin, playPop } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -11,15 +12,15 @@ interface Track {
 }
 
 const TRACKS: Track[] = [
-  { file: '01. TAKEDOWN (JEONGYEON, JIHYO, CHAEYOUNG).flac', title: 'TAKEDOWN (TWICE Version)', startSec: 12 },
-  { file: "02. How It's Done.flac", title: "How It's Done", startSec: 8 },
-  { file: '03. Soda Pop.flac', title: 'Soda Pop', startSec: 15 },
-  { file: '04. Golden.flac', title: 'Golden', startSec: 6 },
-  { file: '05. Strategy.flac', title: 'Strategy', startSec: 18 },
-  { file: '06. Takedown.flac', title: 'Takedown', startSec: 10 },
-  { file: '07. Your Idol.flac', title: 'Your Idol', startSec: 14 },
-  { file: '08. Free.flac', title: 'Free', startSec: 9 },
-];
+  { file: '01-takedown-twice.m4a', title: 'Takedown (TWICE version)', startSec: 12 },
+  { file: '02-hows-it-done.m4a', title: "How It's Done", startSec: 8 },
+  { file: '03-soda-pop.m4a', title: 'Soda Pop', startSec: 15 },
+  { file: '04-golden.m4a', title: 'Golden', startSec: 6 },
+  { file: '05-strategy.m4a', title: 'Strategy', startSec: 18 },
+  { file: '06-takedown.m4a', title: 'Takedown (HUNTR/X version)', startSec: 10 },
+  { file: '07-your-idol.m4a', title: 'Your Idol', startSec: 14 },
+  { file: '08-free.m4a', title: 'Free', startSec: 9 },
+]
 
 const CLIP_LENGTHS = [1.5, 2.5, 4]; // progressively easier
 const CLIP_LABELS = ['🔥 SUPER SHORT', '⚡ SHORT', '🎵 LONGER'];
@@ -32,6 +33,7 @@ function pickOptions(correct: Track): Track[] {
 
 export default function GuessTheIntro() {
   const { setGameState, addXP } = useGameStore();
+  const later = useSafeTimeout();
   const [round, setRound] = useState(0);
   const [score, setScore] = useState(0);
   const [clipIdx, setClipIdx] = useState(0);
@@ -42,70 +44,49 @@ export default function GuessTheIntro() {
   const [done, setDone] = useState(false);
   const [confetti, setConfetti] = useState(false);
 
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const sourceRef = useRef<AudioBufferSourceNode | null>(null);
-  const bufferCache = useRef<Map<string, AudioBuffer>>(new Map());
+  // A plain <audio> element (not decodeAudioData) so only the needed bytes stream in, and so
+  // it works on iPad Safari, which requires play() to be called directly inside the tap.
+  const clipRef = useRef<HTMLAudioElement | null>(null);
   const stopTimerRef = useRef<number | null>(null);
+  const setIsPlaying = useGameStore(s => s.setIsPlaying);
 
+  // Pause the background music while guessing (Safari ignores volume changes, so no fading),
+  // and put it back the way it was when leaving.
   useEffect(() => {
+    const wasPlaying = useGameStore.getState().isPlaying;
+    setIsPlaying(false);
+    clipRef.current = new Audio();
+    clipRef.current.preload = 'auto';
     return () => {
-      try { sourceRef.current?.stop(); } catch { /* ignore */ }
+      clipRef.current?.pause();
+      clipRef.current = null;
       if (stopTimerRef.current) clearTimeout(stopTimerRef.current);
-      audioCtxRef.current?.close();
+      if (wasPlaying) setIsPlaying(true);
     };
-  }, []);
+  }, [setIsPlaying]);
 
-  const ensureCtx = async () => {
-    if (!audioCtxRef.current) {
-      const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      audioCtxRef.current = new Ctx();
-    }
-    if (audioCtxRef.current.state === 'suspended') {
-      await audioCtxRef.current.resume();
-    }
-    return audioCtxRef.current;
-  };
+  // Preload the round's track so the seek is instant when she taps play.
+  useEffect(() => {
+    const el = clipRef.current;
+    if (!el) return;
+    el.src = `/musickpop/${target.file}`;
+    el.load();
+  }, [target]);
 
-  const loadBuffer = async (file: string): Promise<AudioBuffer> => {
-    const cached = bufferCache.current.get(file);
-    if (cached) return cached;
-    const ctx = await ensureCtx();
-    const res = await fetch(`/musickpop/${file}`);
-    const arr = await res.arrayBuffer();
-    const buf = await ctx.decodeAudioData(arr);
-    bufferCache.current.set(file, buf);
-    return buf;
-  };
-
-  const playClip = async () => {
-    if (playing || feedback) return;
+  const playClip = () => {
+    const el = clipRef.current;
+    if (playing || feedback || !el) return;
     playClick();
     setPlaying(true);
-    try {
-      const ctx = await ensureCtx();
-      const buf = await loadBuffer(target.file);
-      try { sourceRef.current?.stop(); } catch { /* ignore */ }
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
-      const gain = ctx.createGain();
-      gain.gain.value = 0;
-      src.connect(gain).connect(ctx.destination);
-      const dur = CLIP_LENGTHS[clipIdx];
-      const start = Math.min(target.startSec, Math.max(0, buf.duration - dur - 0.5));
-      src.start(0, start, dur + 0.2);
-      gain.gain.linearRampToValueAtTime(0.8, ctx.currentTime + 0.05);
-      gain.gain.setValueAtTime(0.8, ctx.currentTime + dur - 0.15);
-      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + dur);
-      sourceRef.current = src;
+    const dur = CLIP_LENGTHS[clipIdx];
+    const seekAndStop = () => {
+      try { el.currentTime = target.startSec; } catch { /* metadata not ready yet */ }
       if (stopTimerRef.current) clearTimeout(stopTimerRef.current);
-      stopTimerRef.current = window.setTimeout(() => {
-        try { src.stop(); } catch { /* ignore */ }
-        setPlaying(false);
-      }, dur * 1000 + 80);
-    } catch (e) {
-      console.error(e);
-      setPlaying(false);
-    }
+      stopTimerRef.current = window.setTimeout(() => { el.pause(); setPlaying(false); }, dur * 1000);
+    };
+    if (el.readyState >= 1) seekAndStop();
+    else el.addEventListener('loadedmetadata', seekAndStop, { once: true });
+    el.play().catch(() => setPlaying(false));
   };
 
   const giveHint = () => {
@@ -130,13 +111,14 @@ export default function GuessTheIntro() {
   };
 
   const next = () => {
-    try { sourceRef.current?.stop(); } catch { /* ignore */ }
+    clipRef.current?.pause();
+    if (stopTimerRef.current) clearTimeout(stopTimerRef.current);
     setPlaying(false);
     if (round >= 4) {
       setDone(true);
       setConfetti(true);
       playWin();
-      setTimeout(() => setConfetti(false), 3000);
+      later(() => setConfetti(false), 3000);
       return;
     }
     const nextTarget = TRACKS[Math.floor(Math.random() * TRACKS.length)];

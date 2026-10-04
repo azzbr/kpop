@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playClick, playCoin, playWrong, playWin, playPop } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -27,7 +28,8 @@ const LEVEL_TARGETS: { x: number; y: number; radius: number }[] = [
 const STAGE_NAMES = ['Warm-Up', 'Easy', 'Medium', 'Hard', 'Expert'];
 
 const RocketLaunch: React.FC = () => {
-  const { setGameState, addXP } = useGameStore();
+  const { setGameState } = useGameStore();
+  const later = useSafeTimeout();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [angle, setAngle] = useState(45);
   const [power, setPower] = useState(55);
@@ -282,17 +284,15 @@ const RocketLaunch: React.FC = () => {
           setHitMsg(`🎯 HIT! +${earned} pts${bonus > 0 ? ` (accuracy bonus!)` : ''}`);
           const nextStage = stageRef.current + 1;
           if (nextStage >= LEVEL_TARGETS.length) {
-            setTimeout(() => {
+            later(() => {
               setStatus('done');
-              const best = parseInt(localStorage.getItem('rocket_best') || '0');
-              if (nextScore > best) localStorage.setItem('rocket_best', String(nextScore));
-              addXP(Math.floor(nextScore / 12));
+              useGameStore.getState().finishRound('rocket_launch', nextScore, 12);
               playWin();
               setConfetti(true);
-              setTimeout(() => setConfetti(false), 3000);
+              later(() => setConfetti(false), 3000);
             }, 800);
           } else {
-            setTimeout(() => {
+            later(() => {
               setStage(nextStage);
               stageRef.current = nextStage;
               setTriesLeft(3);
@@ -316,9 +316,9 @@ const RocketLaunch: React.FC = () => {
           // skip to next with 0 pts
           const nextStage = stageRef.current + 1;
           if (nextStage >= LEVEL_TARGETS.length) {
-            setTimeout(() => setStatus('done'), 500);
+            later(() => setStatus('done'), 500);
           } else {
-            setTimeout(() => {
+            later(() => {
               setStage(nextStage);
               stageRef.current = nextStage;
               setTriesLeft(3);
@@ -331,7 +331,7 @@ const RocketLaunch: React.FC = () => {
           setHitMsg(`💨 Missed! ${newTries} ${newTries === 1 ? 'try' : 'tries'} left`);
         }
         setStatus('miss');
-        setTimeout(() => setStatus('aim'), 900);
+        later(() => setStatus('aim'), 900);
       }
     }
 
@@ -361,10 +361,20 @@ const RocketLaunch: React.FC = () => {
       g.particles = g.particles.filter(p => p.life > 0);
       ctx.globalAlpha = 1;
 
-      raf = requestAnimationFrame(draw);
     }
 
-    draw();
+    // draw() also advances the rocket and particles by one 1/60 s step, so run it on a fixed
+    // 60 Hz clock — otherwise a 120 Hz iPad plays at double speed.
+    const STEP_MS = 1000 / 60;
+    let last = performance.now();
+    let acc = STEP_MS;
+    const frame = (now: number) => {
+      acc += Math.min(now - last, 100);
+      last = now;
+      while (acc >= STEP_MS) { draw(); acc -= STEP_MS; }
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -376,7 +386,7 @@ const RocketLaunch: React.FC = () => {
     setLaunching(true);
     setStatus('flight');
     playPop();
-    setTimeout(() => setLaunching(false), 400);
+    later(() => setLaunching(false), 400);
   };
 
   const resetGame = () => {
@@ -405,9 +415,9 @@ const RocketLaunch: React.FC = () => {
     >
       {confetti && <ConfettiBurst count={80} durationMs={3000} />}
       <div className="w-full max-w-3xl mx-auto">
-        <button onClick={() => { playClick(); setGameState('boys_zone'); }}
+        <button onClick={() => { playClick(); setGameState('game_mode'); }}
           className="mb-3 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full font-fredoka text-sm border border-white/20">
-          ← Boys Zone
+          ← Back
         </button>
 
         <div className="text-center mb-3">
@@ -449,7 +459,7 @@ const RocketLaunch: React.FC = () => {
                   <p className="font-fredoka text-2xl text-yellow-300 mb-1">⭐ {score} pts</p>
                   <p className="font-nunito text-emerald-200 text-sm mb-4">+{Math.floor(score / 12)} XP earned!</p>
                   <button onClick={resetGame} className="btn-kid mr-2">🔄 Play Again</button>
-                  <button onClick={() => setGameState('boys_zone')} className="btn-kid-secondary">← Zone</button>
+                  <button onClick={() => setGameState('game_mode')} className="btn-kid-secondary">← Zone</button>
                 </motion.div>
               </motion.div>
             )}

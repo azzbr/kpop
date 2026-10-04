@@ -1,31 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useGameStore } from '../store';
+import { useGameStore, trackInfo as getTrackInfo } from '../store';
 import { playClick, playPop, playWin } from '../utils/sounds';
 
 const SHOUTOUTS = [
   "Big shoutout to Year 4 for surviving Monday! 📣",
   "This one goes out to everyone who remembered their homework! 🏆",
-  "HUNTR/X FM says: drink your water, legends! 💧",
+  "Fun Quest FM says: drink your water, legends! 💧",
   "Shoutout to the whole class — you're all stars tonight! ⭐",
   "This is your DJ saying: be kind to each other! 🌟",
   "Special dedication to whoever tidied the art supplies last! 🎨",
-  "HUNTR/X FM: where every listener is a future idol! 🎤",
+  "Fun Quest FM: where every listener is a future idol! 🎤",
   "Sending good vibes to everyone in the back row! 🎵",
   "Mr. Jarvis says this one's for the class champions! 🥇",
   "You're listening to the most awesome school radio ever! 📻",
 ];
 
-const TRACK_DISPLAY: Record<string, { title: string; artist: string }> = {
-  '01. TAKEDOWN (JEONGYEON, JIHYO, CHAEYOUNG).flac': { title: 'TAKEDOWN', artist: 'JEONGYEON, JIHYO, CHAEYOUNG' },
-  "02. How It's Done.flac": { title: "How It's Done", artist: 'HUNTR/X' },
-  '03. Soda Pop.flac': { title: 'Soda Pop', artist: 'HUNTR/X' },
-  '04. Golden.flac': { title: 'Golden', artist: 'HUNTR/X' },
-  '05. Strategy.flac': { title: 'Strategy', artist: 'HUNTR/X' },
-  '06. Takedown.flac': { title: 'Takedown', artist: 'HUNTR/X' },
-  '07. Your Idol.flac': { title: 'Your Idol', artist: 'HUNTR/X' },
-  '08. Free.flac': { title: 'Free', artist: 'HUNTR/X' },
-};
 
 export default function FMRadio() {
   const { setGameState, userName, playlist, currentTrack, isPlaying, setCurrentTrack, setIsPlaying, setVolume, volume } = useGameStore();
@@ -36,7 +26,7 @@ export default function FMRadio() {
   const shoutTimer = useRef<number | null>(null);
   const barTimer = useRef<number | null>(null);
 
-  const trackInfo = TRACK_DISPLAY[playlist[currentTrack]] ?? { title: playlist[currentTrack], artist: 'HUNTR/X' };
+  const trackInfo = getTrackInfo(playlist[currentTrack]);
   const djName = userName || 'DJ Star';
 
   // animate visualiser bars
@@ -49,6 +39,8 @@ export default function FMRadio() {
   }, [isPlaying]);
 
   useEffect(() => { setSpinning(isPlaying); }, [isPlaying]);
+
+  useEffect(() => () => { if (shoutTimer.current) clearTimeout(shoutTimer.current); }, []);
 
   const fireShoutout = () => {
     playWin();
@@ -88,7 +80,7 @@ export default function FMRadio() {
 
           {/* Station header */}
           <div className="bg-gradient-to-r from-purple-700 via-fuchsia-700 to-purple-700 px-6 py-3 text-center">
-            <div className="font-fredoka text-white text-3xl tracking-widest drop-shadow-lg">HUNTR/X FM</div>
+            <div className="font-fredoka text-white text-3xl tracking-widest drop-shadow-lg">FUN QUEST FM</div>
             <div className="font-nunito text-purple-200 text-sm tracking-[0.3em]">96.3 MHz · EST. NOW</div>
           </div>
 
@@ -120,7 +112,7 @@ export default function FMRadio() {
                 <div className="font-nunito text-purple-400 text-xs uppercase tracking-widest mb-1">Now Playing</div>
                 <div className="font-fredoka text-white text-xl leading-tight truncate">{trackInfo.title}</div>
                 <div className="font-nunito text-purple-300 text-sm truncate">{trackInfo.artist}</div>
-                <div className="font-nunito text-purple-500 text-xs mt-1">DJ {djName} · HUNTR/X FM</div>
+                <div className="font-nunito text-purple-500 text-xs mt-1">DJ {djName} · Fun Quest FM</div>
               </div>
             </div>
 
@@ -145,7 +137,7 @@ export default function FMRadio() {
                 transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
                 className="font-mono text-green-400 text-sm whitespace-nowrap"
               >
-                ★ HUNTR/X FM 96.3 ★ NOW PLAYING: {trackInfo.title} by {trackInfo.artist} ★ DJ {djName} IN THE MIX ★ STAY TUNED ★
+                ★ FUN QUEST FM 96.3 ★ NOW PLAYING: {trackInfo.title} by {trackInfo.artist} ★ DJ {djName} IN THE MIX ★ STAY TUNED ★
               </motion.div>
             </div>
 
@@ -192,7 +184,7 @@ export default function FMRadio() {
         <div className="mt-4 rounded-2xl overflow-hidden border-2 border-purple-800"
           style={{ background: '#0d0d1a' }}>
           {playlist.map((f, i) => {
-            const info = TRACK_DISPLAY[f] ?? { title: f, artist: 'HUNTR/X' };
+            const info = getTrackInfo(f);
             const active = i === currentTrack;
             return (
               <button key={f} onClick={() => { setCurrentTrack(i); playPop(); }}

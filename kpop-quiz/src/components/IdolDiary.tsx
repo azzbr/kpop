@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playClick, playPop, playWin, playUnlock } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -80,6 +81,7 @@ interface DiaryEntry { id: number; storyId: string; words: string[]; date: strin
 
 const IdolDiary: React.FC = () => {
   const { setGameState, addXP } = useGameStore();
+  const later = useSafeTimeout();
   const [tab, setTab] = useState<'new' | 'shelf'>('new');
   const [storyIdx, setStoryIdx] = useState<number | null>(null);
   const [step, setStep] = useState(0);
@@ -111,7 +113,7 @@ const IdolDiary: React.FC = () => {
       playWin();
       setConfetti(true);
       addXP(15);
-      setTimeout(() => setConfetti(false), 2500);
+      later(() => setConfetti(false), 2500);
     } else {
       setStep(s => s + 1);
     }
@@ -160,13 +162,13 @@ const IdolDiary: React.FC = () => {
       {confetti && <ConfettiBurst count={70} durationMs={2500} />}
 
       <div className="max-w-md w-full mx-auto">
-        <button onClick={() => { playClick(); setGameState('girls_zone'); }}
+        <button onClick={() => { playClick(); setGameState('game_mode'); }}
           className="mb-3 px-4 py-2 bg-white/70 hover:bg-white text-rose-700 rounded-full font-fredoka text-sm border-2 border-rose-200">
-          ← Girls Zone
+          ← Back
         </button>
 
         <div className="text-center mb-3">
-          <h1 className="text-3xl font-fredoka font-bold text-rose-700">📔 Idol Diary</h1>
+          <h1 className="text-3xl font-fredoka font-bold text-rose-700">📔 Secret Diary</h1>
           <p className="font-nunito text-rose-500 text-sm">Fill in the blanks · Save funny stories!</p>
         </div>
 

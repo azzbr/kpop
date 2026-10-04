@@ -4,7 +4,7 @@ import { useGameStore } from '../store';
 import type { Difficulty } from '../store';
 
 const DifficultyScreen: React.FC = () => {
-  const { userName, setDifficulty, initializeQuiz } = useGameStore();
+  const { userName, setDifficulty, initializeQuiz, setGameState } = useGameStore();
 
   const handleDifficultySelect = (difficulty: Difficulty) => {
     setDifficulty(difficulty);
@@ -67,7 +67,16 @@ const DifficultyScreen: React.FC = () => {
       transition={{ duration: 0.5 }}
       className="flex flex-col items-center justify-center min-h-screen px-4 text-center bg-kid-pattern"
     >
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto w-full">
+        <div className="flex justify-start pt-4 mb-2">
+          <button
+            onClick={() => setGameState('game_mode')}
+            className="btn-kid-secondary min-h-[44px] font-fredoka"
+          >
+            ← Back
+          </button>
+        </div>
+
         <motion.div
           initial={{ scale: 0.8, rotate: -3 }}
           animate={{ scale: 1, rotate: 0 }}

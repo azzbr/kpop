@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
 import { playPop, playCoin, playWrong, playWin, playUnlock } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -94,7 +95,8 @@ function mixC(a: number[], b: number[], t: number) {
 }
 
 const KPopRushGame: React.FC = () => {
-  const { setGameState, addXP } = useGameStore();
+  const { setGameState } = useGameStore();
+  const later = useSafeTimeout();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<GameData | null>(null);
   const controlsRef = useRef<{ start: () => void; jump: () => void; duckDown: () => void; duckUp: () => void } | null>(null);
@@ -105,9 +107,7 @@ const KPopRushGame: React.FC = () => {
   const [hud, setHud] = useState({ score: 0, coins: 0, combo: 0 });
   const [over, setOver] = useState({ score: 0, coins: 0, high: 0, isHigh: false, xp: 0 });
   const [confetti, setConfetti] = useState(false);
-  const [highScore, setHighScore] = useState<number>(() => {
-    try { return parseInt(localStorage.getItem('kpoprush_high') || '0'); } catch { return 0; }
-  });
+  const [highScore, setHighScore] = useState<number>(() => useGameStore.getState().highScores.kpop_rush ?? 0);
 
   useEffect(() => { charIdxRef.current = charIdx; }, [charIdx]);
 
@@ -247,17 +247,13 @@ const KPopRushGame: React.FC = () => {
       g.shake = 16;
       playWrong();
       const finalScore = Math.floor(g.score);
-      const isHigh = finalScore > highScore;
-      const newHigh = Math.max(finalScore, highScore);
+      const { isBest: isHigh, best: newHigh, xp } = useGameStore.getState().finishRound('kpop_rush', finalScore, 18);
       if (isHigh) {
-        localStorage.setItem('kpoprush_high', String(finalScore));
         setHighScore(finalScore);
         setConfetti(true);
-        setTimeout(() => setConfetti(false), 3000);
+        later(() => setConfetti(false), 3000);
         playWin();
       }
-      const xp = Math.floor(finalScore / 18) + g.coinCount * 2;
-      addXP(xp);
       setOver({ score: finalScore, coins: g.coinCount, high: newHigh, isHigh, xp });
       setStatus('over');
     }
@@ -703,14 +699,24 @@ const KPopRushGame: React.FC = () => {
     }
 
     /* ---------- loop ---------- */
+    // Physics are tuned per 1/60 s step. Run them on a fixed 60 Hz clock so the game is the
+    // same speed on a 120 Hz iPad as on a 60 Hz screen.
+    const STEP_MS = 1000 / 60;
     let hudTick = 0;
-    function loop() {
-      update();
-      draw();
-      const g = gameRef.current!;
-      if (g.running && ++hudTick % 6 === 0) {
-        setHud({ score: Math.floor(g.score), coins: g.coinCount, combo: g.combo });
+    let last = performance.now();
+    let acc = 0;
+    function loop(now: number) {
+      acc += Math.min(now - last, 250);
+      last = now;
+      while (acc >= STEP_MS) {
+        update();
+        acc -= STEP_MS;
+        const g = gameRef.current!;
+        if (g.running && ++hudTick % 6 === 0) {
+          setHud({ score: Math.floor(g.score), coins: g.coinCount, combo: g.combo });
+        }
       }
+      draw();
       raf = requestAnimationFrame(loop);
     }
 
@@ -732,7 +738,7 @@ const KPopRushGame: React.FC = () => {
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
 
-    loop();
+    raf = requestAnimationFrame(loop);
 
     return () => {
       cancelAnimationFrame(raf);
@@ -762,7 +768,7 @@ const KPopRushGame: React.FC = () => {
 
         <div className="text-center mb-3">
           <h1 className="text-3xl md:text-4xl font-fredoka font-bold text-purple-600 text-kid-glow">
-            🏃 K-Pop Rush
+            🏃 Rush Runner
           </h1>
           <p className="font-nunito text-gray-500 text-sm">
             Jump 🆙 · Duck ⬇️ · Grab coins & power-ups · Survive the city!

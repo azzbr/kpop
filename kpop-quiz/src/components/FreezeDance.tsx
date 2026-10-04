@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { useGameStore } from '../store';
+import { useGameStore, trackInfo } from '../store';
 import { playClick, playWin, playPop, playTick } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
@@ -34,6 +34,9 @@ export default function FreezeDance() {
 
   const freezeTimer = useRef<number | null>(null);
   const poseCdTimer = useRef<number | null>(null);
+  const confettiTimer = useRef<number | null>(null);
+  const phaseRef = useRef<Phase>('setup');
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
 
   // load roster from Jarvis localStorage
   useEffect(() => {
@@ -49,7 +52,18 @@ export default function FreezeDance() {
   const clearTimers = () => {
     if (freezeTimer.current) clearTimeout(freezeTimer.current);
     if (poseCdTimer.current) clearInterval(poseCdTimer.current);
+    freezeTimer.current = null;
+    poseCdTimer.current = null;
   };
+
+  // Leaving the screen any way (not just Back) stops the freeze/pose timers,
+  // and stops the music this game started.
+  useEffect(() => () => {
+    if (freezeTimer.current) clearTimeout(freezeTimer.current);
+    if (poseCdTimer.current) clearInterval(poseCdTimer.current);
+    if (confettiTimer.current) clearTimeout(confettiTimer.current);
+    if (phaseRef.current === 'playing') useGameStore.getState().setIsPlaying(false);
+  }, []);
 
   const scheduleFreeze = useCallback(() => {
     const delay = 10000 + Math.random() * 30000; // 10–40 seconds
@@ -99,7 +113,7 @@ export default function FreezeDance() {
       setPhase('gameover');
       setConfetti(true);
       playWin();
-      setTimeout(() => setConfetti(false), 4000);
+      confettiTimer.current = window.setTimeout(() => setConfetti(false), 4000);
       setIsPlaying(false);
       clearTimers();
     }
@@ -115,7 +129,7 @@ export default function FreezeDance() {
   };
 
   const activePlayers = roster.filter(n => !eliminated.includes(n));
-  const trackName = playlist[currentTrack]?.replace(/\.flac$/, '').replace(/^\d+\.\s*/, '') ?? 'HUNTR/X Track';
+  const trackName = trackInfo(playlist[currentTrack]).title;
 
   return (
     <motion.div

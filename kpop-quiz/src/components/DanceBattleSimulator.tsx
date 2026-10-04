@@ -35,6 +35,18 @@ const DanceBattleSimulator: React.FC = () => {
   const [showConfetti, setShowConfetti] = useState(false);
   const [wrongAt, setWrongAt] = useState(-1);
   const playingRef = useRef(false);
+  const timeoutsRef = useRef<number[]>([]);
+
+  // Track every timeout so none can fire after leaving the screen
+  const later = useCallback((fn: () => void, ms: number) => {
+    timeoutsRef.current.push(window.setTimeout(fn, ms));
+  }, []);
+  const clearAllTimeouts = useCallback(() => {
+    timeoutsRef.current.forEach(clearTimeout);
+    timeoutsRef.current = [];
+  }, []);
+
+  useEffect(() => clearAllTimeouts, [clearAllTimeouts]);
 
   const showSequence = useCallback((seq: number[]) => {
     if (playingRef.current) return;
@@ -43,27 +55,27 @@ const DanceBattleSimulator: React.FC = () => {
     setHighlightIdx(null);
 
     seq.forEach((moveIdx, i) => {
-      setTimeout(() => {
+      later(() => {
         setHighlightIdx(moveIdx);
-        setTimeout(() => setHighlightIdx(null), SHOW_MS - PAUSE_MS);
+        later(() => setHighlightIdx(null), SHOW_MS - PAUSE_MS);
       }, i * (SHOW_MS + PAUSE_MS));
     });
 
-    setTimeout(() => {
+    later(() => {
       setHighlightIdx(null);
       setPlayerMoves([]);
       setPhase('your_turn');
       playingRef.current = false;
     }, seq.length * (SHOW_MS + PAUSE_MS) + 300);
-  }, []);
+  }, [later]);
 
   const startRound = useCallback((roundNum: number) => {
     const len = SEQUENCE_LENGTHS[Math.min(roundNum, SEQUENCE_LENGTHS.length - 1)];
     const seq = Array.from({ length: len }, () => Math.floor(Math.random() * MOVES.length));
     setSequence(seq);
     setPlayerMoves([]);
-    setTimeout(() => showSequence(seq), 800);
-  }, [showSequence]);
+    later(() => showSequence(seq), 800);
+  }, [showSequence, later]);
 
   const handleMoveClick = (moveIdx: number) => {
     if (phase !== 'your_turn') return;
@@ -77,7 +89,7 @@ const DanceBattleSimulator: React.FC = () => {
       setWrongAt(pos);
       setFeedback('wrong');
       setPhase('feedback');
-      setTimeout(() => {
+      later(() => {
         setPhase('done');
       }, 1500);
       return;
@@ -91,7 +103,7 @@ const DanceBattleSimulator: React.FC = () => {
       setScore(prev => prev + pts);
       setFeedback('correct');
       setPhase('feedback');
-      setTimeout(() => {
+      later(() => {
         const nextRound = round + 1;
         if (nextRound >= SEQUENCE_LENGTHS.length) {
           setShowConfetti(true);
@@ -109,6 +121,8 @@ const DanceBattleSimulator: React.FC = () => {
 
   const startGame = () => {
     playClick();
+    clearAllTimeouts();
+    playingRef.current = false;
     setRound(0);
     setScore(0);
     setFeedback(null);

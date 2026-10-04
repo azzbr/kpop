@@ -9,9 +9,23 @@
     font-family: 'Nunito', sans-serif;
   }
 
+  html, body {
+    /* No pull-to-refresh / rubber-band bounce pulling the page away on iPad. */
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
-    @apply bg-gradient-to-br from-pink-100 via-purple-50 to-blue-100 text-gray-800 min-h-screen;
+    @apply bg-gradient-to-br from-indigo-100 via-violet-50 to-sky-100 text-gray-800;
+    min-height: 100dvh;
     font-family: 'Nunito', sans-serif;
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Buttons never trigger double-tap zoom. */
+  button, a, [role='button'] {
+    touch-action: manipulation;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -34,6 +48,29 @@
 
   .text-kid-glow {
     text-shadow: 0 0 8px rgba(255, 105, 180, 0.5);
+  }
+
+  /* Dark arcade backdrop used by the welcome screen, game grid and new games. */
+  .arcade-bg {
+    background:
+      radial-gradient(circle at 20% 10%, rgba(217, 70, 239, 0.25) 0%, transparent 45%),
+      radial-gradient(circle at 85% 80%, rgba(56, 189, 248, 0.2) 0%, transparent 45%),
+      linear-gradient(160deg, #1e1b4b 0%, #312e81 55%, #1e1b4b 100%);
+  }
+
+  /* Screen height that follows Safari's toolbar (100vh is too tall on iPad). */
+  .min-h-screen-d {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  /* Wrap real-time game areas in this: no scrolling, zooming, selecting or long-press menu. */
+  .game-surface {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    overscroll-behavior: contain;
   }
 
   .bg-kid-pattern {
@@ -82,9 +119,12 @@
   to { filter: hue-rotate(360deg); }
 }
 
-/* Reserve space at the bottom of every screen so the fixed music player
-   never covers back buttons or other content. The music player div has the
-   .fixed class, so :not(.fixed) targets only the active screen wrapper. */
+/* A little breathing room under every screen (the music player floats at the right edge). */
 .App > div:not(.fixed) {
-  padding-bottom: 6rem;
+  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
+}
+
+/* 100vh on iPad Safari includes the hidden toolbar; prefer the dynamic height everywhere. */
+.min-h-screen {
+  min-height: 100dvh;
 }

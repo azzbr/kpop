@@ -1,16 +1,92 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
-import type { GameMode } from '../store';
+import type { GameState } from '../store';
 import PlayerLevelBadge from './PlayerLevelBadge';
 import { playClick, playWin } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 
+type Category = 'arcade' | 'puzzle' | 'quiz' | 'party' | 'create' | 'me' | 'teacher';
+
+interface Tile {
+  id: GameState;
+  /** High-score key in the store, when it differs from `id`. */
+  scoreKey?: string;
+  title: string;
+  description: string;
+  icon: string;
+  color: string;
+  category: Category;
+  isNew?: boolean;
+}
+
+const CATEGORIES: { id: Category; title: string; subtitle: string }[] = [
+  { id: 'arcade', title: '🕹️ Arcade', subtitle: 'Fast reflexes, big scores' },
+  { id: 'puzzle', title: '🧩 Puzzles & Brain', subtitle: 'Think it through' },
+  { id: 'quiz', title: '❓ Quiz', subtitle: 'How much do you know?' },
+  { id: 'party', title: '🎉 Party', subtitle: '2+ players — pass the iPad!' },
+  { id: 'create', title: '🎨 Create & Music', subtitle: 'Make something awesome' },
+  { id: 'me', title: '🏆 My Stuff', subtitle: 'Streaks and trophies' },
+  { id: 'teacher', title: "🍎 Mr. Jarvis's Classroom", subtitle: 'Teacher tools' },
+];
+
+const TILES: Tile[] = [
+  // Arcade
+  { id: 'paper_clash', title: 'Paper Clash', description: 'Grab land, cut trails, rule the map. Swipe to steer!', icon: '🗺️', color: 'from-sky-500 to-fuchsia-600', category: 'arcade', isNew: true },
+  { id: 'kpop_rush', title: 'Rush Runner', description: 'Endless runner — jump, duck, grab power-ups.', icon: '🏃', color: 'from-fuchsia-500 to-purple-600', category: 'arcade' },
+  { id: 'ninja_slice', title: 'Ninja Slice', description: 'Swipe to slice fruit. Dodge the bombs!', icon: '🥷', color: 'from-red-500 to-orange-500', category: 'arcade' },
+  { id: 'rocket_launch', title: 'Rocket Launch', description: 'Aim, set power, hit the planets.', icon: '🚀', color: 'from-sky-500 to-indigo-600', category: 'arcade' },
+  { id: 'battle_arena', title: 'Battle Arena', description: 'Turn-based duels against a crafty bot.', icon: '⚔️', color: 'from-slate-500 to-blue-700', category: 'arcade' },
+
+  // Puzzles
+  { id: 'mini_sudoku', title: 'Mini Sudoku', description: '6×6 sudoku — a fresh puzzle every time.', icon: '🔢', color: 'from-emerald-500 to-teal-600', category: 'puzzle' },
+  { id: 'zip_game', title: 'Zip', description: 'Connect the numbers and fill every square.', icon: '🔗', color: 'from-cyan-500 to-blue-600', category: 'puzzle' },
+  { id: 'word_ladder', title: 'Word Ladder', description: 'Change one letter at a time to reach the goal word.', icon: '🪜', color: 'from-blue-500 to-sky-600', category: 'puzzle' },
+  { id: 'crossword_mini', title: 'Crossword Mini', description: 'Quick crosswords with tricky clues.', icon: '📰', color: 'from-indigo-500 to-violet-600', category: 'puzzle' },
+  { id: 'word_scramble', title: 'Word Scramble', description: 'Unscramble the words before time runs out.', icon: '🔤', color: 'from-amber-500 to-yellow-500', category: 'puzzle' },
+  { id: 'pattern_memory', title: 'Pattern Memory', description: 'Repeat the colour pattern. How far can you go?', icon: '🧠', color: 'from-purple-500 to-fuchsia-600', category: 'puzzle' },
+  { id: 'memory_speed', title: 'Speed Memory', description: 'Match every pair in 60 seconds. Chain combos!', icon: '🃏', color: 'from-orange-500 to-amber-500', category: 'puzzle' },
+  { id: 'sparkle_match', title: 'Gem Match', description: 'Swap gems to match three or more.', icon: '💎', color: 'from-pink-500 to-rose-600', category: 'puzzle' },
+
+  // Quiz
+  { id: 'difficulty', scoreKey: 'quiz_hard', title: 'Music Quiz', description: 'K-Pop & music trivia — five difficulty levels.', icon: '🎼', color: 'from-violet-500 to-purple-700', category: 'quiz' },
+  { id: 'lightning_quiz', title: 'Lightning Quiz', description: '8 seconds per question. Think fast!', icon: '⚡', color: 'from-yellow-500 to-orange-600', category: 'quiz' },
+  { id: 'idol_personality_quiz', title: 'Which Star Are You?', description: 'A personality quiz with a surprise result.', icon: '🌟', color: 'from-pink-500 to-violet-600', category: 'quiz' },
+
+  // Party
+  { id: 'online_hub', title: 'Friends Arena — Online', description: 'Make a room, share the 4-letter code and play together on different devices: quiz show, doodles, Monopoly Deal & lots more.', icon: '🌐', color: 'from-emerald-500 to-cyan-600', category: 'party', isNew: true },
+  { id: 'tug_of_war', title: 'Tug-of-War', description: 'Two players mash buttons to drag the rope to their side. Best of 3!', icon: '🪢', color: 'from-amber-500 to-pink-600', category: 'party' },
+  { id: 'truth_or_dare', title: 'Truth or Dare', description: 'Silly truths and hilarious dares for 2–4.', icon: '🎯', color: 'from-orange-500 to-red-600', category: 'party' },
+  { id: 'trivia_battle', title: 'Buzzer Battle', description: 'Two players race to hit the right answer.', icon: '🛎️', color: 'from-rose-500 to-pink-600', category: 'party' },
+  { id: 'reaction_duel', title: 'Reaction Duel', description: 'Tap your side first when the signal flashes.', icon: '👆', color: 'from-red-500 to-pink-500', category: 'party' },
+  { id: 'talent_show', title: 'Talent Show', description: 'Perform, get judged, crown the star.', icon: '🎭', color: 'from-purple-500 to-fuchsia-600', category: 'party' },
+  { id: 'team_maker', title: 'Team Picker', description: 'Random fair teams for any game.', icon: '👥', color: 'from-indigo-500 to-purple-600', category: 'party' },
+
+  // Create & music
+  { id: 'beat_maker', title: 'Beat Maker', description: 'Build a beat on a 16-step drum machine.', icon: '🎛️', color: 'from-red-500 to-orange-500', category: 'create' },
+  { id: 'guess_intro', title: 'Guess the Intro', description: 'Name the song from a 1.5-second clip.', icon: '🎧', color: 'from-violet-500 to-fuchsia-600', category: 'create' },
+  { id: 'fm_radio', title: 'Fun Quest FM', description: 'Your own radio station — be the DJ.', icon: '📻', color: 'from-purple-700 to-fuchsia-800', category: 'create' },
+  { id: 'dance_battle', title: 'Dance Battle', description: 'Watch the moves, then repeat them perfectly.', icon: '💃', color: 'from-rose-500 to-pink-600', category: 'create' },
+  { id: 'style_studio', title: 'Style Studio', description: 'Design outfits and save your looks.', icon: '👗', color: 'from-pink-500 to-fuchsia-500', category: 'create' },
+  { id: 'idol_profile', title: 'Superstar Card', description: 'Make your own trading card with stats.', icon: '🪪', color: 'from-pink-500 to-purple-600', category: 'create' },
+  { id: 'idol_diary', title: 'Secret Diary', description: 'Fill in the blanks for a ridiculous story.', icon: '📔', color: 'from-amber-500 to-rose-500', category: 'create' },
+
+  // Me
+  { id: 'streak_calendar', title: 'Daily Streak', description: 'How many days in a row can you play?', icon: '🔥', color: 'from-orange-500 to-red-500', category: 'me' },
+  { id: 'achievement_showcase', title: 'Trophy Room', description: 'Your level, badges, themes and best scores.', icon: '🏆', color: 'from-yellow-500 to-amber-600', category: 'me' },
+
+  // Teacher (hidden unless Jarvis mode is unlocked)
+  { id: 'jarvis_hq', title: "Mr. Jarvis's Lounge", description: 'Pop Quiz, Roll Call, Boss Battle & more.', icon: '👨‍🏫', color: 'from-amber-500 to-red-600', category: 'teacher' },
+  { id: 'freeze_dance', title: 'Freeze Dance', description: 'Dance, then freeze in a silly pose!', icon: '❄️', color: 'from-cyan-500 to-blue-600', category: 'teacher' },
+  { id: 'chaotic_backstage', title: 'Chaotic Backstage', description: 'Each student fills a blank, then read it aloud.', icon: '📜', color: 'from-rose-500 to-fuchsia-600', category: 'teacher' },
+];
+
 const GameModeSelection: React.FC = () => {
-  const { userName, setGameState, setSelectedGameMode, addXP } = useGameStore();
+  const { userName, setGameState, highScores } = useGameStore();
   const [discoMode, setDiscoMode] = useState(false);
   const [discoTaps, setDiscoTaps] = useState(0);
-  const [showConfetti, setShowConfetti] = useState(false);
+  const teacherMode = typeof window !== 'undefined' && localStorage.getItem('jarvis_mode') === '1';
+  const tiles = TILES.filter(t => t.category !== 'teacher' || teacherMode);
 
   const handleTitleClick = () => {
     const next = discoTaps + 1;
@@ -19,12 +95,7 @@ const GameModeSelection: React.FC = () => {
     if (next >= 5) {
       setDiscoMode(true);
       setDiscoTaps(0);
-      setShowConfetti(true);
       playWin();
-      setTimeout(() => {
-        setDiscoMode(false);
-        setShowConfetti(false);
-      }, 6000);
     }
   };
 
@@ -35,637 +106,118 @@ const GameModeSelection: React.FC = () => {
     }
   }, [discoTaps]);
 
-  const gameModes = [
-    {
-      id: 'quiz' as GameMode,
-      title: 'K-pop Quiz',
-      description: 'Test your K-pop knowledge with multiple difficulty levels!',
-      icon: '🧠',
-      color: 'from-purple-400 to-pink-500',
-      bgColor: 'bg-purple-100',
-      borderColor: 'border-purple-300'
-    },
-    {
-      id: 'memory' as GameMode,
-      title: 'Memory Game',
-      description: 'Match K-pop idols, songs, and album covers!',
-      icon: '🃏',
-      color: 'from-blue-400 to-cyan-500',
-      bgColor: 'bg-blue-100',
-      borderColor: 'border-blue-300'
-    },
-    {
-      id: 'rhythm' as GameMode,
-      title: 'Rhythm Game',
-      description: 'Tap to the beat and unlock new songs!',
-      icon: '🎵',
-      color: 'from-green-400 to-emerald-500',
-      bgColor: 'bg-green-100',
-      borderColor: 'border-green-300'
-    },
-    {
-      id: 'trivia' as GameMode,
-      title: 'Trivia Cards',
-      description: 'Collect and trade K-pop idol cards!',
-      icon: '🎴',
-      color: 'from-orange-400 to-red-500',
-      bgColor: 'bg-orange-100',
-      borderColor: 'border-orange-300'
-    },
-    {
-      id: 'instruments' as GameMode,
-      title: 'Learn Instruments',
-      description: 'Learn to play K-Pop songs on piano and recorder!',
-      icon: '🎼',
-      color: 'from-yellow-400 to-orange-500',
-      bgColor: 'bg-yellow-100',
-      borderColor: 'border-yellow-300'
-    },
-    {
-      id: 'teams' as GameMode,
-      title: 'Team Maker',
-      description: 'Create random teams for sports and games!',
-      icon: '👥',
-      color: 'from-indigo-400 to-purple-500',
-      bgColor: 'bg-indigo-100',
-      borderColor: 'border-indigo-300'
-    },
-    {
-      id: 'friends' as GameMode,
-      title: 'Friends Trivia',
-      description: 'Test your knowledge about your friends!',
-      icon: '👫',
-      color: 'from-pink-400 to-rose-500',
-      bgColor: 'bg-pink-100',
-      borderColor: 'border-pink-300'
-    },
-    {
-      id: 'math' as GameMode,
-      title: 'Math Challenge',
-      description: 'Master math skills with fun challenges!',
-      icon: '🧮',
-      color: 'from-blue-400 to-indigo-500',
-      bgColor: 'bg-blue-100',
-      borderColor: 'border-blue-300'
-    },
-    {
-      id: 'spelling' as GameMode,
-      title: 'Spelling Bee',
-      description: 'Master spelling with interactive letter fun!',
-      icon: '🐝',
-      color: 'from-yellow-400 to-orange-500',
-      bgColor: 'bg-yellow-100',
-      borderColor: 'border-yellow-300'
-    },
-    {
-      id: 'reading' as GameMode,
-      title: 'Reading Comprehension',
-      description: 'Read stories and answer comprehension questions!',
-      icon: '📖',
-      color: 'from-indigo-400 to-purple-500',
-      bgColor: 'bg-indigo-100',
-      borderColor: 'border-indigo-300'
-    },
-    {
-      id: 'science' as GameMode,
-      title: 'Science Quiz',
-      description: 'Learn amazing facts about animals, planets, and weather!',
-      icon: '🔬',
-      color: 'from-teal-400 to-green-500',
-      bgColor: 'bg-teal-100',
-      borderColor: 'border-teal-300'
-    },
-    {
-      id: 'word_scramble' as GameMode,
-      title: 'Word Scramble',
-      description: 'Unscramble K-pop words before time runs out!',
-      icon: '🔤',
-      color: 'from-amber-400 to-yellow-500',
-      bgColor: 'bg-amber-100',
-      borderColor: 'border-amber-300'
-    },
-    {
-      id: 'lightning_quiz' as GameMode,
-      title: 'Lightning Quiz ⚡',
-      description: '8 seconds per question — can you handle the speed?',
-      icon: '⚡',
-      color: 'from-yellow-500 to-orange-500',
-      bgColor: 'bg-yellow-100',
-      borderColor: 'border-yellow-400'
-    },
-    {
-      id: 'animal_sound_quiz' as GameMode,
-      title: 'Animal Sounds Quiz',
-      description: 'Hear a funny animal sound and guess which animal made it!',
-      icon: '🐾',
-      color: 'from-green-500 to-teal-500',
-      bgColor: 'bg-green-100',
-      borderColor: 'border-green-300'
-    },
-    {
-      id: 'song_title_generator' as GameMode,
-      title: 'Song Title Generator',
-      description: 'Create your own K-pop banger title in seconds!',
-      icon: '🎤',
-      color: 'from-violet-400 to-purple-600',
-      bgColor: 'bg-violet-100',
-      borderColor: 'border-violet-300'
-    },
-    {
-      id: 'idol_personality_quiz' as GameMode,
-      title: 'Which Idol Are You?',
-      description: 'Answer questions and discover your inner HUNTR/X idol!',
-      icon: '🌟',
-      color: 'from-pink-500 to-violet-500',
-      bgColor: 'bg-pink-100',
-      borderColor: 'border-pink-300'
-    },
-    {
-      id: 'dance_battle' as GameMode,
-      title: 'Dance Battle!',
-      description: 'Watch the dance sequence and repeat it perfectly!',
-      icon: '💃',
-      color: 'from-rose-400 to-pink-600',
-      bgColor: 'bg-rose-100',
-      borderColor: 'border-rose-300'
-    },
-    {
-      id: 'daily_spin_wheel' as GameMode,
-      title: 'Daily Spin Wheel',
-      description: 'Spin the wheel to win bonus XP and surprises!',
-      icon: '🎡',
-      color: 'from-yellow-400 to-amber-500',
-      bgColor: 'bg-yellow-100',
-      borderColor: 'border-yellow-300'
-    },
-    {
-      id: 'beat_maker' as GameMode,
-      title: 'Beat Maker',
-      description: 'Build your own K-pop beat with a 16-step drum machine!',
-      icon: '🎛️',
-      color: 'from-red-400 to-orange-500',
-      bgColor: 'bg-red-50',
-      borderColor: 'border-red-300'
-    },
-    {
-      id: 'korean_word' as GameMode,
-      title: 'Korean Word of the Day',
-      description: 'Learn a new Korean word every day and test yourself!',
-      icon: '🇰🇷',
-      color: 'from-blue-400 to-indigo-500',
-      bgColor: 'bg-blue-50',
-      borderColor: 'border-blue-300'
-    },
-    {
-      id: 'truth_or_dare' as GameMode,
-      title: 'Truth or Dare!',
-      description: 'K-pop themed truths and hilarious dares for 2–4 players!',
-      icon: '🎯',
-      color: 'from-orange-400 to-red-500',
-      bgColor: 'bg-orange-50',
-      borderColor: 'border-orange-300'
-    },
-    {
-      id: 'trivia_battle' as GameMode,
-      title: 'Trivia Battle ⚔️',
-      description: 'Two players race to answer — fastest correct tap wins!',
-      icon: '⚔️',
-      color: 'from-pink-500 to-rose-600',
-      bgColor: 'bg-pink-50',
-      borderColor: 'border-pink-300'
-    },
-    {
-      id: 'talent_show' as GameMode,
-      title: 'Talent Show',
-      description: 'Perform, get judged, and see who\'s the ultimate star!',
-      icon: '🎭',
-      color: 'from-purple-500 to-fuchsia-500',
-      bgColor: 'bg-purple-50',
-      borderColor: 'border-purple-300'
-    },
-    {
-      id: 'zip_game' as GameMode,
-      title: 'Zip — 30s Break',
-      description: 'Connect the dots in order and fill the whole grid fast!',
-      icon: '🔗',
-      color: 'from-cyan-400 to-blue-500',
-      bgColor: 'bg-cyan-50',
-      borderColor: 'border-cyan-300'
-    },
-    {
-      id: 'mini_sudoku' as GameMode,
-      title: 'Mini Sudoku — 3min Break',
-      description: 'The classic number puzzle, made mini for a quick brain break!',
-      icon: '🔢',
-      color: 'from-emerald-400 to-teal-500',
-      bgColor: 'bg-emerald-50',
-      borderColor: 'border-emerald-300'
-    },
-    {
-      id: 'crossword_mini' as GameMode,
-      title: 'Crossword Mini',
-      description: 'K-Pop themed mini crossword puzzle — fill in the answers!',
-      icon: '📰',
-      color: 'from-indigo-400 to-violet-500',
-      bgColor: 'bg-indigo-50',
-      borderColor: 'border-indigo-300'
-    },
-    {
-      id: 'word_ladder' as GameMode,
-      title: 'Word Ladder',
-      description: 'Change one letter at a time to climb from the start word to the end!',
-      icon: '🔤',
-      color: 'from-blue-400 to-sky-500',
-      bgColor: 'bg-blue-50',
-      borderColor: 'border-blue-300'
-    },
-    {
-      id: 'memory_speed' as GameMode,
-      title: 'Speed Memory!',
-      description: 'Match all pairs in 60 seconds — chain combos to multiply your XP!',
-      icon: '⚡',
-      color: 'from-yellow-400 to-orange-500',
-      bgColor: 'bg-yellow-50',
-      borderColor: 'border-yellow-300'
-    },
-    {
-      id: 'reaction_duel' as GameMode,
-      title: 'Reaction Duel',
-      description: '2 players, 1 device — tap your side first when the signal flashes!',
-      icon: '⚡',
-      color: 'from-red-400 to-pink-500',
-      bgColor: 'bg-red-50',
-      borderColor: 'border-red-300'
-    },
-    {
-      id: 'streak_calendar' as GameMode,
-      title: 'Daily Streak',
-      description: 'Track your daily play streak — how many days in a row can you play?',
-      icon: '🔥',
-      color: 'from-orange-400 to-red-500',
-      bgColor: 'bg-orange-50',
-      borderColor: 'border-orange-300'
-    },
-    {
-      id: 'achievement_showcase' as GameMode,
-      title: 'Trophy Room',
-      description: 'See all your achievements, level, themes, and stats in one place!',
-      icon: '🏆',
-      color: 'from-yellow-400 to-amber-500',
-      bgColor: 'bg-yellow-50',
-      borderColor: 'border-yellow-300'
-    },
-    {
-      id: 'pattern_memory' as GameMode,
-      title: 'Pattern Memory',
-      description: 'Simon Says style — watch the color pattern and repeat it. How far can you go?',
-      icon: '🧠',
-      color: 'from-purple-500 to-fuchsia-500',
-      bgColor: 'bg-purple-50',
-      borderColor: 'border-purple-300'
-    },
-    {
-      id: 'boys_zone' as GameMode,
-      title: '🔥 Boys Zone',
-      description: 'Ninja Slice, Battle Arena & Rocket Launch — 3 action-packed challenges in one epic hub!',
-      icon: '⚔️',
-      color: 'from-blue-700 to-indigo-900',
-      bgColor: 'bg-slate-900',
-      borderColor: 'border-blue-500'
-    },
-    {
-      id: 'girls_zone' as GameMode,
-      title: '🌸 Girls Zone',
-      description: 'Style Studio, Sparkle Match & Idol Diary — creative, sparkly, and story-filled fun!',
-      icon: '✨',
-      color: 'from-pink-500 to-fuchsia-500',
-      bgColor: 'bg-pink-100',
-      borderColor: 'border-pink-400'
-    },
-    {
-      id: 'fm_radio' as GameMode,
-      title: '📻 HUNTR/X FM Radio',
-      description: 'Tune into the class station — full controls, visualiser, and shoutout button!',
-      icon: '📻',
-      color: 'from-purple-700 to-fuchsia-900',
-      bgColor: 'bg-slate-900',
-      borderColor: 'border-purple-500'
-    },
-    {
-      id: 'freeze_dance' as GameMode,
-      title: '💃 Freeze Dance',
-      description: 'Music plays, everyone dances — freeze when it stops and hold the pose!',
-      icon: '❄️',
-      color: 'from-cyan-400 to-blue-600',
-      bgColor: 'bg-cyan-50',
-      borderColor: 'border-cyan-300'
-    },
-    {
-      id: 'chaotic_backstage' as GameMode,
-      title: '🎭 Chaotic Backstage',
-      description: 'Each student fills one blank — Mr. Jarvis reads the whole story aloud!',
-      icon: '🎭',
-      color: 'from-rose-500 to-fuchsia-600',
-      bgColor: 'bg-rose-50',
-      borderColor: 'border-rose-300'
-    },
-    {
-      id: 'guess_intro' as GameMode,
-      title: '🎧 Guess the Intro',
-      description: 'Hear a 1.5-second snippet — name the HUNTR/X song!',
-      icon: '🎧',
-      color: 'from-violet-500 to-fuchsia-600',
-      bgColor: 'bg-violet-50',
-      borderColor: 'border-violet-300'
-    },
-    {
-      id: 'idol_profile' as GameMode,
-      title: '🎙️ Idol Profile Card',
-      description: 'Design your own debut card — stats, signature move, fan club!',
-      icon: '🎙️',
-      color: 'from-pink-500 to-purple-600',
-      bgColor: 'bg-pink-50',
-      borderColor: 'border-pink-300'
-    },
-    {
-      id: 'online_hub' as GameMode,
-      title: '🌐 Friends Arena — ONLINE!',
-      description: 'Create a room, share the 4-letter code, and play on different devices! 10 games: quiz show, doodles, bingo, Monopoly Deal, tycoon board race & more — whole class welcome!',
-      icon: '🌐',
-      color: 'from-emerald-400 to-cyan-600',
-      bgColor: 'bg-emerald-50',
-      borderColor: 'border-emerald-300'
-    },
-    {
-      id: 'tug_of_war' as GameMode,
-      title: '🪢 Lightstick Tug-of-War',
-      description: '2 players! Mash your button and drag the lightstick to your side — best of 3!',
-      icon: '🪢',
-      color: 'from-amber-400 to-pink-600',
-      bgColor: 'bg-amber-50',
-      borderColor: 'border-amber-300'
-    },
-    ...(typeof window !== 'undefined' && localStorage.getItem('jarvis_mode') === '1' ? [{
-      id: 'jarvis_hq' as GameMode,
-      title: "🍎 Mr. Jarvis's Lounge",
-      description: 'Classroom mode — Pop Quiz, Roll Call, Gold Stars & the Cheer Cannon. For teachers!',
-      icon: '👨‍🏫',
-      color: 'from-amber-500 to-red-600',
-      bgColor: 'bg-stone-800',
-      borderColor: 'border-amber-500'
-    }] : []),
-  ];
+  useEffect(() => {
+    if (!discoMode) return;
+    const t = setTimeout(() => setDiscoMode(false), 6000);
+    return () => clearTimeout(t);
+  }, [discoMode]);
 
-  const handleGameModeSelect = (mode: GameMode) => {
-    setSelectedGameMode(mode);
-    if (mode === 'quiz') {
-      setGameState('difficulty');
-    } else if (mode === 'memory') {
-      setGameState('memory_game');
-    } else if (mode === 'rhythm') {
-      setGameState('rhythm_game');
-    } else if (mode === 'trivia') {
-      setGameState('trivia_cards');
-    } else if (mode === 'instruments') {
-      setGameState('instruments_tutorial');
-    } else if (mode === 'teams') {
-      setGameState('team_maker');
-    } else if (mode === 'friends') {
-      setGameState('friends_trivia');
-    } else if (mode === 'math') {
-      setGameState('math_challenge');
-    } else if (mode === 'spelling') {
-      setGameState('spelling_bee');
-    } else if (mode === 'reading') {
-      setGameState('reading_comprehension');
-    } else if (mode === 'science') {
-      setGameState('science_quiz');
-    } else if (mode === 'word_scramble') {
-      setGameState('word_scramble');
-    } else if (mode === 'lightning_quiz') {
-      setGameState('lightning_quiz');
-    } else if (mode === 'animal_sound_quiz') {
-      setGameState('animal_sound_quiz');
-    } else if (mode === 'song_title_generator') {
-      setGameState('song_title_generator');
-    } else if (mode === 'idol_personality_quiz') {
-      setGameState('idol_personality_quiz');
-    } else if (mode === 'dance_battle') {
-      setGameState('dance_battle');
-    } else if (mode === 'daily_spin_wheel') {
-      setGameState('daily_spin_wheel');
-    } else if (mode === 'beat_maker') {
-      setGameState('beat_maker');
-    } else if (mode === 'korean_word') {
-      setGameState('korean_word');
-    } else if (mode === 'truth_or_dare') {
-      setGameState('truth_or_dare');
-    } else if (mode === 'trivia_battle') {
-      setGameState('trivia_battle');
-    } else if (mode === 'talent_show') {
-      setGameState('talent_show');
-    } else if (mode === 'zip_game') {
-      setGameState('zip_game');
-    } else if (mode === 'mini_sudoku') {
-      setGameState('mini_sudoku');
-    } else if (mode === 'crossword_mini') {
-      setGameState('crossword_mini');
-    } else if (mode === 'word_ladder') {
-      setGameState('word_ladder');
-    } else if (mode === 'memory_speed') {
-      setGameState('memory_speed');
-    } else if (mode === 'reaction_duel') {
-      setGameState('reaction_duel');
-    } else if (mode === 'streak_calendar') {
-      setGameState('streak_calendar');
-    } else if (mode === 'achievement_showcase') {
-      setGameState('achievement_showcase');
-    } else if (mode === 'pattern_memory') {
-      setGameState('pattern_memory');
-    } else if (mode === 'boys_zone') {
-      setGameState('boys_zone');
-    } else if (mode === 'girls_zone') {
-      setGameState('girls_zone');
-    } else if (mode === 'jarvis_hq') {
-      setGameState('jarvis_hq');
-    } else if (mode === 'guess_intro') {
-      setGameState('guess_intro');
-    } else if (mode === 'idol_profile') {
-      setGameState('idol_profile');
-    } else if (mode === 'fm_radio') {
-      setGameState('fm_radio');
-    } else if (mode === 'freeze_dance') {
-      setGameState('freeze_dance');
-    } else if (mode === 'chaotic_backstage') {
-      setGameState('chaotic_backstage');
-    } else if (mode === 'tug_of_war') {
-      setGameState('tug_of_war');
-    } else if (mode === 'online_hub') {
-      setGameState('online_hub');
-    }
-    addXP(5);
+  const open = (id: GameState) => {
+    playClick();
+    setGameState(id);
   };
+
+  let tileIndex = 0;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.5 }}
-      className="flex flex-col items-center justify-center min-h-screen px-4 text-center bg-kid-pattern"
-      style={discoMode ? { filter: 'hue-rotate(0deg)', animation: 'discoSpin 0.8s linear infinite' } : {}}
+      transition={{ duration: 0.3 }}
+      className="arcade-bg min-h-screen-d px-4 pt-6 text-white"
+      style={discoMode ? { animation: 'discoSpin 0.8s linear infinite' } : {}}
     >
-      {showConfetti && <ConfettiBurst count={80} durationMs={4000} />}
+      {discoMode && <ConfettiBurst count={80} durationMs={4000} />}
 
-      {/* Disco mode overlay */}
-      <AnimatePresence>
-        {discoMode && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 pointer-events-none z-50"
-            style={{ background: 'repeating-linear-gradient(45deg, rgba(255,0,255,0.04) 0px, transparent 4px, rgba(0,255,255,0.04) 8px, transparent 12px)' }}
-          />
-        )}
-      </AnimatePresence>
-
-      <div className="max-w-4xl mx-auto">
-        {/* Disco mode banner */}
+      <div className="max-w-5xl mx-auto">
         <AnimatePresence>
           {discoMode && (
             <motion.div
               initial={{ opacity: 0, y: -30 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -30 }}
-              className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-gradient-to-r from-fuchsia-500 to-cyan-500 text-white px-8 py-3 rounded-full font-fredoka text-2xl font-bold shadow-2xl"
+              className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-gradient-to-r from-fuchsia-500 to-cyan-500 text-white px-8 py-3 rounded-full font-fredoka text-2xl shadow-2xl"
             >
               🪩 DISCO MODE! 🪩
             </motion.div>
           )}
         </AnimatePresence>
 
-        <motion.div
-          initial={{ scale: 0.8 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          className="mb-4"
-        >
-          <motion.h1
-            className="text-3xl md:text-5xl font-fredoka font-bold text-purple-600 mb-2 text-kid-glow cursor-pointer select-none"
-            animate={discoMode ? { color: ['#9333ea', '#ec4899', '#06b6d4', '#8b5cf6', '#9333ea'] } : {}}
-            transition={discoMode ? { duration: 0.8, repeat: Infinity } : {}}
+        <div className="text-center mb-4">
+          <h1
+            className="text-3xl md:text-5xl font-fredoka text-white mb-1 cursor-pointer select-none drop-shadow-[0_0_12px_rgba(168,85,247,0.7)]"
             onClick={handleTitleClick}
-            title="Tap 5 times for a surprise! 🎉"
           >
-            Welcome, {userName}! 🌟
-          </motion.h1>
-          {discoTaps > 0 && discoTaps < 5 && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-sm font-nunito text-purple-400"
-            >
-              🎵 {5 - discoTaps} more taps for a surprise...
-            </motion.p>
-          )}
-          <p className="text-xl md:text-2xl font-fredoka font-semibold text-pink-500">
-            Choose Your Adventure!
-          </p>
-        </motion.div>
+            Hey, {userName || 'Player'}! 🎮
+          </h1>
+          <p className="text-lg md:text-xl font-nunito text-violet-200">Pick a game.</p>
+        </div>
 
         <PlayerLevelBadge />
 
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4, duration: 0.5 }}
-          className="text-lg text-gray-700 mb-8 max-w-2xl mx-auto leading-relaxed font-nunito"
-        >
-          What would you like to play today? Each game offers unique K-pop fun and challenges!
-        </motion.p>
-
-        {/* Random Fun Button */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.5, type: 'spring', stiffness: 180 }}
-          className="flex justify-center mb-8"
-        >
+        <div className="flex justify-center my-6">
           <motion.button
-            whileHover={{ scale: 1.08, rotate: [-1, 1, -1, 0] }}
-            whileTap={{ scale: 0.92 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => {
-              playWin();
-              const random = gameModes[Math.floor(Math.random() * gameModes.length)];
-              handleGameModeSelect(random.id);
+              const playable = tiles.filter(t => t.category !== 'me');
+              open(playable[Math.floor(Math.random() * playable.length)].id);
             }}
-            className="bg-gradient-to-r from-fuchsia-500 via-pink-500 to-orange-400 text-white font-fredoka font-bold text-xl px-10 py-4 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center gap-3"
+            className="bg-gradient-to-r from-fuchsia-500 via-pink-500 to-orange-400 text-white font-fredoka text-xl px-8 py-4 rounded-full shadow-xl min-h-[56px]"
           >
-            <motion.span
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-              className="text-2xl"
-            >
-              🎲
-            </motion.span>
-            Surprise Me! Play a Random Game!
-            <motion.span
-              animate={{ rotate: -360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-              className="text-2xl"
-            >
-              🎲
-            </motion.span>
+            🎲 Surprise Me!
           </motion.button>
-        </motion.div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          {gameModes.map((mode, index) => (
-            <motion.div
-              key={mode.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 + index * 0.1, duration: 0.5 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <button
-                onClick={() => handleGameModeSelect(mode.id)}
-                className={`w-full p-6 ${mode.bgColor} ${mode.borderColor} border-3 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 text-left group`}
-              >
-                <div className="flex items-start space-x-4">
-                  <div className={`text-4xl md:text-5xl p-3 bg-gradient-to-r ${mode.color} rounded-2xl text-white shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                    {mode.icon}
-                  </div>
-                  <div className="flex-1">
-                    <h3 className={`text-xl md:text-2xl font-fredoka font-bold mb-2 ${mode.id === 'boys_zone' || mode.id === 'jarvis_hq' || mode.id === 'fm_radio' ? 'text-white' : 'text-gray-800'}`}>
-                      {mode.title}
-                    </h3>
-                    <p className={`text-sm md:text-base leading-relaxed font-nunito ${mode.id === 'boys_zone' ? 'text-blue-200' : mode.id === 'jarvis_hq' ? 'text-amber-100' : mode.id === 'fm_radio' ? 'text-purple-200' : 'text-gray-600'}`}>
-                      {mode.description}
-                    </p>
-                  </div>
-                </div>
-              </button>
-            </motion.div>
-          ))}
         </div>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.2, duration: 0.5 }}
-          className="mt-12"
-        >
-          <button
-            onClick={() => setGameState('welcome')}
-            className="btn-kid-secondary font-fredoka text-lg"
-          >
+        {CATEGORIES.map(cat => {
+          const catTiles = tiles.filter(t => t.category === cat.id);
+          if (catTiles.length === 0) return null;
+          return (
+            <section key={cat.id} className="mb-8">
+              <div className="flex items-baseline gap-3 mb-3 px-1">
+                <h2 className="font-fredoka text-2xl text-white">{cat.title}</h2>
+                <span className="font-nunito text-violet-300 text-base">{cat.subtitle}</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {catTiles.map(tile => {
+                  const delay = Math.min(tileIndex++ * 0.03, 0.3);
+                  const best = highScores[tile.scoreKey ?? tile.id];
+                  return (
+                    <motion.button
+                      key={tile.id}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay, duration: 0.25 }}
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => open(tile.id)}
+                      className="relative w-full text-left rounded-2xl p-4 bg-white/10 hover:bg-white/15 border border-white/15 backdrop-blur-sm shadow-lg flex items-center gap-4 min-h-[88px]"
+                    >
+                      <div className={`text-4xl w-16 h-16 shrink-0 rounded-2xl bg-gradient-to-br ${tile.color} flex items-center justify-center shadow-md`}>
+                        {tile.icon}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-fredoka text-xl text-white leading-tight">{tile.title}</h3>
+                        <p className="font-nunito text-base text-violet-200 leading-snug">{tile.description}</p>
+                        {best ? <p className="font-nunito text-sm text-yellow-300 mt-1">🏅 Best: {best.toLocaleString()}</p> : null}
+                      </div>
+                      {tile.isNew && (
+                        <span className="absolute top-2 right-2 bg-yellow-400 text-stone-900 font-fredoka text-xs px-2 py-0.5 rounded-full">NEW</span>
+                      )}
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
+
+        <div className="text-center mt-4">
+          <button onClick={() => setGameState('welcome')} className="btn-kid-secondary font-fredoka text-lg">
             ← Back to Welcome
           </button>
-        </motion.div>
+        </div>
       </div>
     </motion.div>
   );
