@@ -1,185 +1,168 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useGameStore } from '../../store';
-import type { RoomApi } from '../../online/useRoom';
+import type { GameMsg, RoomApi } from '../../online/useRoom';
 import { playClick, playCorrect, playWrong, playWin } from '../../utils/sounds';
 import ConfettiBurst from './../ConfettiBurst';
+import { useHelloGate, useArenaFinish, msLeft, placeOf } from '../../online/helloGate';
+import { CALL_EVERY_MS, buildCalls, dealCard, canMark, findLine, bingoRanking, type Call } from './timesTableBingoLogic';
 
-const CALL_EVERY_MS = 8000;
+// Solve the call, find the answer on your own card — first full line wins.
+// The host deals and keeps every card and every player's marks, so a device that mounts
+// late (or reloads its game) gets its card, the calls so far and its marks back (ttb_sync).
 
-const LINES = [
-  [0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15],
-  [0, 4, 8, 12], [1, 5, 9, 13], [2, 6, 10, 14], [3, 7, 11, 15],
-  [0, 5, 10, 15], [3, 6, 9, 12],
-];
+const DEAL_MS = 3000; // look at your card before the first call
 
-interface Call {
-  a: number;
-  b: number;
-  answer: number;
-}
+interface EndInfo { winnerId: string | null; ranked: (string | string[])[]; marks: Record<string, number> }
 
-function buildCalls(): Call[] {
-  const seen = new Set<number>();
-  const calls: Call[] = [];
-  const pairs: [number, number][] = [];
-  for (let a = 2; a <= 12; a++) for (let b = 2; b <= 12; b++) pairs.push([a, b]);
-  pairs.sort(() => Math.random() - 0.5);
-  pairs.forEach(([a, b]) => {
-    if (!seen.has(a * b)) {
-      seen.add(a * b);
-      calls.push({ a, b, answer: a * b });
-    }
-  });
-  return calls;
-}
-
-interface Standing {
-  id: string;
-  name: string;
-  emoji: string;
-  marks: number;
-}
-
-// Messages exchanged over the room channel
-type TbMsg = { from?: string } & (
-  | { t: 'tb_claim'; from: string; cells: number[] }
-  | { t: 'tb_setup'; cards: Record<string, number[]> }
-  | { t: 'tb_call'; n: number; a: number; b: number; answer: number }
-  | { t: 'tb_winner'; playerId: string; standings: Standing[] }
-  | { t: 'tb_final'; standings: Standing[] }
+// Messages (all prefixed ttb_)
+type TtbMsg = { from?: string } & (
+  | { t: 'ttb_deal'; cards: Record<string, number[]>; ms: number }
+  | { t: 'ttb_call'; n: number; a: number; b: number; answer: number; ms: number }
+  | { t: 'ttb_mark'; cell: number }
+  | ({ t: 'ttb_end' } & EndInfo)
+  | { t: 'ttb_sync'; to: string; card: number[]; marks: number[]; called: Call[]; ms: number; end?: EndInfo }
 );
 
 const TimesTableBingo: React.FC<{ room: RoomApi }> = ({ room }) => {
   const { players, isHost, myId, send, onMessage } = room;
-  const { addXP } = useGameStore();
+  const { finish, reward } = useArenaFinish(room);
 
   const [card, setCard] = useState<number[]>([]);
   const [marked, setMarked] = useState<number[]>([]);
   const [called, setCalled] = useState<Call[]>([]);
-  const [currentCall, setCurrentCall] = useState<Call | null>(null);
   const [nextIn, setNextIn] = useState(0);
   const [wrongFlash, setWrongFlash] = useState<number | null>(null);
-  const [winner, setWinner] = useState<{ id: string; standings: Standing[] } | null>(null);
-  const xpGiven = useRef(false);
-  const claimed = useRef(false);
+  const [end, setEnd] = useState<EndInfo | null>(null);
   const nextCallAt = useRef(0);
+
+  const playersRef = useRef(players);
+  playersRef.current = players;
 
   // Host-side authoritative state
   const hd = useRef({
     calls: [] as Call[],
     idx: -1,
     cards: {} as Record<string, number[]>,
-    winner: null as string | null,
+    marks: {} as Record<string, number[]>,
+    nextAt: 0,
+    end: null as EndInfo | null,
     iv: 0,
     timer: 0,
   });
 
   const byId = (id: string) =>
-    players.find((p) => p.id === id) || { id, name: '???', emoji: '👻', isHost: false, joinedAt: 0 };
+    players.find((p) => p.id === id) || { id, name: 'Friend', emoji: '🙂', isHost: false, joinedAt: 0 };
 
   // ---- HOST ----
-  useEffect(() => {
-    if (!isHost) return;
+  const calledSet = () => {
     const h = hd.current;
-    h.calls = buildCalls();
-    const answers = h.calls.map((c) => c.answer);
-    players.forEach((p) => {
-      h.cards[p.id] = [...answers].sort(() => Math.random() - 0.5).slice(0, 16);
-    });
+    return new Set(h.calls.slice(0, h.idx + 1).map((c) => c.answer));
+  };
 
-    const standings = (): Standing[] => {
-      const calledAns = new Set(h.calls.slice(0, h.idx + 1).map((c) => c.answer));
-      return Object.entries(h.cards)
-        .map(([id, c]) => ({
-          id,
-          name: byId(id).name,
-          emoji: byId(id).emoji,
-          marks: c.filter((v) => calledAns.has(v)).length,
-        }))
-        .sort((a, b) => b.marks - a.marks);
-    };
+  const hostEnd = (winnerId: string | null) => {
+    const h = hd.current;
+    if (h.end) return;
+    window.clearInterval(h.iv);
+    window.clearTimeout(h.timer);
+    const marks: Record<string, number> = {};
+    for (const [id, m] of Object.entries(h.marks)) marks[id] = m.length;
+    h.end = { winnerId, ranked: bingoRanking(winnerId, h.marks), marks };
+    send({ t: 'ttb_end', ...h.end });
+  };
 
-    const callNext = () => {
-      if (h.winner) return;
-      h.idx += 1;
-      if (h.idx >= h.calls.length) {
-        window.clearInterval(h.iv);
-        send({ t: 'tb_final', standings: standings() });
-        return;
-      }
-      const c = h.calls[h.idx];
-      send({ t: 'tb_call', n: h.idx + 1, a: c.a, b: c.b, answer: c.answer });
-    };
+  const hostCallNext = () => {
+    const h = hd.current;
+    if (h.end) return;
+    h.idx += 1;
+    if (h.idx >= h.calls.length) {
+      hostEnd(null);
+      return;
+    }
+    const c = h.calls[h.idx];
+    h.nextAt = Date.now() + CALL_EVERY_MS;
+    send({ t: 'ttb_call', n: h.idx + 1, a: c.a, b: c.b, answer: c.answer, ms: CALL_EVERY_MS });
+  };
 
-    const offMsg = onMessage((raw) => {
-      const m = raw as unknown as TbMsg;
-      if (m.t === 'tb_claim' && !h.winner) {
-        const playerCard = h.cards[m.from];
-        const cells = m.cells as number[];
-        if (!playerCard || !Array.isArray(cells) || cells.length !== 4) return;
-        const calledAns = new Set(h.calls.slice(0, h.idx + 1).map((c) => c.answer));
-        const isLine = LINES.some((line) => line.every((c) => cells.includes(c)));
-        const allCalled = cells.every((c) => c >= 0 && c < 16 && calledAns.has(playerCard[c]));
-        if (isLine && allCalled) {
-          h.winner = m.from;
-          window.clearInterval(h.iv);
-          send({ t: 'tb_winner', playerId: m.from, standings: standings() });
-        }
-      }
-    });
-
-    h.timer = window.setTimeout(() => {
-      send({ t: 'tb_setup', cards: { ...h.cards } });
+  useHelloGate(room, 'ttb', {
+    onStart: () => {
+      const h = hd.current;
+      h.calls = buildCalls();
+      playersRef.current.forEach((p) => {
+        h.cards[p.id] = dealCard(h.calls);
+        h.marks[p.id] = [];
+      });
+      h.nextAt = Date.now() + DEAL_MS;
+      send({ t: 'ttb_deal', cards: { ...h.cards }, ms: DEAL_MS });
       h.timer = window.setTimeout(() => {
-        callNext();
-        h.iv = window.setInterval(callNext, CALL_EVERY_MS);
-      }, 3000);
-    }, 900);
+        hostCallNext();
+        h.iv = window.setInterval(hostCallNext, CALL_EVERY_MS);
+      }, DEAL_MS);
+    },
+    onHello: (from) => {
+      const h = hd.current;
+      send({
+        t: 'ttb_sync', to: from, card: h.cards[from] ?? [], marks: h.marks[from] ?? [],
+        called: h.calls.slice(0, h.idx + 1), ms: msLeft(h.nextAt), end: h.end ?? undefined,
+      });
+    },
+  });
 
+  const hostHandle = (m: TtbMsg) => {
+    const h = hd.current;
+    if (m.t !== 'ttb_mark' || !m.from || h.end) return;
+    const card = h.cards[m.from];
+    const marks = h.marks[m.from];
+    if (!card || !marks || marks.includes(m.cell) || !canMark(card, m.cell, calledSet())) return;
+    marks.push(m.cell);
+    if (findLine(marks)) hostEnd(m.from);
+  };
+
+  // ---- EVERYONE ----
+  const showEnd = (e: EndInfo) => {
+    setEnd(e);
+    if (e.winnerId === myId) playWin();
+    else playCorrect();
+    finish(e.ranked);
+  };
+
+  const handle = (m: TtbMsg) => {
+    if (isHost) hostHandle(m);
+    switch (m.t) {
+      case 'ttb_deal':
+        setCard(m.cards[myId] || []);
+        setMarked([]);
+        nextCallAt.current = Date.now() + m.ms;
+        break;
+      case 'ttb_call':
+        setCalled((c) => [...c.slice(0, m.n - 1), { a: m.a, b: m.b, answer: m.answer }]);
+        nextCallAt.current = Date.now() + m.ms;
+        playClick();
+        break;
+      case 'ttb_end':
+        showEnd(m);
+        break;
+      case 'ttb_sync':
+        if (m.to !== myId) break;
+        setCard(m.card);
+        setMarked(m.marks);
+        setCalled(m.called);
+        nextCallAt.current = Date.now() + m.ms;
+        if (m.end) showEnd(m.end);
+        break;
+    }
+  };
+  const handleRef = useRef(handle);
+  handleRef.current = handle;
+
+  useEffect(() => {
+    const off = onMessage((raw: GameMsg) => handleRef.current(raw as unknown as TtbMsg));
+    const h = hd.current;
     return () => {
-      offMsg();
+      off();
       window.clearTimeout(h.timer);
       window.clearInterval(h.iv);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // ---- EVERYONE ----
-  useEffect(() => {
-    return onMessage((raw) => {
-      const m = raw as unknown as TbMsg;
-      switch (m.t) {
-        case 'tb_setup':
-          setCard(m.cards[myId] || []);
-          setMarked([]);
-          claimed.current = false;
-          break;
-        case 'tb_call':
-          setCurrentCall({ a: m.a, b: m.b, answer: m.answer });
-          setCalled((c) => [...c, { a: m.a, b: m.b, answer: m.answer }]);
-          nextCallAt.current = Date.now() + CALL_EVERY_MS;
-          playClick();
-          break;
-        case 'tb_winner':
-          setWinner({ id: m.playerId, standings: m.standings });
-          if (!xpGiven.current) {
-            xpGiven.current = true;
-            addXP(m.playerId === myId ? 40 : 15);
-          }
-          if (m.playerId === myId) playWin();
-          break;
-        case 'tb_final':
-          setWinner({ id: m.standings[0]?.id || '', standings: m.standings });
-          if (!xpGiven.current) {
-            xpGiven.current = true;
-            addXP(m.standings[0]?.id === myId ? 40 : 15);
-          }
-          break;
-      }
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [onMessage]);
 
   // "next call" countdown ticker
   useEffect(() => {
@@ -190,19 +173,11 @@ const TimesTableBingo: React.FC<{ room: RoomApi }> = ({ room }) => {
   }, []);
 
   const tapCell = (i: number) => {
-    if (winner || marked.includes(i) || card.length === 0) return;
-    const calledAnswers = new Set(called.map((c) => c.answer));
-    if (calledAnswers.has(card[i])) {
+    if (end || marked.includes(i) || card.length === 0) return;
+    if (canMark(card, i, new Set(called.map((c) => c.answer)))) {
       playCorrect();
-      const newMarked = [...marked, i];
-      setMarked(newMarked);
-      if (!claimed.current) {
-        const line = LINES.find((l) => l.every((c) => newMarked.includes(c)));
-        if (line) {
-          claimed.current = true;
-          send({ t: 'tb_claim', cells: line });
-        }
-      }
+      setMarked((mk) => [...mk, i]);
+      send({ t: 'ttb_mark', cell: i });
     } else {
       playWrong();
       setWrongFlash(i);
@@ -210,11 +185,16 @@ const TimesTableBingo: React.FC<{ room: RoomApi }> = ({ room }) => {
     }
   };
 
+  const currentCall = called.length ? called[called.length - 1] : null;
+  const winLine = findLine(marked);
+  const flatRank = end ? end.ranked.flatMap((r) => (Array.isArray(r) ? r : [r])) : [];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-950 via-emerald-950 to-green-950 text-white px-4 py-6 select-none">
+    <div className="min-h-screen-d bg-gradient-to-br from-teal-950 via-emerald-950 to-green-950 text-white px-4 py-6 select-none"
+      style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))', paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}>
       <div className="max-w-xl mx-auto pt-6">
-        <h1 className="text-center font-fredoka font-bold text-2xl md:text-4xl mb-1">🔢 Times-Table Bingo</h1>
-        <p className="text-center font-nunito text-emerald-200 text-sm mb-4">
+        <h1 className="text-center font-fredoka font-bold text-3xl md:text-4xl mb-1">🔢 Times-Table Bingo</h1>
+        <p className="text-center font-nunito text-emerald-200 text-lg mb-4">
           Solve the sum, find it on YOUR card — first full line wins!
         </p>
 
@@ -230,17 +210,17 @@ const TimesTableBingo: React.FC<{ room: RoomApi }> = ({ room }) => {
               >
                 {currentCall.a} × {currentCall.b} = ?
               </motion.div>
-              <div className="font-nunito text-emerald-200 text-sm mt-2">
+              <div className="font-nunito text-emerald-200 text-lg mt-2">
                 Call {called.length} · next in {nextIn}s ⏱️
               </div>
             </>
           ) : (
-            <div className="font-fredoka text-2xl">🎱 Cards coming up…</div>
+            <div className="font-fredoka text-2xl">{card.length ? `🎱 First call in ${nextIn}s…` : '🎱 Cards coming up…'}</div>
           )}
         </div>
 
         {/* My card */}
-        {card.length === 16 ? (
+        {card.length > 0 ? (
           <div className="grid grid-cols-4 gap-2 mb-4">
             {card.map((v, i) => (
               <motion.button
@@ -248,12 +228,12 @@ const TimesTableBingo: React.FC<{ room: RoomApi }> = ({ room }) => {
                 whileTap={{ scale: 0.93 }}
                 onClick={() => tapCell(i)}
                 animate={wrongFlash === i ? { x: [0, -6, 6, -6, 0] } : {}}
-                className={`aspect-square rounded-2xl font-fredoka font-bold text-xl md:text-2xl border-2 transition-colors ${
+                className={`aspect-square min-h-[56px] rounded-2xl font-fredoka font-bold text-2xl md:text-3xl border-2 transition-colors ${
                   marked.includes(i)
-                    ? 'bg-amber-400 text-amber-950 border-amber-300 shadow-lg'
+                    ? `${winLine?.includes(i) ? 'bg-pink-400 border-pink-200' : 'bg-amber-400 border-amber-300'} text-amber-950 shadow-lg`
                     : wrongFlash === i
                     ? 'bg-red-500/50 border-red-400'
-                    : 'bg-white/10 border-white/20 hover:bg-white/20'
+                    : 'bg-white/10 border-white/20'
                 }`}
               >
                 {v}
@@ -261,18 +241,21 @@ const TimesTableBingo: React.FC<{ room: RoomApi }> = ({ room }) => {
             ))}
           </div>
         ) : (
-          <div className="text-center font-nunito bg-white/10 rounded-3xl p-5 mb-4 text-emerald-200">
-            {currentCall ? '👀 You joined late — watch this round!' : '🎫 Dealing your bingo card…'}
+          <div className="text-center font-nunito text-lg bg-white/10 rounded-3xl p-5 mb-4 text-emerald-200">
+            {currentCall ? '👀 This game started without you — watch and join the next one!' : '🎫 Dealing your bingo card…'}
           </div>
+        )}
+        {wrongFlash !== null && (
+          <div className="text-center font-nunito text-lg text-amber-200 mb-2">Not called yet — keep looking! 🔍</div>
         )}
 
         {/* Called history */}
         {called.length > 0 && (
           <div className="bg-white/5 rounded-2xl p-3">
-            <div className="font-fredoka text-xs text-emerald-300 mb-1.5">Called so far:</div>
+            <div className="font-fredoka text-base text-emerald-300 mb-1.5">Called so far:</div>
             <div className="flex flex-wrap gap-1.5">
               {called.map((c, i) => (
-                <span key={i} className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-nunito">
+                <span key={i} className="rounded-full bg-white/10 px-2.5 py-0.5 text-base font-nunito">
                   {c.a}×{c.b}
                 </span>
               ))}
@@ -282,9 +265,9 @@ const TimesTableBingo: React.FC<{ room: RoomApi }> = ({ room }) => {
       </div>
 
       <AnimatePresence>
-        {winner && (
+        {end && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-30 flex items-center justify-center bg-black/75 px-4">
-            {winner.id === myId && <ConfettiBurst count={90} durationMs={4500} />}
+            <ConfettiBurst count={90} durationMs={4500} />
             <motion.div
               initial={{ scale: 0.6 }}
               animate={{ scale: 1 }}
@@ -293,26 +276,26 @@ const TimesTableBingo: React.FC<{ room: RoomApi }> = ({ room }) => {
             >
               <div className="text-6xl mb-2">🎉</div>
               <h2 className="font-fredoka font-bold text-3xl text-amber-300 mb-3">
-                BINGO! {byId(winner.id).emoji} {byId(winner.id).name}!
+                {end.winnerId ? `BINGO! ${byId(end.winnerId).emoji} ${byId(end.winnerId).name}!` : 'All the sums are called!'}
               </h2>
               <div className="bg-black/25 rounded-2xl p-3 mb-4 text-left max-h-44 overflow-y-auto">
-                {winner.standings.slice(0, 8).map((s, i) => (
-                  <div key={s.id} className="flex justify-between font-nunito text-sm py-0.5">
-                    <span>#{i + 1} {s.emoji} {s.name}</span>
-                    <span className="text-amber-200">{s.marks} marked</span>
+                {flatRank.slice(0, 10).map((id) => (
+                  <div key={id} className={`flex justify-between font-nunito text-base py-0.5 ${id === myId ? 'text-amber-200 font-bold' : ''}`}>
+                    <span>#{placeOf(end.ranked, id)} {byId(id).emoji} {byId(id).name}</span>
+                    <span className="text-amber-200">{end.marks[id] ?? 0} marked</span>
                   </div>
                 ))}
               </div>
-              <p className="font-fredoka text-green-300 mb-5">+{winner.id === myId ? 40 : 15} XP</p>
+              {reward && <p className="font-fredoka text-lg text-green-300 mb-5">+{reward.xp} XP · +{reward.coins} 🪙</p>}
               {isHost ? (
                 <button
                   onClick={() => { playClick(); send({ t: 'to_lobby' }); }}
-                  className="px-8 py-3 rounded-full font-fredoka font-bold bg-gradient-to-r from-amber-400 to-pink-500 shadow-xl"
+                  className="min-h-[52px] px-8 py-3 rounded-full font-fredoka font-bold text-lg bg-gradient-to-r from-amber-400 to-pink-500 shadow-xl"
                 >
                   Back to Lobby 🏠
                 </button>
               ) : (
-                <div className="font-nunito text-emerald-300">Waiting for the host…</div>
+                <div className="font-nunito text-lg text-emerald-300">Waiting for the host…</div>
               )}
             </motion.div>
           </motion.div>

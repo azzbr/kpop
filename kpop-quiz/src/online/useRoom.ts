@@ -4,10 +4,8 @@ import { realtime } from './supabaseClient';
 import { LocalChannel, LOCAL_ROOMS } from './localChannel';
 
 export type GameId =
-  | 'quiz_duel'
   | 'team_tug'
   | 'world_tour'
-  | 'rocket_race'
   | 'copy_cat'
   | 'tt_bingo'
   | 'doodle_dash'
@@ -65,7 +63,7 @@ export interface RoomApi {
   send: (msg: GameMsg) => void;
   onMessage: (handler: (msg: GameMsg) => void) => () => void;
   /** Host only: report a finished game's ranking (best first) for the lobby's session leaderboard. */
-  reportResult: (rankedIds: string[]) => void;
+  reportResult: (ranked: (string | string[])[]) => void;
 }
 
 export const SESSION_RESULT = 'session_result';
@@ -264,7 +262,7 @@ export function useRoom() {
     };
   }, []);
 
-  const reportResult = useCallback((rankedIds: string[]) => send({ t: SESSION_RESULT, ranked: rankedIds }), [send]);
+  const reportResult = useCallback((ranked: (string | string[])[]) => send({ t: SESSION_RESULT, ranked }), [send]);
 
   return { status, code, players, isHost, hostId, hostAway, myId, createRoom, joinRoom, rejoin, leaveRoom, send, onMessage, reportResult };
 }

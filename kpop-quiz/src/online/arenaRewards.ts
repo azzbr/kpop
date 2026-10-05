@@ -29,6 +29,6 @@ export const flatRanking = (ranked: (string | string[])[]) => ranked.flatMap(r =
 
 /** Rewards this device's player and (on the host) feeds the session leaderboard. Returns the reward. */
 export function finishArenaGame(room: Pick<RoomApi, 'isHost' | 'myId' | 'reportResult'>, ranked: (string | string[])[]): RoundResult {
-  if (room.isHost) room.reportResult(flatRanking(ranked));
+  if (room.isHost) room.reportResult(ranked);
   return useGameStore.getState().finishRound(ARENA_ID, placeScore(ranked, room.myId), ARENA_XP_SCALE);
 }

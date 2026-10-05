@@ -8,12 +8,10 @@ import { playClick, playUnlock, playWin } from '../../utils/sounds';
 // They all take { room, config }.
 type GameComp = React.ComponentType<{ room: RoomApi; config?: GameConfig }>;
 const GAME_SCREENS: Partial<Record<GameId, React.LazyExoticComponent<GameComp>>> = {
-  quiz_duel: lazy(() => import('./QuizDuelOnline') as Promise<{ default: GameComp }>),
   team_tug: lazy(() => import('./TeamTugOnline') as Promise<{ default: GameComp }>),
   world_tour: lazy(() => import('./WorldTourRace') as Promise<{ default: GameComp }>),
   quiz_party: lazy(() => import('./quiz/QuizParty') as Promise<{ default: GameComp }>),
   imposter: lazy(() => import('./Imposter') as Promise<{ default: GameComp }>),
-  rocket_race: lazy(() => import('./RocketTapRace') as Promise<{ default: GameComp }>),
   copy_cat: lazy(() => import('./CopyCat') as Promise<{ default: GameComp }>),
   tt_bingo: lazy(() => import('./TimesTableBingo') as Promise<{ default: GameComp }>),
   doodle_dash: lazy(() => import('./DoodleDash') as Promise<{ default: GameComp }>),
@@ -48,7 +46,6 @@ const GAMES: { id: GameId; icon: string; title: string; desc: string; min: numbe
   { id: 'quiz_party', icon: '🎉', title: 'Quiz Party', desc: 'Kahoot-style quiz on a big screen or everyone\'s iPad — Classic, Gold Quest, Racing & Cash Climb. Topics, school subjects or your own quiz!', min: 2, max: 40, tag: 'whole class!' },
   { id: 'doodle_dash', icon: '🎨', title: 'Doodle Dash', desc: 'One draws, everyone guesses — the doodle appears live on every screen!', min: 2, max: 30, tag: 'whole class!' },
   { id: 'tt_bingo', icon: '🔢', title: 'Times-Table Bingo', desc: 'Solve the call, find it on your card — first full line shouts BINGO!', min: 2, max: 30, tag: 'whole class!' },
-  { id: 'rocket_race', icon: '🚀', title: 'Rocket Tap Race', desc: 'Mash to blast off! Every rocket races on screen — first to the moon!', min: 2, max: 30, tag: 'whole class!' },
   { id: 'copy_cat', icon: '🧠', title: 'Copy Cat', desc: 'Watch the pattern, repeat it perfectly. One slip = out. Last one standing wins!', min: 2, max: 30, tag: 'whole class!' },
   { id: 'emoji_detective', icon: '🕵️', title: 'Emoji Detective', desc: 'Crack the emoji puzzle — 🦁👑, 🌧️🏹 — and race to type the answer first!', min: 2, max: 30, tag: 'whole class!' },
   { id: 'word_scramble', icon: '🔤', title: 'Scramble Race', desc: 'The letters are jumbled — unscramble the word fastest to win the round!', min: 2, max: 30, tag: 'whole class!' },
@@ -70,9 +67,8 @@ const GAMES: { id: GameId; icon: string; title: string; desc: string; min: numbe
   { id: 'connect_four', icon: '♟️', title: 'Connect 4', desc: 'Line up four in a row before your rival blocks you. Classic strategy duel!', min: 2, max: 2, tag: '1 vs 1' },
   { id: 'battleship', icon: '🚢', title: 'Battleship', desc: 'Hide your fleet, then fire on the grid to sink your rival’s ships first. Deduction duel!', min: 2, max: 2, tag: '1 vs 1' },
   { id: 'dots_boxes', icon: '◻️', title: 'Dots & Boxes', desc: 'Draw lines, complete boxes to claim them and go again. Sneaky strategy!', min: 2, max: 2, tag: '1 vs 1' },
-  { id: 'quiz_duel', icon: '⚔️', title: 'Quiz Duel', desc: 'School questions, two screens — fastest correct answer steals the round!', min: 2, max: 2, tag: '1 vs 1' },
   { id: 'penalty_duel', icon: '⚽', title: 'Penalty Duel', desc: 'Shooter vs keeper — pick your corner and outsmart your rival in 5 penalties!', min: 2, max: 2, tag: '1 vs 1' },
-  { id: 'team_tug', icon: '🪢', title: 'Team Tug-of-War', desc: 'Two teams mash to pull the star. Teamwork = power!', min: 2, max: 8, tag: '2v2 up to 4v4' },
+  { id: 'team_tug', icon: '🪢', title: 'Team Tug & Rocket Race', desc: 'Mash to win! Team tug-of-war (up to 4 v 4), or everyone races a rocket to the moon.', min: 2, max: 30, tag: 'mash it!' },
   { id: 'world_tour', icon: '✈️', title: 'World Tour Tycoon', desc: 'Board race Seoul → London — buy venues, charge rent, dodge traps!', min: 2, max: 4, tag: '2–4 players' },
   { id: 'monopoly_deal', icon: '🃏', title: 'Monopoly Deal', desc: 'The card game! Collect 3 full city sets — rent, sly deals & JUST SAY NO!', min: 2, max: 4, tag: '2–4 players' },
 ];
@@ -87,6 +83,7 @@ const STD = [
   { value: 'easy', label: '😀 Easy' }, { value: 'medium', label: '🙂 Medium' }, { value: 'hard', label: '🤓 Hard' }, { value: 'expert', label: '🧠 Expert' }, { value: 'master', label: '🔥 Master' }, { value: 'legend', label: '💀 Legend' },
 ];
 const GAME_OPTIONS: Partial<Record<GameId, OptionGroup[]>> = {
+  team_tug: [{ key: 'mode', label: 'Mode', choices: [{ value: 'tug', label: '🪢 Team tug' }, { value: 'rocket', label: '🚀 Rocket race' }] }],
   math_sprint: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
   pattern_quest: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
   make_24: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
@@ -210,12 +207,15 @@ const OnlineHub: React.FC = () => {
         setActiveGame(null);
         setWaitingFor(null);
       } else if (m.t === SESSION_RESULT) {
-        const ranked = (m.ranked as string[]) || [];
+        // Best first; an entry can be a rung of tied players, who share that place's points.
+        const ranked = ((m.ranked as (string | string[])[]) || []).map(r => (Array.isArray(r) ? r : [r]));
         setSession(prev => {
           const next = { ...prev };
-          ranked.slice(0, 3).forEach((id, i) => {
-            const cur = next[id] ?? { pts: 0, wins: 0 };
-            next[id] = { pts: cur.pts + 3 - i, wins: cur.wins + (i === 0 ? 1 : 0) };
+          ranked.slice(0, 3).forEach((rung, i) => {
+            for (const id of rung) {
+              const cur = next[id] ?? { pts: 0, wins: 0 };
+              next[id] = { pts: cur.pts + 3 - i, wins: cur.wins + (i === 0 ? 1 : 0) };
+            }
           });
           return next;
         });
