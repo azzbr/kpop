@@ -19,7 +19,7 @@ export const SCRAMBLE_WORDS: ScrambleWord[] = [
   { word: 'THUNDER', hint: 'The boom after lightning', emoji: '⛈️' },
   { word: 'PUZZLE', hint: 'You are solving one right now', emoji: '🧩' },
   { word: 'CHAMPION', hint: 'The winner of a competition', emoji: '🏆' },
-  { word: 'SKATEBOARD', hint: 'A board with four wheels', emoji: '🛹' },
+  { word: 'SKATEBOARD', hint: 'Stand on it and roll along on four little wheels', emoji: '🛹' },
   { word: 'CHOCOLATE', hint: 'A sweet treat made from cocoa', emoji: '🍫' },
   { word: 'ADVENTURE', hint: 'An exciting journey', emoji: '🗺️' },
   { word: 'GRAVITY', hint: 'What keeps your feet on the ground', emoji: '🍎' },

@@ -119,7 +119,9 @@ async function coinsAfterLeaving(room: Room) {
   const [p1, p2] = room.players;
   await room.host.close();
   await p2.close();
-  await p1.getByRole('button', { name: '✖ Leave room' }).click();
+  // Leave asks to confirm: tap twice.
+  await p1.getByRole('button', { name: '✖ Leave' }).click();
+  await p1.getByRole('button', { name: 'Tap again to leave' }).click();
   await p1.getByRole('button', { name: /← Back/ }).click();
   await expect(p1.getByText('Pick a game.')).toBeVisible();
   return (await readSave(p1))?.state.userCurrency ?? 0;

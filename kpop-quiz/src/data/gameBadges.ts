@@ -109,7 +109,6 @@ export const GAME_BADGES: GameBadge[] = [
   best('rl_100', 'rocket_launch', 'Lift Off', '🚀', 100, 'Score 100 in Rocket Launch'),
   best('rl_500', 'rocket_launch', 'Star Pilot', '🌌', 500, 'Score 500 in Rocket Launch'),
 
-  // ⚔️ Battle Arena — lifetime wins
   // Score = ❤️ left × 10 on a win (since Oct 2026; older saves held a win count).
   best('ba_1', 'battle_arena', 'First Victory', '⚔️', 1, 'Win a battle in Battle Arena'),
   best('ba_10', 'battle_arena', 'Arena Hero', '🛡️', 500, 'Win a Battle Arena match with 50+ ❤️ left'),
@@ -134,6 +133,50 @@ export const GAME_BADGES: GameBadge[] = [
   // 🕵️ Imposter
   plays('im_first', 'imposter', 'Sneaky Start', '🎭', 1, 'Play a round of Imposter'),
   plays('im_10', 'imposter', 'Super Sleuth', '🔎', 10, 'Play 10 rounds of Imposter'),
+
+  // 📰 Crossword Mini — 1000 − time/hints
+  plays('cw_first', 'crossword_mini', 'Clue Cracker', '📰', 1, 'Finish a Crossword Mini'),
+  best('cw_850', 'crossword_mini', 'Crossword Whizz', '✏️', 850, 'Score 850 in Crossword Mini'),
+
+  // 🔗 Zip — level points for time
+  plays('zip_first', 'zip_game', 'Zip Starter', '🪡', 1, 'Finish a Zip puzzle'),
+  best('zip_250', 'zip_game', 'Path Finder', '🔗', 250, 'Score 250 in Zip'),
+  best('zip_600', 'zip_game', 'Zip Zoomer', '🧵', 600, 'Score 600 in Zip'),
+
+  // 🔢 Mini Sudoku — level points for time
+  plays('su_first', 'mini_sudoku', 'Grid Solver', '🔢', 1, 'Solve a Mini Sudoku'),
+  best('su_550', 'mini_sudoku', 'Sudoku Star', '🌟', 550, 'Score 550 in Mini Sudoku'),
+
+  // 🪜 Word Ladder — 100 for the shortest ladder
+  plays('wl_first', 'word_ladder', 'First Rung', '🪜', 1, 'Finish a Word Ladder'),
+  best('wl_100', 'word_ladder', 'Perfect Ladder', '🏅', 100, 'Climb a Word Ladder in the fewest steps'),
+
+  // 🔤 Word Scramble — points over 10 words
+  best('ws_800', 'word_scramble', 'Unscrambler', '🔤', 800, 'Score 800 in Word Scramble'),
+  best('ws_2000', 'word_scramble', 'Super Speller', '🐝', 2000, 'Score 2,000 in Word Scramble'),
+
+  // 🃏 Speed Memory — 20 per pair + time bonus
+  best('mem_250', 'memory_speed', 'Sharp Eyes', '👀', 250, 'Score 250 in Speed Memory'),
+  best('mem_500', 'memory_speed', 'Pair Pro', '🃏', 500, 'Score 500 in Speed Memory'),
+
+  // 🎧 Guess the Intro — songs right out of 5
+  plays('gi_first', 'guess_intro', 'Music Detective', '🎧', 1, 'Play Guess the Intro'),
+  best('gi_5', 'guess_intro', 'Golden Ears', '👂', 5, 'Name all 5 songs in Guess the Intro'),
+
+  // 🛎️ Buzzer Battle, 👆 Reaction Duel, 🪢 Tug-of-War, 🎭 Talent Show (party games on one iPad)
+  plays('tb_first', 'trivia_battle', 'Buzzer Rookie', '🔔', 1, 'Play a Buzzer Battle'),
+  best('tb_7', 'trivia_battle', 'Buzzer Boss', '🛎️', 7, 'Win a Buzzer Battle with 7+ points'),
+  plays('rd_first', 'reaction_duel', 'Quick Draw', '⚡', 1, 'Play a Reaction Duel'),
+  best('rd_7', 'reaction_duel', 'Lightning Fingers', '👆', 7, 'Win a Reaction Duel with 7+ points'),
+  plays('tw_first', 'tug_of_war', 'Rope Puller', '💪', 1, 'Play a Tug-of-War match'),
+  best('tw_300', 'tug_of_war', 'Rope Ruler', '🪢', 300, 'Pull 300 times in one Tug-of-War match'),
+  plays('ts_first', 'talent_show', 'Star of the Stage', '🎤', 1, 'Put on a Talent Show'),
+  plays('ts_5', 'talent_show', 'Showstopper', '🎭', 5, 'Put on 5 Talent Shows'),
+
+  // 🌐 Friends Arena — placement out of 100 (1st = 100)
+  plays('arena_first', 'friends_arena', 'Arena Rookie', '🌐', 1, 'Finish a game in Friends Arena'),
+  best('arena_win', 'friends_arena', 'Arena Winner', '🥇', 100, 'Win a game in Friends Arena'),
+  plays('arena_10', 'friends_arena', 'Arena Regular', '🎮', 10, 'Finish 10 games in Friends Arena'),
 
   // 🌍 Across all games
   { id: 'any_5games', name: 'Game Hopper', icon: '🐸', description: 'Play 5 different games', game: 'any', test: c => gamesPlayed(c) >= 5 },

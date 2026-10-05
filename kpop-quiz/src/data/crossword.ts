@@ -130,7 +130,7 @@ export const PUZZLES: CrosswordPuzzle[] = [
     ],
     clues: [
       { id: 1, dir: 'across', clue: '⛈️ Wild weather with wind, rain and thunder (5)', answer: 'STORM', row: 0, col: 0 },
-      { id: 3, dir: 'across', clue: '🌤️ Look up! Clouds drift across the blue ___ (5)', answer: 'SKIES', row: 4, col: 0 },
+      { id: 3, dir: 'across', clue: '🌤️ Sunny days have clear blue ___ (5)', answer: 'SKIES', row: 4, col: 0 },
       { id: 1, dir: 'down', clue: '❄️ When it ___, you can build a snowman (5)', answer: 'SNOWS', row: 0, col: 0 },
       { id: 2, dir: 'down', clue: '🍦 What an ice cream does on a hot sunny day (5)', answer: 'MELTS', row: 0, col: 4 },
     ],

@@ -26,6 +26,10 @@ const CHALLENGES: DailyChallenge[] = [
   { gameId: 'ninja_slice', screen: 'ninja_slice', icon: '🥷', label: 'Score 150 in Ninja Slice', target: 150 },
   { gameId: 'pattern_memory', screen: 'pattern_memory', icon: '🧠', label: 'Reach round 8 in Pattern Memory', target: 8 },
   { gameId: 'sparkle_match', screen: 'sparkle_match', icon: '💎', label: 'Score 800 in Gem Match', target: 800 },
+  { gameId: 'mini_sudoku', screen: 'mini_sudoku', icon: '🔢', label: 'Score 300 in Mini Sudoku', target: 300 },
+  { gameId: 'word_ladder', screen: 'word_ladder', icon: '🪜', label: 'Climb a Word Ladder in the fewest steps', target: 100 },
+  { gameId: 'crossword_mini', screen: 'crossword_mini', icon: '📰', label: 'Score 600 in Crossword Mini', target: 600 },
+  { gameId: 'word_scramble', screen: 'word_scramble', icon: '🔤', label: 'Score 1,200 in Word Scramble', target: 1200 },
 ];
 
 export const DAILY_REWARD = { xp: 100, coins: 50 };

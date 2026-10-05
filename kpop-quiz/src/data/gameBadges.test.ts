@@ -8,6 +8,8 @@ const KNOWN_GAMES = [
   'paper_clash', 'snake_arena', 'game_2048', 'block_blast', 'word_guess', 'quiz_arena', 'quiz_party',
   'real_or_fake', 'emoji_guess', 'would_you_rather', 'kpop_rush', 'ninja_slice', 'rocket_launch',
   'battle_arena', 'pattern_memory', 'sparkle_match', 'tower_defense', 'heads_up', 'imposter', 'truth_or_dare',
+  'crossword_mini', 'zip_game', 'mini_sudoku', 'word_ladder', 'word_scramble', 'memory_speed', 'guess_intro',
+  'trivia_battle', 'reaction_duel', 'tug_of_war', 'talent_show', 'friends_arena',
 ];
 
 /** A plausible good-but-not-amazing score per game, in finishRound units. */
@@ -15,6 +17,8 @@ const PLAUSIBLE: Record<string, number> = {
   paper_clash: 120, snake_arena: 60, game_2048: 2500, block_blast: 400, word_guess: 1, quiz_arena: 4000,
   quiz_party: 3000, real_or_fake: 5, emoji_guess: 6, would_you_rather: 6, kpop_rush: 800, ninja_slice: 150,
   rocket_launch: 200, battle_arena: 300, pattern_memory: 6, sparkle_match: 300, tower_defense: 400, heads_up: 7, imposter: 2,
+  crossword_mini: 700, zip_game: 200, mini_sudoku: 300, word_ladder: 80, word_scramble: 900, memory_speed: 260,
+  guess_intro: 3, trivia_battle: 6, reaction_duel: 6, tug_of_war: 200, talent_show: 20, friends_arena: 60, truth_or_dare: 15,
 };
 
 const check = (gameId: string, score: number, extra: Partial<BadgeCheck> = {}): BadgeCheck => ({
