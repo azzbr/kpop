@@ -1,40 +1,45 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store';
 import { useRoom, SESSION_RESULT, savedRoom } from '../../online/useRoom';
 import type { GameId, GameConfig, RoomApi } from '../../online/useRoom';
 import { playClick, playUnlock, playWin } from '../../utils/sounds';
-import QuizDuelOnline from './QuizDuelOnline';
-import TeamTugOnline from './TeamTugOnline';
-import WorldTourRace from './WorldTourRace';
-import QuizParty from './quiz/QuizParty';
-import Imposter from './Imposter';
-import RocketTapRace from './RocketTapRace';
-import CopyCat from './CopyCat';
-import TimesTableBingo from './TimesTableBingo';
-import DoodleDash from './DoodleDash';
-import PenaltyDuel from './PenaltyDuel';
-import MonopolyDeal from './MonopolyDeal';
-import EmojiDetective from './EmojiDetective';
-import WordScramble from './WordScramble';
-import RiddleRush from './RiddleRush';
-import PictureTelephone from './PictureTelephone';
-import MathSprint from './MathSprint';
-import CodeBreaker from './CodeBreaker';
-import OddOneOut from './OddOneOut';
-import WhatsMissing from './WhatsMissing';
-import PatternQuest from './PatternQuest';
-import ConnectFour from './ConnectFour';
-import MemoryDigits from './MemoryDigits';
-import SudokuMini from './SudokuMini';
-import Battleship from './Battleship';
-import Make24 from './Make24';
-import Hangman from './Hangman';
-import BrainBuzzer from './BrainBuzzer';
-import Minesweeper from './Minesweeper';
-import DotsBoxes from './DotsBoxes';
-import ColourClash from './ColourClash';
-import SlidingPuzzle from './SlidingPuzzle';
+// Each game is its own download, fetched when the host starts it (the hub stays small).
+// They all take { room, config }.
+type GameComp = React.ComponentType<{ room: RoomApi; config?: GameConfig }>;
+const GAME_SCREENS: Partial<Record<GameId, React.LazyExoticComponent<GameComp>>> = {
+  quiz_duel: lazy(() => import('./QuizDuelOnline') as Promise<{ default: GameComp }>),
+  team_tug: lazy(() => import('./TeamTugOnline') as Promise<{ default: GameComp }>),
+  world_tour: lazy(() => import('./WorldTourRace') as Promise<{ default: GameComp }>),
+  quiz_party: lazy(() => import('./quiz/QuizParty') as Promise<{ default: GameComp }>),
+  imposter: lazy(() => import('./Imposter') as Promise<{ default: GameComp }>),
+  rocket_race: lazy(() => import('./RocketTapRace') as Promise<{ default: GameComp }>),
+  copy_cat: lazy(() => import('./CopyCat') as Promise<{ default: GameComp }>),
+  tt_bingo: lazy(() => import('./TimesTableBingo') as Promise<{ default: GameComp }>),
+  doodle_dash: lazy(() => import('./DoodleDash') as Promise<{ default: GameComp }>),
+  penalty_duel: lazy(() => import('./PenaltyDuel') as Promise<{ default: GameComp }>),
+  monopoly_deal: lazy(() => import('./MonopolyDeal') as Promise<{ default: GameComp }>),
+  emoji_detective: lazy(() => import('./EmojiDetective') as Promise<{ default: GameComp }>),
+  word_scramble: lazy(() => import('./WordScramble') as Promise<{ default: GameComp }>),
+  riddle_rush: lazy(() => import('./RiddleRush') as Promise<{ default: GameComp }>),
+  picture_phone: lazy(() => import('./PictureTelephone') as Promise<{ default: GameComp }>),
+  math_sprint: lazy(() => import('./MathSprint') as Promise<{ default: GameComp }>),
+  code_breaker: lazy(() => import('./CodeBreaker') as Promise<{ default: GameComp }>),
+  odd_one_out: lazy(() => import('./OddOneOut') as Promise<{ default: GameComp }>),
+  whats_missing: lazy(() => import('./WhatsMissing') as Promise<{ default: GameComp }>),
+  pattern_quest: lazy(() => import('./PatternQuest') as Promise<{ default: GameComp }>),
+  memory_digits: lazy(() => import('./MemoryDigits') as Promise<{ default: GameComp }>),
+  sudoku_mini: lazy(() => import('./SudokuMini') as Promise<{ default: GameComp }>),
+  connect_four: lazy(() => import('./ConnectFour') as Promise<{ default: GameComp }>),
+  make_24: lazy(() => import('./Make24') as Promise<{ default: GameComp }>),
+  hangman: lazy(() => import('./Hangman') as Promise<{ default: GameComp }>),
+  brain_buzzer: lazy(() => import('./BrainBuzzer') as Promise<{ default: GameComp }>),
+  battleship: lazy(() => import('./Battleship') as Promise<{ default: GameComp }>),
+  minesweeper: lazy(() => import('./Minesweeper') as Promise<{ default: GameComp }>),
+  sliding_puzzle: lazy(() => import('./SlidingPuzzle') as Promise<{ default: GameComp }>),
+  colour_clash: lazy(() => import('./ColourClash') as Promise<{ default: GameComp }>),
+  dots_boxes: lazy(() => import('./DotsBoxes') as Promise<{ default: GameComp }>),
+};
 
 const EMOJIS = ['🎤', '🎸', '🥁', '🎹', '🎧', '🌟', '💖', '🔥', '🦄', '🐯', '🐰', '🦊'];
 
@@ -129,7 +134,12 @@ const OnlineHub: React.FC = () => {
   const [restored] = useState<{ game: GameId; config: GameConfig } | null>(() => {
     try { return savedRoom() ? JSON.parse(sessionStorage.getItem('kpop_active_game') || 'null') : null; } catch { return null; }
   });
-  const [activeGame, setActiveGame] = useState<GameId | null>(restored?.game ?? null);
+  // Only games that can resync from the host (LATE_JOIN_GAMES) reopen after a refresh. For the
+  // rest this device waits in the lobby for the next game (a refreshed host ends the game).
+  const canResume = !!restored && LATE_JOIN_GAMES.includes(restored.game);
+  const [activeGame, setActiveGame] = useState<GameId | null>(canResume ? restored!.game : null);
+  const [waitingFor, setWaitingFor] = useState<GameId | null>(restored && !canResume ? restored.game : null);
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const [selGame, setSelGame] = useState<GameId>('quiz_party');
   const [opts, setOpts] = useState<Record<string, string>>({});
   const [gameConfig, setGameConfig] = useState<GameConfig>(restored?.config ?? {});
@@ -155,10 +165,19 @@ const OnlineHub: React.FC = () => {
     setBusy(true);
     room.rejoin().then((ok) => {
       setBusy(false);
-      if (!ok) { setScreen('menu'); setActiveGame(null); setJoinError('That room has closed — make a new one!'); }
+      if (!ok) { setScreen('menu'); setActiveGame(null); setWaitingFor(null); setJoinError('That room has closed — make a new one!'); }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // A refreshed host can't rebuild a game that isn't resumable: end it for everyone.
+  const endedStale = useRef(false);
+  useEffect(() => {
+    if (endedStale.current || !waitingFor || room.status !== 'lobby' || !room.hostId) return;
+    endedStale.current = true;
+    if (room.isHost) { room.send({ t: 'to_lobby' }); setWaitingFor(null); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room.status, room.hostId, room.isHost, waitingFor]);
 
   // A new host took over (the old one left for good). Games that can't move to a new host
   // send everyone back to the lobby; Quiz Party ends itself with the latest standings.
@@ -178,6 +197,7 @@ const OnlineHub: React.FC = () => {
   useEffect(() => {
     return room.onMessage((m) => {
       if (m.t === 'start') {
+        setWaitingFor(null);
         setActiveGame(prev => {
           if (prev !== m.game) playUnlock();
           return m.game as GameId;
@@ -185,6 +205,7 @@ const OnlineHub: React.FC = () => {
         setGameConfig((m.config as GameConfig) || {});
       } else if (m.t === 'to_lobby') {
         setActiveGame(null);
+        setWaitingFor(null);
       } else if (m.t === SESSION_RESULT) {
         const ranked = (m.ranked as string[]) || [];
         setSession(prev => {
@@ -305,46 +326,27 @@ const OnlineHub: React.FC = () => {
     </AnimatePresence>
   );
 
+  const GameScreen = activeGame ? GAME_SCREENS[activeGame] : undefined;
   if (activeGame && room.status === 'lobby') {
     return (
       <div className="relative">
         {statusOverlay}
-        {activeGame === 'quiz_duel' && <QuizDuelOnline room={api} />}
-        {activeGame === 'team_tug' && <TeamTugOnline room={api} />}
-        {activeGame === 'world_tour' && <WorldTourRace room={api} />}
-        {activeGame === 'quiz_party' && <QuizParty room={api} />}
-        {activeGame === 'imposter' && <Imposter room={api} />}
-        {activeGame === 'rocket_race' && <RocketTapRace room={api} />}
-        {activeGame === 'copy_cat' && <CopyCat room={api} />}
-        {activeGame === 'tt_bingo' && <TimesTableBingo room={api} />}
-        {activeGame === 'doodle_dash' && <DoodleDash room={api} />}
-        {activeGame === 'penalty_duel' && <PenaltyDuel room={api} />}
-        {activeGame === 'monopoly_deal' && <MonopolyDeal room={api} />}
-        {activeGame === 'emoji_detective' && <EmojiDetective room={api} />}
-        {activeGame === 'word_scramble' && <WordScramble room={api} />}
-        {activeGame === 'riddle_rush' && <RiddleRush room={api} />}
-        {activeGame === 'picture_phone' && <PictureTelephone room={api} />}
-        {activeGame === 'math_sprint' && <MathSprint room={api} config={gameConfig} />}
-        {activeGame === 'code_breaker' && <CodeBreaker room={api} config={gameConfig} />}
-        {activeGame === 'odd_one_out' && <OddOneOut room={api} config={gameConfig} />}
-        {activeGame === 'whats_missing' && <WhatsMissing room={api} config={gameConfig} />}
-        {activeGame === 'pattern_quest' && <PatternQuest room={api} config={gameConfig} />}
-        {activeGame === 'memory_digits' && <MemoryDigits room={api} config={gameConfig} />}
-        {activeGame === 'sudoku_mini' && <SudokuMini room={api} config={gameConfig} />}
-        {activeGame === 'connect_four' && <ConnectFour room={api} />}
-        {activeGame === 'make_24' && <Make24 room={api} config={gameConfig} />}
-        {activeGame === 'hangman' && <Hangman room={api} config={gameConfig} />}
-        {activeGame === 'brain_buzzer' && <BrainBuzzer room={api} config={gameConfig} />}
-        {activeGame === 'battleship' && <Battleship room={api} />}
-        {activeGame === 'minesweeper' && <Minesweeper room={api} config={gameConfig} />}
-        {activeGame === 'sliding_puzzle' && <SlidingPuzzle room={api} config={gameConfig} />}
-        {activeGame === 'colour_clash' && <ColourClash room={api} config={gameConfig} />}
-        {activeGame === 'dots_boxes' && <DotsBoxes room={api} config={gameConfig} />}
+        {GameScreen && (
+          <Suspense fallback={<div className="min-h-screen-d arcade-bg flex items-center justify-center text-white font-fredoka text-2xl">Loading the game… 🎮</div>}>
+            <GameScreen room={api} config={gameConfig} />
+          </Suspense>
+        )}
         <button
-          onClick={leaveToMenu}
-          className="fixed top-2 right-2 z-50 bg-black/40 hover:bg-black/60 text-white/80 rounded-full px-3 py-1 font-fredoka text-xs"
+          onClick={() => {
+            if (confirmLeave) { setConfirmLeave(false); leaveToMenu(); return; }
+            playClick();
+            setConfirmLeave(true);
+            window.setTimeout(() => setConfirmLeave(false), 3000);
+          }}
+          className={`fixed z-50 min-h-[48px] px-4 rounded-full font-fredoka text-base text-white shadow-lg ${confirmLeave ? 'bg-red-600' : 'bg-black/50'}`}
+          style={{ top: 'max(8px, env(safe-area-inset-top))', right: 'max(8px, env(safe-area-inset-right))' }}
         >
-          ✖ Leave room
+          {confirmLeave ? 'Tap again to leave' : '✖ Leave'}
         </button>
       </div>
     );
@@ -467,6 +469,11 @@ const OnlineHub: React.FC = () => {
         )}
         {screen === 'lobby' && room.status === 'lobby' && (
           <motion.div initial={{ scale: 0.97, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+            {waitingFor && !room.isHost && (
+              <div className="rounded-3xl bg-amber-400/90 text-stone-900 p-5 mb-6 text-center font-fredoka text-xl" role="status">
+                👀 A game of {GAMES.find(g => g.id === waitingFor)?.title ?? 'something fun'} is still going — you'll join the next one!
+              </div>
+            )}
             <div className="bg-white/10 rounded-3xl p-6 border border-white/20 mb-6 text-center">
               <div className="font-nunito text-teal-200 mb-1">Tell your friends to join with code:</div>
               <div className="font-fredoka font-bold text-5xl md:text-7xl tracking-[0.35em] text-amber-300 select-all">

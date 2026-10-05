@@ -13,7 +13,7 @@
     "test:e2e:chromium": "playwright test --project=ipad-chromium --project=desktop-chromium"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.108.1",
+    "@supabase/realtime-js": "^2.108.1",
     "@types/node": "^24.3.1",
     "@typescript-eslint/eslint-plugin": "^8.42.0",
     "@typescript-eslint/parser": "^8.42.0",

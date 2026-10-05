@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { RealtimeChannel } from '@supabase/supabase-js';
-import { supabase } from './supabaseClient';
+import type { RealtimeChannel } from '@supabase/realtime-js';
+import { realtime } from './supabaseClient';
 import { LocalChannel, LOCAL_ROOMS } from './localChannel';
 
 export type GameId =
@@ -127,7 +127,7 @@ export function useRoom() {
     const ch = channelRef.current;
     if (ch) {
       if (ch instanceof LocalChannel) ch.close();
-      else supabase.removeChannel(ch);
+      else realtime.removeChannel(ch);
       channelRef.current = null;
     }
   }, []);
@@ -157,7 +157,7 @@ export function useRoom() {
         // ?localroom swaps Supabase for a BroadcastChannel between tabs (tests, offline play).
         const channel = (LOCAL_ROOMS
           ? new LocalChannel(`kpoproom:${roomCode}`, myId)
-          : supabase.channel(`kpoproom:${roomCode}`, {
+          : realtime.channel(`kpoproom:${roomCode}`, {
               config: {
                 presence: { key: myId },
                 broadcast: { self: true },
