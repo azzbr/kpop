@@ -90,7 +90,7 @@ export const HERO_QUESTIONS: HeroQuestion[] = [
       { text: 'Putting up the tents', hero: 'inventor' },
       { text: 'Reading the map', hero: 'puzzler' },
       { text: 'Leading the campfire songs', hero: 'party' },
-      { text: 'Exploring the trail first', hero: 'speedster' },
+      { text: 'Leading the morning hike', hero: 'speedster' },
     ],
   },
   {
