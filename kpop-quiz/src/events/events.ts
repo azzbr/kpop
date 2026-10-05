@@ -109,7 +109,7 @@ export function activeEvent(dateKey: string, search?: string, events: SeasonEven
 
 /** Screens where an item may hide: menus and collections only — never a real-time game. */
 export const HUNT_SCREENS: readonly string[] = [
-  'welcome', 'game_mode', 'secret_menu', 'streak_calendar', 'achievement_showcase',
+  'welcome', 'game_mode', 'secret_menu', 'quest_map', 'achievement_showcase',
   'locker', 'idol_profile', 'style_studio', 'agent_hq', 'team_maker',
 ];
 /** Screens that get an item each day (~1 in 3 of HUNT_SCREENS). */

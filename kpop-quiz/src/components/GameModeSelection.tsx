@@ -77,8 +77,6 @@ const TILES: Tile[] = [
   // Create & music
   { id: 'beat_maker', title: 'Beat Maker', description: 'Build a beat on a 16-step drum machine.', icon: '🎛️', color: 'from-red-500 to-orange-500', category: 'create' },
   { id: 'guess_intro', title: 'Guess the Intro', description: 'Name the song from a 1.5-second clip.', icon: '🎧', color: 'from-violet-500 to-fuchsia-600', category: 'create' },
-  { id: 'fm_radio', title: 'Fun Quest FM', description: 'Your own radio station — be the DJ.', icon: '📻', color: 'from-purple-700 to-fuchsia-800', category: 'create' },
-  { id: 'dance_battle', title: 'Dance Battle', description: 'Watch the moves, then repeat them perfectly.', icon: '💃', color: 'from-rose-500 to-pink-600', category: 'create' },
   { id: 'style_studio', title: 'Style Studio', description: 'Design outfits and save your looks.', icon: '👗', color: 'from-pink-500 to-fuchsia-500', category: 'create' },
   { id: 'idol_profile', title: 'Superstar Card', description: 'Make your own trading card with stats.', icon: '🪪', color: 'from-pink-500 to-purple-600', category: 'create' },
   { id: 'idol_diary', title: 'Secret Diary', description: 'Fill in the blanks for a ridiculous story.', icon: '📔', color: 'from-amber-500 to-rose-500', category: 'create' },
@@ -87,7 +85,6 @@ const TILES: Tile[] = [
   { id: 'pet_pal', title: 'Pet Pal', description: 'Adopt a pet that grows every day you play. Feed it, decorate its room!', icon: '🐾', color: 'from-pink-500 to-amber-500', category: 'me', isNew: true },
   { id: 'quest_map', title: 'Quest Map', description: '30 quests to complete — claim coins along the trail.', icon: '🧭', color: 'from-teal-500 to-indigo-600', category: 'me', isNew: true },
   { id: 'locker', title: 'Locker', description: 'Spend coins on avatars, colours, trails and titles.', icon: '🎒', color: 'from-yellow-500 to-fuchsia-600', category: 'me', isNew: true },
-  { id: 'streak_calendar', title: 'Daily Streak', description: 'How many days in a row can you play?', icon: '🔥', color: 'from-orange-500 to-red-500', category: 'me' },
   { id: 'achievement_showcase', title: 'Trophy Room', description: 'Your level, badges, themes and best scores.', icon: '🏆', color: 'from-yellow-500 to-amber-600', category: 'me' },
 
   // Teacher (hidden unless Jarvis mode is unlocked)

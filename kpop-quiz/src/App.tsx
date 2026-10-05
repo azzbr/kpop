@@ -24,7 +24,6 @@ const SCREENS: Partial<Record<GameState, LazyExoticComponent<ComponentType>>> = 
   kpop_rush: lazy(() => import('./components/KPopRushGame')),
   word_scramble: lazy(() => import('./components/WordScramble')),
   idol_personality_quiz: lazy(() => import('./components/IdolPersonalityQuiz')),
-  dance_battle: lazy(() => import('./components/DanceBattleSimulator')),
   beat_maker: lazy(() => import('./components/BeatMaker')),
   huntrx_splash: lazy(() => import('./components/HuntrxSplash')),
   truth_or_dare: lazy(() => import('./components/TruthOrDare')),
@@ -36,7 +35,6 @@ const SCREENS: Partial<Record<GameState, LazyExoticComponent<ComponentType>>> = 
   word_ladder: lazy(() => import('./components/WordLadder')),
   memory_speed: lazy(() => import('./components/MemorySpeedRound')),
   reaction_duel: lazy(() => import('./components/ReactionDuel')),
-  streak_calendar: lazy(() => import('./components/DailyStreakCalendar')),
   achievement_showcase: lazy(() => import('./components/AchievementShowcase')),
   pattern_memory: lazy(() => import('./components/PatternMemory')),
   ninja_slice: lazy(() => import('./components/NinjaSlice')),
@@ -48,7 +46,6 @@ const SCREENS: Partial<Record<GameState, LazyExoticComponent<ComponentType>>> = 
   jarvis_hq: lazy(() => import('./components/JarvisHQ')),
   guess_intro: lazy(() => import('./components/GuessTheIntro')),
   idol_profile: lazy(() => import('./components/IdolProfileCard')),
-  fm_radio: lazy(() => import('./components/FMRadio')),
   freeze_dance: lazy(() => import('./components/FreezeDance')),
   chaotic_backstage: lazy(() => import('./components/ChaoticBackstage')),
   paper_clash: lazy(() => import('./components/games/PaperClash')),
@@ -101,7 +98,7 @@ function App() {
           {renderCurrentScreen()}
         </AnimatePresence>
       </Suspense>
-      <MusicPlayer hidden={gameState === 'fm_radio'} />
+      <MusicPlayer />
       <PlayTimeTracker />
       <BadgeToast />
       <PumpkinHunt screen={gameState} />

@@ -8,12 +8,12 @@ import { GAME_BADGES } from './data/gameBadges';
 export type GameState =
   | 'welcome' | 'game_mode'
   | 'team_maker' | 'secret_menu' | 'doodle_pad' | 'sticker_board' | 'pixel_studio' | 'theme_lab' | 'my_stats' | 'agent_hq' | 'kpop_rush'
-  | 'word_scramble' | 'idol_personality_quiz' | 'dance_battle' | 'beat_maker'
+  | 'word_scramble' | 'idol_personality_quiz' | 'beat_maker'
   | 'huntrx_splash' | 'truth_or_dare' | 'trivia_battle' | 'talent_show' | 'zip_game' | 'mini_sudoku'
-  | 'crossword_mini' | 'word_ladder' | 'memory_speed' | 'reaction_duel' | 'streak_calendar'
+  | 'crossword_mini' | 'word_ladder' | 'memory_speed' | 'reaction_duel'
   | 'achievement_showcase' | 'pattern_memory' | 'ninja_slice' | 'battle_arena' | 'rocket_launch'
   | 'style_studio' | 'sparkle_match' | 'idol_diary' | 'jarvis_hq' | 'guess_intro' | 'idol_profile'
-  | 'fm_radio' | 'freeze_dance' | 'chaotic_backstage' | 'paper_clash' | 'tug_of_war' | 'online_hub'
+  | 'freeze_dance' | 'chaotic_backstage' | 'paper_clash' | 'tug_of_war' | 'online_hub'
   | 'snake_arena' | 'game_2048' | 'block_blast' | 'word_guess' | 'quiz_arena' | 'would_you_rather'
   | 'real_or_fake' | 'emoji_guess' | 'quiz_maker' | 'locker'
   | 'tower_defense' | 'pet_pal' | 'quest_map' | 'parent_corner' | 'heads_up';
