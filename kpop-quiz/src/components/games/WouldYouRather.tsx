@@ -141,6 +141,7 @@ export default function WouldYouRather() {
 
   return (
     <GameShell
+      celebrateEnd={isParty}
       gameId="would_you_rather"
       title="Would You Rather"
       icon="🤷"

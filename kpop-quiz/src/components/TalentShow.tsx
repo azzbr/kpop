@@ -1,380 +1,287 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useGameStore } from '../store';
+import GameShell from '../games/engine/GameShell';
+import type { ShellStatus } from '../games/engine/GameShell';
+import { createRng } from '../games/engine/rng';
 import { playClick, playCorrect, playWin, playPop, playTimeOut, playTick } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
+import { PlayerChips } from './games/partyNames';
+import { AVATARS } from './games/partyNamesLogic';
+import {
+  actStars, actAverage, cheerFor, dealIdeas, judgesFor, showAwards, showScore,
+  MAX_PLAYERS, MIN_PLAYERS, PERFORM_SECS, STAR_LABELS, TOP_AWARD,
+} from './games/talentShowLogic';
+import type { Act } from './games/talentShowLogic';
 
-const JUDGE_COMMENTS: Record<string, string[]> = {
-  '1': ["💀 My ears have left the building.", "🫣 I've seen better from my cat.", "📞 Hello, 911? I need help.", "🚪 Please. Use. The. Exit."],
-  '2': ["😬 Well... you tried. That counts for something.", "🙉 I didn't NOT hate it.", "👀 I've seen worse. Barely.", "🤔 Interesting choice of... everything."],
-  '3': ["🤷 It's giving... something. Not sure what.", "😐 Three stars. I'm being generous.", "🎭 Very bold. Very brave. Very mid.", "👏 Points for showing up!"],
-  '4': ["✨ Oh! That actually had moments!", "😮 Wait — that was kind of good?", "💅 I see potential. Deep, deep down.", "🔥 Starting to feel something!"],
-  '5': ["🌟 OKAY WE SEE YOU!", "🎤 Drop the mic! Drop it NOW!", "👑 A star has been born today!", "🚀 That just launched my soul into space!"],
-};
+type Phase = 'setup' | 'idea' | 'perform' | 'judge' | 'result' | 'awards';
 
-const TALENT_IDEAS = [
-  "🎤 Sing a K-pop chorus in a funny voice",
-  "💃 Do a 15-second freestyle dance",
-  "🎭 Act out a dramatic K-drama scene",
-  "🤸 Do your best physical trick",
-  "🎵 Beatbox for 15 seconds",
-  "😂 Tell the funniest joke you know",
-  "🐒 Do your best animal impression",
-  "🤖 Do the robot dance perfectly",
-  "🎨 Draw something in 20 seconds and reveal it",
-  "🗣️ Say the alphabet backwards as fast as you can",
-];
+const OWN_IDEA = '✨ My own secret talent';
+const rng = () => createRng((Date.now() + Math.floor(Math.random() * 1e6)) % 1e9);
 
-interface Performance {
-  performer: string;
-  talent: string;
-  scores: number[];
-  total: number;
-  comments: string[];
-}
-
-type Phase = 'setup' | 'perform' | 'judging' | 'result' | 'leaderboard';
-
-const TalentShow: React.FC = () => {
-  const { setGameState } = useGameStore();
+export default function TalentShow() {
+  const [status, setStatus] = useState<ShellStatus>('ready');
+  const [show, setShow] = useState(0);
   const [phase, setPhase] = useState<Phase>('setup');
-  const [judgeNames, setJudgeNames] = useState(['', '', '']);
-  const [performerName, setPerformerName] = useState('');
+  const [players, setPlayers] = useState<string[]>([]);
+  const [turn, setTurn] = useState(0);
+  const [ideas, setIdeas] = useState<string[]>([]);
   const [talent, setTalent] = useState('');
-  const [customTalent, setCustomTalent] = useState('');
-  const [timer, setTimer] = useState(20);
-  const [timerRunning, setTimerRunning] = useState(false);
-  const [judgeScores, setJudgeScores] = useState<number[]>([0, 0, 0]);
-  const [currentJudge, setCurrentJudge] = useState(0);
-  const [performances, setPerformances] = useState<Performance[]>([]);
-  const [lastPerf, setLastPerf] = useState<Performance | null>(null);
-  const [showConfetti, setShowConfetti] = useState(false);
-  const timerRef = useRef<number | null>(null);
-  const confettiTimeoutRef = useRef<number | null>(null);
+  const [timer, setTimer] = useState(PERFORM_SECS);
+  const [running, setRunning] = useState(false);
+  const [judgeN, setJudgeN] = useState(0);
+  const [stars, setStars] = useState<number[]>([]);
+  const [chosen, setChosen] = useState(0);
+  const [acts, setActs] = useState<Act[]>([]);
+  const [cheer, setCheer] = useState('');
 
-  useEffect(() => () => { if (confettiTimeoutRef.current) clearTimeout(confettiTimeoutRef.current); }, []);
+  const judges = judgesFor(players, turn);
+  const performer = players[turn];
+  const lastAct = acts[acts.length - 1];
 
-  const activeJudges = judgeNames.filter(j => j.trim()).length;
-
+  // Pause when she switches apps.
   useEffect(() => {
-    if (!timerRunning) return;
-    if (timer <= 0) {
-      playTimeOut();
-      setTimerRunning(false);
-      return;
-    }
-    if (timer <= 5) playTick();
-    timerRef.current = window.setTimeout(() => setTimer(t => t - 1), 1000);
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [timer, timerRunning]);
+    const onVis = () => { if (document.hidden) setStatus(s => (s === 'playing' ? 'paused' : s)); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
 
-  const startPerformance = () => {
-    const t = customTalent.trim() || talent;
-    if (!performerName.trim() || !t) return;
+  // Performance timer
+  useEffect(() => {
+    if (!running || status !== 'playing' || phase !== 'perform') return;
+    if (timer <= 0) { playTimeOut(); setRunning(false); return; }
+    if (timer <= 5) playTick();
+    const t = window.setTimeout(() => setTimer(s => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [timer, running, status, phase]);
+
+  const start = () => {
+    setActs([]);
+    setTurn(0);
+    setPhase('setup');
+    setShow(s => s + 1);
+    setStatus('playing');
+  };
+
+  const toIdea = (t: number) => {
+    setTurn(t);
+    setIdeas(dealIdeas(rng()));
+    setTalent('');
+    setPhase('idea');
+  };
+
+  const toPerform = () => {
     playClick();
-    setTimer(20);
-    setTimerRunning(false);
-    setJudgeScores(Array(activeJudges).fill(0));
-    setCurrentJudge(0);
+    setTimer(PERFORM_SECS);
+    setRunning(false);
     setPhase('perform');
   };
 
-  const startTimer = () => { playClick(); setTimerRunning(true); };
-
-  const goToJudging = () => {
+  const toJudging = () => {
     playClick();
-    setTimerRunning(false);
-    setPhase('judging');
+    setRunning(false);
+    setJudgeN(0);
+    setStars([]);
+    setChosen(0);
+    setPhase('judge');
   };
 
-  const setScore = (score: number) => {
-    playPop();
-    setJudgeScores(prev => prev.map((s, i) => i === currentJudge ? score : s));
-  };
-
-  const nextJudge = () => {
-    if (judgeScores[currentJudge] === 0) return;
-    playClick();
-    if (currentJudge + 1 < activeJudges) {
-      setCurrentJudge(j => j + 1);
-    } else {
-      // Calculate result
-      const filled = judgeScores.filter((_, i) => i < activeJudges);
-      const total = Math.round(filled.reduce((a, b) => a + b, 0) / filled.length);
-      const bucket = String(Math.min(Math.max(total, 1), 5));
-      const pool = JUDGE_COMMENTS[bucket];
-      const comments = filled.map(() => pool[Math.floor(Math.random() * pool.length)]);
-      const perf: Performance = {
-        performer: performerName,
-        talent: customTalent.trim() || talent,
-        scores: filled,
-        total,
-        comments,
-      };
-      setLastPerf(perf);
-      setPerformances(prev => [...prev, perf].sort((a, b) => b.total - a.total));
-      if (total >= 4) { setShowConfetti(true); playWin(); if (confettiTimeoutRef.current) clearTimeout(confettiTimeoutRef.current); confettiTimeoutRef.current = window.setTimeout(() => setShowConfetti(false), 2500); }
-      else playCorrect();
-      setPhase('result');
+  const giveStars = () => {
+    if (!chosen) return;
+    const all = [...stars, chosen];
+    if (judgeN + 1 < judges.length) {
+      playClick();
+      setStars(all);
+      setJudgeN(judgeN + 1);
+      setChosen(0);
+      return;
     }
+    const act: Act = { performer, talent, stars: all };
+    setActs(a => [...a, act]);
+    setCheer(cheerFor(actAverage(act), rng()));
+    playWin();
+    setPhase('result');
   };
 
-  const newPerformer = () => {
+  const next = () => {
     playClick();
-    setPerformerName('');
-    setTalent('');
-    setCustomTalent('');
-    setJudgeScores([0, 0, 0]);
-    setCurrentJudge(0);
-    setTimer(20);
-    setTimerRunning(false);
-    setLastPerf(null);
-    setPhase('setup');
+    if (turn + 1 < players.length) toIdea(turn + 1);
+    else { playWin(); setPhase('awards'); }
   };
 
-  const randomTalent = () => {
-    playPop();
-    setTalent(TALENT_IDEAS[Math.floor(Math.random() * TALENT_IDEAS.length)]);
-    setCustomTalent('');
-  };
+  const awards = showAwards(acts);
+  const avatar = (name: string) => AVATARS[Math.max(0, players.indexOf(name)) % AVATARS.length];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="min-h-screen bg-kid-pattern flex flex-col items-center p-4"
-    >
-      {showConfetti && <ConfettiBurst count={60} durationMs={2500} />}
-
-      <div className="max-w-lg w-full mx-auto">
-        <button onClick={() => { playClick(); setGameState('game_mode'); }} className="btn-kid-secondary mb-4">← Back</button>
-
-        <div className="text-center mb-5">
-          <div className="text-5xl mb-1">🎭</div>
-          <h1 className="text-4xl font-fredoka font-bold text-purple-600 text-kid-glow">Talent Show!</h1>
-          <p className="font-nunito text-gray-500 text-sm">Perform • Get Judged • Become a Star</p>
+    <GameShell
+      celebrateEnd
+      gameId="talent_show"
+      title="Talent Show"
+      icon="🎭"
+      xpScale={1}
+      status={status}
+      score={showScore(acts)}
+      round={show}
+      formatScore={s => `${s} ⭐`}
+      overTitle="What a show! 🎉"
+      overStats={[
+        { label: '🎤 Acts', value: `${acts.length}` },
+        { label: '🏆 Star of the Show', value: awards.filter(a => a.award === TOP_AWARD).map(a => a.performer).join(' & ') || '—' },
+      ]}
+      onStart={start}
+      onPause={() => setStatus('paused')}
+      onResume={() => setStatus('playing')}
+      readyContent={
+        <div className="space-y-2 font-nunito text-lg text-violet-100">
+          <p>Everyone takes a turn on stage! 🎤</p>
+          <p>Pick a fun talent, perform for up to {PERFORM_SECS} seconds, then the other players give ⭐ stars.</p>
+          <p>Everyone wins an award at the end! 🏆</p>
         </div>
-
-        <AnimatePresence mode="wait">
-
-          {/* SETUP */}
-          {phase === 'setup' && (
-            <motion.div key="setup" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <div className="bg-white rounded-3xl p-6 shadow-xl border-2 border-purple-200 mb-4">
-                <h2 className="font-fredoka font-bold text-xl text-center text-gray-800 mb-4">🎤 Set Up Your Show</h2>
-                <label className="block font-fredoka font-bold text-purple-600 mb-1">Performer Name</label>
-                <input type="text" value={performerName} onChange={e => setPerformerName(e.target.value)}
-                  placeholder="Who's performing?" maxLength={16}
-                  className="w-full border-2 border-purple-200 rounded-xl px-3 py-2 font-nunito mb-4 focus:outline-none focus:border-purple-400" />
-
-                <label className="block font-fredoka font-bold text-purple-600 mb-2">Judge Names (2–3 judges)</label>
-                {[0, 1, 2].map(i => (
-                  <input key={i} type="text" value={judgeNames[i]}
-                    onChange={e => setJudgeNames(n => n.map((v, j) => j === i ? e.target.value : v))}
-                    placeholder={`Judge ${i + 1}${i === 2 ? ' (optional)' : ''}`} maxLength={12}
-                    className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 font-nunito mb-2 focus:outline-none focus:border-purple-400" />
-                ))}
-
-                <label className="block font-fredoka font-bold text-purple-600 mb-2 mt-2">Choose a Talent</label>
-                <div className="flex gap-2 flex-wrap mb-2">
-                  <button onClick={randomTalent} className="px-3 py-1.5 bg-pink-100 border-2 border-pink-300 rounded-full font-fredoka text-sm text-pink-700 hover:bg-pink-200 transition-colors">
-                    🎲 Random Idea
-                  </button>
-                </div>
-                {talent && !customTalent && (
-                  <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-3 mb-2 font-nunito text-gray-700 text-sm">{talent}</div>
-                )}
-                <input type="text" value={customTalent} onChange={e => setCustomTalent(e.target.value)}
-                  placeholder="Or type your own talent..." maxLength={60}
-                  className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 font-nunito focus:outline-none focus:border-purple-400" />
-              </div>
-
-              <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
-                onClick={startPerformance}
-                disabled={!performerName.trim() || (!talent && !customTalent.trim()) || activeJudges < 2}
-                className="w-full btn-kid font-fredoka text-xl py-4">
-                🎬 Let the Show Begin!
-              </motion.button>
-              {activeJudges < 2 && <p className="text-center font-nunito text-red-400 text-sm mt-2">Need at least 2 judge names!</p>}
-            </motion.div>
+      }
+    >
+      <div className="absolute inset-0 overflow-y-auto overflow-x-hidden px-3 py-3" style={{ touchAction: 'pan-y' }}>
+        {(phase === 'result' && lastAct && actAverage(lastAct) >= 3) && <ConfettiBurst count={50} durationMs={2500} />}
+        {phase === 'awards' && <ConfettiBurst count={90} durationMs={3500} />}
+        <div className="max-w-2xl mx-auto flex flex-col gap-3">
+          {phase !== 'setup' && phase !== 'awards' && (
+            <div className="flex justify-between items-center font-fredoka text-lg">
+              <span className="rounded-full bg-white/10 px-3 py-1">🎭 Act {turn + 1}/{players.length}</span>
+              <span className="rounded-full bg-white/10 px-3 py-1">{avatar(performer)} {performer}</span>
+            </div>
           )}
 
-          {/* PERFORM */}
-          {phase === 'perform' && (
-            <motion.div key="perform" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
-              <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-3xl p-6 text-white text-center shadow-2xl mb-4">
-                <motion.div animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 1.5, repeat: Infinity }} className="text-6xl mb-3">🎤</motion.div>
-                <h2 className="text-3xl font-fredoka font-bold mb-1">{performerName}</h2>
-                <p className="font-nunito text-purple-100 mb-4 text-sm">{customTalent.trim() || talent}</p>
+          <AnimatePresence mode="wait">
+            {phase === 'setup' && (
+              <motion.div key="setup" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col gap-3">
+                <h2 className="font-fredoka text-3xl text-center">Who's in the show? 🎤</h2>
+                <PlayerChips players={players} onChange={setPlayers} min={MIN_PLAYERS} max={MAX_PLAYERS} />
+                <button type="button" disabled={players.length < MIN_PLAYERS} onClick={() => { playClick(); toIdea(0); }}
+                  className="min-h-[60px] rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-400 font-fredoka text-2xl shadow-lg disabled:opacity-40">
+                  {players.length < MIN_PLAYERS ? `Add ${MIN_PLAYERS - players.length} more 👆` : `🎬 Start the show! (${players.length} stars)`}
+                </button>
+              </motion.div>
+            )}
 
-                {/* Timer display */}
-                <motion.div
-                  key={timer}
-                  animate={timer <= 5 ? { scale: [1, 1.3, 1], color: ['#fff', '#fca5a5', '#fff'] } : {}}
-                  transition={{ duration: 0.4 }}
-                  className="text-7xl font-fredoka font-bold mb-4"
-                >
-                  {timerRunning || timer < 20 ? timer : '20'}
-                </motion.div>
-
-                <div className="w-full bg-white bg-opacity-30 rounded-full h-4 mb-4 overflow-hidden">
-                  <motion.div
-                    className="h-4 bg-white rounded-full"
-                    animate={{ width: `${(timer / 20) * 100}%` }}
-                    transition={{ duration: 0.5 }}
-                  />
-                </div>
-
-                {!timerRunning && timer === 20 && (
-                  <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                    onClick={startTimer}
-                    className="bg-white text-purple-600 font-fredoka font-bold text-xl px-10 py-3 rounded-full shadow-lg hover:shadow-xl mb-3 w-full">
-                    ▶ Start Performance!
-                  </motion.button>
-                )}
-                {(timerRunning || timer < 20) && (
-                  <p className="font-fredoka text-purple-100 text-lg animate-pulse mb-3">
-                    {timer > 0 ? '🎵 Performing...' : '🎬 Time\'s up!'}
-                  </p>
-                )}
-              </div>
-
-              <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
-                onClick={goToJudging}
-                className="w-full btn-kid-secondary font-fredoka text-xl py-4">
-                ✅ Done! Let the Judges Decide!
-              </motion.button>
-            </motion.div>
-          )}
-
-          {/* JUDGING */}
-          {phase === 'judging' && (
-            <motion.div key={`judge-${currentJudge}`} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}>
-              <div className="bg-white rounded-3xl p-6 shadow-xl border-2 border-yellow-300 mb-4 text-center">
-                <div className="text-4xl mb-2">⭐</div>
-                <h2 className="text-2xl font-fredoka font-bold text-gray-800 mb-1">
-                  {judgeNames.filter(j => j.trim())[currentJudge]}'s Score
-                </h2>
-                <p className="font-nunito text-gray-500 text-sm mb-5">
-                  Judge {currentJudge + 1} of {activeJudges} — be honest!
-                </p>
-
-                <div className="flex justify-center gap-3 mb-6 flex-wrap">
-                  {[1, 2, 3, 4, 5].map(score => (
-                    <motion.button
-                      key={score}
-                      whileHover={{ scale: 1.15, y: -4 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => setScore(score)}
-                      className={`w-14 h-14 rounded-2xl border-3 font-fredoka font-bold text-2xl transition-all duration-200 shadow ${
-                        judgeScores[currentJudge] === score
-                          ? 'bg-yellow-400 border-yellow-600 text-white shadow-lg scale-110'
-                          : 'bg-gray-100 border-gray-300 text-gray-600 hover:bg-yellow-100 hover:border-yellow-400'
-                      }`}
-                    >
-                      {score}
-                    </motion.button>
+            {phase === 'idea' && (
+              <motion.div key={`idea-${turn}`} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+                className="rounded-3xl bg-indigo-900/80 border-2 border-fuchsia-400/60 p-5 flex flex-col gap-3">
+                <div className="text-center text-6xl">{avatar(performer)}</div>
+                <h2 className="font-fredoka text-3xl text-center">Up next: {performer}! 🌟</h2>
+                <p className="font-nunito text-lg text-violet-200 text-center">Pick your talent:</p>
+                <div className="flex flex-col gap-2">
+                  {[...ideas, OWN_IDEA].map(idea => (
+                    <button key={idea} type="button" onClick={() => { playPop(); setTalent(idea); }}
+                      className={`min-h-[56px] rounded-2xl px-4 py-2 font-fredoka text-lg text-left ${talent === idea ? 'bg-fuchsia-500 ring-4 ring-yellow-300' : 'bg-white/10'}`}>
+                      {idea}
+                    </button>
                   ))}
                 </div>
-
-                <div className="text-4xl mb-4">
-                  {judgeScores[currentJudge] >= 5 ? '🤩🤩🤩' :
-                   judgeScores[currentJudge] >= 4 ? '🔥🔥' :
-                   judgeScores[currentJudge] >= 3 ? '😊' :
-                   judgeScores[currentJudge] >= 2 ? '😬' :
-                   judgeScores[currentJudge] === 1 ? '💀' : '❓'}
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => { playPop(); setIdeas(dealIdeas(rng())); setTalent(''); }}
+                    className="min-h-[56px] rounded-full bg-white/15 font-fredoka text-xl">🎲 New ideas</button>
+                  <button type="button" disabled={!talent} onClick={toPerform}
+                    className="min-h-[56px] rounded-full bg-gradient-to-r from-green-500 to-emerald-500 font-fredoka text-xl disabled:opacity-40">
+                    🎤 I'm ready!
+                  </button>
                 </div>
+              </motion.div>
+            )}
 
-                <motion.button
-                  whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
-                  onClick={nextJudge}
-                  disabled={judgeScores[currentJudge] === 0}
-                  className="w-full btn-kid font-fredoka text-lg">
-                  {currentJudge + 1 < activeJudges ? `Next Judge →` : '🏁 See Results!'}
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-
-          {/* RESULT */}
-          {phase === 'result' && lastPerf && (
-            <motion.div key="result" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 150 }}>
-              <div className="bg-white rounded-3xl p-6 shadow-2xl border-4 border-yellow-400 text-center mb-4">
-                <motion.div animate={{ rotate: [-5, 5, -5, 0], scale: [1, 1.1, 1] }} transition={{ duration: 0.6 }} className="text-6xl mb-3">
-                  {lastPerf.total >= 5 ? '👑' : lastPerf.total >= 4 ? '🌟' : lastPerf.total >= 3 ? '👏' : lastPerf.total >= 2 ? '😅' : '💀'}
-                </motion.div>
-                <h2 className="text-3xl font-fredoka font-bold text-purple-600 mb-1">{lastPerf.performer}</h2>
-                <p className="font-nunito text-gray-500 text-sm mb-4 italic">"{lastPerf.talent}"</p>
-
-                <div className="text-6xl font-fredoka font-bold text-yellow-500 mb-2">
-                  {lastPerf.total} / 5
+            {phase === 'perform' && (
+              <motion.div key={`perform-${turn}`} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+                className="rounded-3xl bg-gradient-to-br from-fuchsia-600 to-indigo-700 p-6 text-center flex flex-col gap-3 shadow-2xl">
+                <motion.div animate={{ scale: [1, 1.08, 1] }} transition={{ duration: 1.5, repeat: Infinity }} className="text-6xl">🎤</motion.div>
+                <h2 className="font-fredoka text-4xl">{performer}</h2>
+                <p className="font-fredoka text-2xl text-yellow-200">{talent}</p>
+                <div className={`font-fredoka text-8xl tabular-nums ${timer <= 5 && running ? 'text-amber-300' : ''}`}>{timer}</div>
+                <div className="h-4 rounded-full bg-white/20 overflow-hidden">
+                  <motion.div className="h-full bg-white rounded-full" animate={{ width: `${(timer / PERFORM_SECS) * 100}%` }} transition={{ duration: 0.5 }} />
                 </div>
-                <p className="font-fredoka text-lg text-gray-600 mb-4">
-                  {'⭐'.repeat(lastPerf.total)}{'🌑'.repeat(5 - lastPerf.total)}
-                </p>
+                {!running && timer === PERFORM_SECS ? (
+                  <button type="button" onClick={() => { playCorrect(); setRunning(true); }}
+                    className="min-h-[60px] rounded-full bg-white text-indigo-700 font-fredoka text-2xl shadow-lg">▶ Start performing!</button>
+                ) : (
+                  <p className="font-fredoka text-xl">{timer > 0 ? '🎵 The stage is yours!' : '🎬 Time! Take a bow! 🙇'}</p>
+                )}
+                <button type="button" onClick={toJudging}
+                  className="min-h-[56px] rounded-full bg-black/30 border-2 border-white/40 font-fredoka text-xl">
+                  ✅ Done — time for stars!
+                </button>
+              </motion.div>
+            )}
 
-                {/* Judge comments */}
-                <div className="space-y-2 mb-5">
-                  {lastPerf.comments.map((comment, i) => (
-                    <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.15 }}
-                      className="flex items-center gap-3 bg-gray-50 rounded-2xl p-3 text-left">
-                      <span className="font-fredoka font-bold text-purple-600 text-sm flex-shrink-0">
-                        {judgeNames.filter(j => j.trim())[i]}:
-                      </span>
-                      <span className="font-nunito text-gray-700 text-sm italic">"{comment}"</span>
-                      <span className="ml-auto font-fredoka font-bold text-orange-500">{lastPerf.scores[i]}/5</span>
+            {phase === 'judge' && (
+              <motion.div key={`judge-${turn}-${judgeN}`} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+                className="rounded-3xl bg-indigo-900/80 border-2 border-yellow-300/70 p-5 flex flex-col gap-4 text-center">
+                <div className="text-5xl">{avatar(players[judges[judgeN]])}</div>
+                <h2 className="font-fredoka text-3xl">{players[judges[judgeN]]}, how many stars for {performer}?</h2>
+                <p className="font-nunito text-lg text-violet-200">Judge {judgeN + 1} of {judges.length} · Pick your stars ⭐</p>
+                <div className="grid grid-cols-5 gap-2">
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <button key={n} type="button" onClick={() => { playPop(); setChosen(n); }} aria-label={`${n} stars`}
+                      className={`min-h-[80px] rounded-2xl flex flex-col items-center justify-center gap-1 font-fredoka transition-transform
+                        ${chosen >= n ? 'bg-yellow-400 text-indigo-950 scale-105' : 'bg-white/10'}`}>
+                      <span className="text-3xl">⭐</span>
+                      <span className="text-lg">{n}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="min-h-[44px] font-fredoka text-3xl text-yellow-300">{chosen ? STAR_LABELS[chosen] : ''}</div>
+                <button type="button" disabled={!chosen} onClick={giveStars}
+                  className="min-h-[60px] rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-400 font-fredoka text-2xl shadow-lg disabled:opacity-40">
+                  {judgeN + 1 < judges.length ? 'Next judge ➡️' : '🌟 Show the stars!'}
+                </button>
+              </motion.div>
+            )}
+
+            {phase === 'result' && lastAct && (
+              <motion.div key={`result-${turn}`} initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+                className="rounded-3xl bg-indigo-900/80 border-2 border-yellow-300/70 p-5 flex flex-col gap-3 text-center">
+                <motion.div animate={{ rotate: [-6, 6, -6, 0], scale: [1, 1.12, 1] }} transition={{ duration: 0.7 }} className="text-7xl">🌟</motion.div>
+                <h2 className="font-fredoka text-4xl">{cheer}</h2>
+                <p className="font-fredoka text-2xl text-yellow-300">{lastAct.performer} collected {actStars(lastAct)} ⭐</p>
+                <p className="font-nunito text-lg text-violet-200">"{lastAct.talent}"</p>
+                <div className="flex flex-col gap-2">
+                  {lastAct.stars.map((s, i) => (
+                    <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 + i * 0.2 }}
+                      className="rounded-2xl bg-white/10 px-4 py-2 flex items-center justify-between gap-2 font-fredoka text-lg">
+                      <span className="truncate">{avatar(players[judges[i]])} {players[judges[i]]}</span>
+                      <span>{STAR_LABELS[s]}</span>
+                      <span className="shrink-0">{'⭐'.repeat(s)}</span>
                     </motion.div>
                   ))}
                 </div>
+                <button type="button" onClick={next}
+                  className="min-h-[60px] rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-400 font-fredoka text-2xl shadow-lg">
+                  {turn + 1 < players.length ? `🎤 Next: ${players[turn + 1]}` : '🏆 Awards time!'}
+                </button>
+              </motion.div>
+            )}
 
-                <div className="flex gap-3 flex-wrap justify-center">
-                  <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={newPerformer} className="btn-kid font-fredoka">
-                    🎤 Next Performer
-                  </motion.button>
-                  <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => { playClick(); setPhase('leaderboard'); }} className="btn-kid-secondary font-fredoka">
-                    🏆 Leaderboard
-                  </motion.button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* LEADERBOARD */}
-          {phase === 'leaderboard' && (
-            <motion.div key="leaderboard" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
-              {performances[0]?.total >= 5 && <ConfettiBurst count={80} durationMs={3000} />}
-              <div className="bg-white rounded-3xl p-6 shadow-2xl border-2 border-purple-200 mb-4">
-                <h2 className="text-3xl font-fredoka font-bold text-center text-purple-600 mb-5">🏆 Hall of Fame</h2>
-                {performances.length === 0 ? (
-                  <p className="text-center font-nunito text-gray-400">No performances yet!</p>
-                ) : performances.map((p, i) => (
-                  <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}
-                    className={`flex items-center gap-3 p-4 rounded-2xl mb-3 ${i === 0 ? 'bg-yellow-50 border-2 border-yellow-400' : 'bg-gray-50 border-2 border-gray-200'}`}>
-                    <span className="text-2xl">{['👑', '🥈', '🥉'][i] || `${i + 1}.`}</span>
-                    <div className="flex-1 text-left">
-                      <p className="font-fredoka font-bold text-gray-800">{p.performer}</p>
-                      <p className="font-nunito text-xs text-gray-500 italic">{p.talent}</p>
+            {phase === 'awards' && (
+              <motion.div key="awards" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                className="rounded-3xl bg-indigo-900/80 border-2 border-fuchsia-400/60 p-5 flex flex-col gap-3 text-center">
+                <h2 className="font-fredoka text-4xl">🏆 Award ceremony!</h2>
+                <p className="font-nunito text-lg text-violet-200">Every performer was a star tonight!</p>
+                {awards.map((a, i) => (
+                  <motion.div key={a.performer} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.2 }}
+                    className={`rounded-2xl px-4 py-3 flex items-center gap-3 text-left ${a.award === TOP_AWARD ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-indigo-950' : 'bg-white/10'}`}>
+                    <span className="text-4xl">{avatar(a.performer)}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-fredoka text-2xl truncate">{a.performer}</div>
+                      <div className="font-fredoka text-lg">{a.award}</div>
                     </div>
-                    <span className="font-fredoka font-bold text-2xl text-yellow-500">{p.total}/5</span>
+                    <span className="font-fredoka text-xl shrink-0">{actStars(acts[i])} ⭐</span>
                   </motion.div>
                 ))}
-              </div>
-              <div className="flex gap-3 justify-center">
-                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={newPerformer} className="btn-kid font-fredoka">
-                  🎤 New Performance
-                </motion.button>
-                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => { playClick(); setGameState('game_mode'); }} className="btn-kid-secondary font-fredoka">
-                  🏠 Menu
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-
-        </AnimatePresence>
+                <button type="button" onClick={() => { playClick(); setStatus('over'); }}
+                  className="min-h-[60px] rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-400 font-fredoka text-2xl shadow-lg">
+                  🎉 Finish
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
-    </motion.div>
+    </GameShell>
   );
-};
-
-export default TalentShow;
+}

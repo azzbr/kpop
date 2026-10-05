@@ -1,348 +1,288 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import GameShell from '../games/engine/GameShell';
+import type { ShellStatus } from '../games/engine/GameShell';
+import { createRng } from '../games/engine/rng';
 import { useSafeTimeout } from '../utils/useSafeTimeout';
-import { easyQuestions, normalQuestions, hardQuestions } from '../quizData';
-import { playClick, playCorrect, playWrong, playWin, playTick, playTimeOut } from '../utils/sounds';
+import { quizSources } from '../online/quiz/sources';
+import { playClick, playCorrect, playPop, playWin, playTick, playTimeOut } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
+import { NameSlots } from './games/partyNames';
+import { slotName } from './games/partyNamesLogic';
+import type { Slot } from './games/partyNamesLogic';
+import { battleScore, battleSources, buildDeck, buzz, leader, CHEERS, KIND_MISS, ROUNDS, SECS_PER_Q } from './games/triviaBattleLogic';
+import type { Answers, BattleQ } from './games/triviaBattleLogic';
 
-const ALL_Q = [...easyQuestions, ...normalQuestions, ...hardQuestions]
-  .sort(() => Math.random() - 0.5)
-  .map(q => ({ ...q, answers: [...q.answers].sort(() => Math.random() - 0.5) }));
+type Phase = 'setup' | 'countdown' | 'battle' | 'reveal' | 'final';
 
-const TOTAL_ROUNDS = 7;
-const SECS_PER_Q = 10;
-
-const PLAYER_COLORS = [
-  { bg: 'from-pink-400 to-rose-500', light: 'bg-pink-50', border: 'border-pink-300', text: 'text-pink-600' },
-  { bg: 'from-blue-400 to-indigo-500', light: 'bg-blue-50', border: 'border-blue-300', text: 'text-blue-600' },
+const SLOTS: Slot[] = [
+  { fallback: 'Pink', emoji: '💗', tone: 'bg-pink-500' },
+  { fallback: 'Blue', emoji: '💙', tone: 'bg-sky-500' },
 ];
+const SIDE = [
+  { grad: 'from-pink-500 to-rose-600', ring: 'border-pink-300', text: 'text-pink-200' },
+  { grad: 'from-sky-500 to-indigo-600', ring: 'border-sky-300', text: 'text-sky-200' },
+];
+const LETTERS = ['A', 'B', 'C', 'D'];
+const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 
-const TAUNT_WIN = ["🔥 FIRST!", "⚡ TOO FAST!", "💥 BOOM!", "🌟 LEGEND!", "😎 EASY!", "🎯 NAILED IT!"];
-const TAUNT_WRONG = ["😬 OOPS!", "💀 NOPE!", "😅 SO CLOSE!", "🙈 YEP, WRONG.", "💩 UH OH!"];
-
-type Phase = 'setup' | 'countdown' | 'battle' | 'round_result' | 'final';
-
-const TriviaBattle: React.FC = () => {
-  const { setGameState } = useGameStore();
+export default function TriviaBattle() {
+  const myQuizzes = useGameStore(s => s.myQuizzes);
+  const sources = useMemo(() => battleSources(quizSources(myQuizzes)), [myQuizzes]);
   const later = useSafeTimeout();
+
+  const [status, setStatus] = useState<ShellStatus>('ready');
+  const [game, setGame] = useState(0);
+  const [sourceId, setSourceId] = useState('bank:mix');
   const [phase, setPhase] = useState<Phase>('setup');
   const [names, setNames] = useState(['', '']);
-  const [scores, setScores] = useState([0, 0]);
-  const [round, setRound] = useState(0);
-  const [qIdx, setQIdx] = useState(0);
+  const [deck, setDeck] = useState<BattleQ[]>([]);
+  const [n, setN] = useState(0);
+  const [scores, setScores] = useState<[number, number]>([0, 0]);
+  const [answers, setAnswers] = useState<Answers>([null, null]);
   const [timeLeft, setTimeLeft] = useState(SECS_PER_Q);
-  const [answered, setAnswered] = useState<[number | null, number | null]>([null, null]);
-  const [locked, setLocked] = useState(false);
-  const [roundWinner, setRoundWinner] = useState<number | null>(null);
-  const [showConfetti, setShowConfetti] = useState(false);
   const [countdown, setCountdown] = useState(3);
-  const [taunt, setTaunt] = useState('');
-  const timerRef = useRef<number | null>(null);
+  const [winner, setWinner] = useState<0 | 1 | null>(null);
+  const [cheer, setCheer] = useState('');
+  const [missLine, setMissLine] = useState<[string, string]>(['', '']);
 
-  const q = ALL_Q[qIdx % ALL_Q.length];
+  const source = sources.find(s => s.id === sourceId) ?? sources[0];
+  const q = deck[n];
+  const name = (i: number) => slotName(names, SLOTS, i);
 
-  // Timer
+  // Pause when she switches apps.
   useEffect(() => {
-    if (phase !== 'battle' || locked) return;
-    if (timeLeft <= 0) {
-      playTimeOut();
-      resolveRound(null);
-      return;
-    }
-    if (timeLeft <= 3) playTick();
-    timerRef.current = window.setTimeout(() => setTimeLeft(t => t - 1), 1000);
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-    // resolveRound is recreated every render; adding it would restart the 1s tick on every render
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeLeft, phase, locked]);
+    const onVis = () => { if (document.hidden) setStatus(s => (s === 'playing' ? 'paused' : s)); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
 
-  // Countdown before battle
-  useEffect(() => {
-    if (phase !== 'countdown') return;
-    if (countdown <= 0) { setPhase('battle'); setTimeLeft(SECS_PER_Q); return; }
-    const t = setTimeout(() => setCountdown(c => c - 1), 800);
-    return () => clearTimeout(t);
-  }, [countdown, phase]);
-
-  const startGame = () => {
-    if (!names[0].trim() || !names[1].trim()) return;
-    playClick();
+  const start = () => {
+    const rng = createRng(Date.now() % 1e9);
+    setDeck(buildDeck(source.questions(), ROUNDS, rng));
+    setN(0);
     setScores([0, 0]);
-    setRound(0);
-    setQIdx(0);
-    setAnswered([null, null]);
-    setLocked(false);
+    setAnswers([null, null]);
+    setWinner(null);
+    setPhase('setup');
+    setGame(g => g + 1);
+    setStatus('playing');
+  };
+
+  const begin = () => {
+    playClick();
     setCountdown(3);
     setPhase('countdown');
   };
 
-  const handleAnswer = (player: 0 | 1, answerIdx: number) => {
-    if (locked || answered[player] !== null) return;
-    const isCorrect = q.answers[answerIdx].isCorrect;
-    const newAnswered: [number | null, number | null] = [answered[0], answered[1]];
-    newAnswered[player] = answerIdx;
-    setAnswered(newAnswered);
-
-    if (isCorrect) {
-      playCorrect();
-      const t = TAUNT_WIN[Math.floor(Math.random() * TAUNT_WIN.length)];
-      setTaunt(t);
-      resolveRound(player);
-    } else {
-      playWrong();
-      const t = TAUNT_WRONG[Math.floor(Math.random() * TAUNT_WRONG.length)];
-      setTaunt(t);
-      // Other player wins if they haven't answered wrong yet
-      const other = player === 0 ? 1 : 0;
-      if (newAnswered[other] !== null && !q.answers[newAnswered[other]!].isCorrect) {
-        resolveRound(null); // both wrong
-      } else if (newAnswered[other] === null) {
-        // let other player still answer — but mark this one as wrong
-        setAnswered(newAnswered);
-      } else {
-        resolveRound(other);
-      }
+  // 3-2-1 before each question
+  useEffect(() => {
+    if (status !== 'playing' || phase !== 'countdown') return;
+    if (countdown <= 0) {
+      setTimeLeft(SECS_PER_Q);
+      setAnswers([null, null]);
+      setMissLine(['', '']);
+      setPhase('battle');
+      return;
     }
-  };
+    playTick();
+    const t = window.setTimeout(() => setCountdown(c => c - 1), 700);
+    return () => clearTimeout(t);
+  }, [countdown, phase, status]);
 
-  const resolveRound = (winner: number | null) => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setLocked(true);
-    setRoundWinner(winner);
-    if (winner !== null) {
-      setScores(prev => prev.map((s, i) => i === winner ? s + 1 : s) as [number, number]);
+  const reveal = (w: 0 | 1 | null) => {
+    setWinner(w);
+    if (w !== null) {
+      setScores(s => (w === 0 ? [s[0] + 1, s[1]] : [s[0], s[1] + 1]));
+      setCheer(pick(CHEERS));
     }
-    setPhase('round_result');
+    setPhase('reveal');
     later(() => {
-      const nextRound = round + 1;
-      if (nextRound >= TOTAL_ROUNDS) {
-        const newScores = scores.map((s, i) => i === winner ? s + 1 : s);
-        if (newScores[0] !== newScores[1]) {
-          setShowConfetti(true);
-          playWin();
-        }
+      if (n + 1 >= deck.length) {
+        playWin();
         setPhase('final');
       } else {
-        setRound(nextRound);
-        setQIdx(q => q + 1);
-        setAnswered([null, null]);
-        setLocked(false);
-        setTaunt('');
-        setRoundWinner(null);
+        setN(n + 1);
         setCountdown(2);
         setPhase('countdown');
       }
-    }, 2200);
+    }, 2400);
   };
 
-  const finalWinner = scores[0] > scores[1] ? 0 : scores[1] > scores[0] ? 1 : null;
+  // Question timer
+  useEffect(() => {
+    if (status !== 'playing' || phase !== 'battle') return;
+    if (timeLeft <= 0) {
+      playTimeOut();
+      reveal(null);
+      return;
+    }
+    if (timeLeft <= 3) playTick();
+    const t = window.setTimeout(() => setTimeLeft(s => s - 1), 1000);
+    return () => clearTimeout(t);
+    // reveal is recreated each render; listing it would restart the 1 s tick every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeLeft, phase, status]);
+
+  const onBuzz = (player: 0 | 1, choice: number) => {
+    if (status !== 'playing' || phase !== 'battle' || !q) return;
+    const r = buzz(q, answers, player, choice);
+    if (r.outcome.kind === 'ignored') return;
+    setAnswers(r.answers);
+    if (r.outcome.kind === 'point') { playCorrect(); reveal(player); }
+    else if (r.outcome.kind === 'both_missed') { playPop(); reveal(null); }
+    else {
+      playPop();
+      const line = pick(KIND_MISS);
+      setMissLine(m => (player === 0 ? [line, m[1]] : [m[0], line]));
+    }
+  };
+
+  const finalLeader = leader(scores);
+
+  const side = (p: 0 | 1) => {
+    if (!q) return null;
+    const mine = answers[p];
+    const locked = phase !== 'battle' || mine !== null;
+    return (
+      <div className="flex flex-col gap-2 min-w-0">
+        <div className={`rounded-2xl bg-gradient-to-r ${SIDE[p].grad} px-3 py-2 flex items-center justify-between font-fredoka shadow-lg`}>
+          <span className="text-xl truncate">{SLOTS[p].emoji} {name(p)}</span>
+          <span className="text-3xl tabular-nums">{scores[p]}</span>
+        </div>
+        {q.options.map((opt, i) => {
+          const isRight = i === q.correct;
+          const showRight = phase === 'reveal' && isRight;
+          const pickedWrong = mine === i && !isRight;
+          return (
+            <button key={i} type="button" disabled={locked}
+              onPointerDown={e => { e.preventDefault(); onBuzz(p, i); }}
+              className={`min-h-[76px] md:min-h-[100px] rounded-2xl border-2 px-3 py-2 flex items-center gap-3 text-left font-fredoka text-lg md:text-xl leading-tight transition-colors select-none
+                ${showRight || (mine === i && isRight) ? 'bg-green-500 border-green-200'
+                  : pickedWrong ? 'bg-amber-500/70 border-amber-200'
+                  : locked ? 'bg-white/5 border-white/10 opacity-60'
+                  : `bg-white/10 ${SIDE[p].ring} active:bg-white/25`}`}>
+              <span className="shrink-0 w-9 h-9 rounded-full bg-black/30 flex items-center justify-center text-base">{q.options.length === 2 ? (i === 0 ? '✔️' : '✖️') : LETTERS[i]}</span>
+              <span className="min-w-0 break-words">{opt}</span>
+            </button>
+          );
+        })}
+        <div className={`min-h-[32px] text-center font-fredoka text-lg ${SIDE[p].text}`}>{missLine[p]}</div>
+      </div>
+    );
+  };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="min-h-screen bg-kid-pattern flex flex-col items-center p-4"
-    >
-      {showConfetti && <ConfettiBurst count={80} durationMs={3000} />}
-
-      <div className="max-w-2xl w-full mx-auto">
-        <button onClick={() => { playClick(); setGameState('game_mode'); }} className="btn-kid-secondary mb-4">← Back</button>
-
-        <div className="text-center mb-5">
-          <div className="text-5xl mb-1">⚔️</div>
-          <h1 className="text-4xl font-fredoka font-bold text-purple-600 text-kid-glow">Trivia Battle!</h1>
-          <p className="font-nunito text-gray-500 text-sm">2 players • first to answer correctly wins the round</p>
+    <GameShell
+      celebrateEnd
+      gameId="trivia_battle"
+      title="Buzzer Battle"
+      icon="🛎️"
+      xpScale={0.2}
+      status={status}
+      score={battleScore(scores)}
+      round={game}
+      formatScore={s => `${s} pts`}
+      overTitle={finalLeader === null ? 'A tie — great minds! 🤝' : `${name(finalLeader)} wins! 🏆`}
+      overStats={[
+        { label: `${SLOTS[0].emoji} ${name(0)}`, value: `${scores[0]} pts` },
+        { label: `${SLOTS[1].emoji} ${name(1)}`, value: `${scores[1]} pts` },
+      ]}
+      onStart={start}
+      onPause={() => setStatus('paused')}
+      onResume={() => setStatus('playing')}
+      readyContent={
+        <div className="space-y-3 text-left">
+          <p className="font-nunito text-lg text-violet-100 text-center">2 players, 1 iPad. Each side has its own answers — first right answer wins the point! {ROUNDS} questions.</p>
+          <p className="font-fredoka text-lg text-center">Pick a category</p>
+          <div className="grid grid-cols-2 gap-2 max-h-[38vh] overflow-y-auto pr-1" style={{ touchAction: 'pan-y' }}>
+            {sources.map(s => (
+              <button key={s.id} type="button" onClick={() => { playClick(); setSourceId(s.id); }}
+                className={`min-h-[52px] rounded-2xl px-3 py-2 font-fredoka text-base text-left flex items-center gap-2 ${s.id === source?.id ? 'bg-fuchsia-500 ring-2 ring-yellow-300' : 'bg-white/10'}`}>
+                <span className="text-2xl">{s.emoji}</span><span className="min-w-0 leading-tight">{s.title}</span>
+              </button>
+            ))}
+          </div>
         </div>
+      }
+    >
+      <div className="absolute inset-0 overflow-y-auto overflow-x-hidden px-3 py-3" style={{ touchAction: phase === 'setup' ? 'pan-y' : 'none' }}>
+        {phase === 'final' && finalLeader !== null && <ConfettiBurst count={80} durationMs={3000} />}
+        <div className="max-w-4xl mx-auto flex flex-col gap-3">
+          <AnimatePresence mode="wait">
+            {phase === 'setup' && (
+              <motion.div key="setup" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col gap-3 max-w-2xl mx-auto w-full">
+                <h2 className="font-fredoka text-3xl text-center">Who's battling? ⚔️</h2>
+                <p className="font-nunito text-lg text-violet-200 text-center">Names are optional — tap a side to change it.</p>
+                <NameSlots names={names} slots={SLOTS} onChange={setNames} />
+                <button type="button" onClick={begin}
+                  className="min-h-[60px] rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-400 font-fredoka text-2xl shadow-lg">
+                  ⚔️ Start battle! ({source?.emoji} {source?.title})
+                </button>
+              </motion.div>
+            )}
 
-        <AnimatePresence mode="wait">
+            {phase === 'countdown' && (
+              <motion.div key={`cd-${n}-${countdown}`} initial={{ scale: 2, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }}
+                className="text-center py-16">
+                <div className="font-fredoka text-9xl text-yellow-300 drop-shadow-lg">{countdown === 0 ? 'GO!' : countdown}</div>
+                <p className="font-fredoka text-2xl text-violet-200 mt-4">Question {n + 1} of {deck.length}</p>
+              </motion.div>
+            )}
 
-          {phase === 'setup' && (
-            <motion.div key="setup" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <div className="bg-white rounded-3xl p-6 shadow-xl border-2 border-purple-200 mb-4">
-                <h2 className="font-fredoka font-bold text-xl text-center text-gray-800 mb-5">👥 Enter Player Names</h2>
-                {[0, 1].map(i => (
-                  <div key={i} className={`rounded-2xl p-4 mb-3 ${PLAYER_COLORS[i].light} border-2 ${PLAYER_COLORS[i].border}`}>
-                    <label className={`block font-fredoka font-bold ${PLAYER_COLORS[i].text} mb-2`}>
-                      {i === 0 ? '👈 Left Player' : '👉 Right Player'}
-                    </label>
-                    <input
-                      type="text"
-                      value={names[i]}
-                      onChange={e => setNames(n => n.map((v, j) => j === i ? e.target.value : v) as [string, string])}
-                      placeholder={`Player ${i + 1} name`}
-                      maxLength={12}
-                      className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 font-nunito text-base focus:outline-none focus:border-purple-400"
-                    />
+            {(phase === 'battle' || phase === 'reveal') && q && (
+              <motion.div key={`q-${n}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col gap-3">
+                <div className="flex items-center gap-3 font-fredoka text-lg">
+                  <span className="rounded-full bg-white/10 px-3 py-1 shrink-0">❓ {n + 1}/{deck.length}</span>
+                  <div className="flex-1 h-4 rounded-full bg-white/10 overflow-hidden">
+                    <motion.div className={`h-full rounded-full ${timeLeft <= 3 ? 'bg-amber-400' : 'bg-emerald-400'}`}
+                      animate={{ width: `${(timeLeft / SECS_PER_Q) * 100}%` }} transition={{ duration: 0.3 }} />
                   </div>
-                ))}
-                <div className="bg-yellow-50 border-2 border-yellow-200 rounded-2xl p-3 mt-3">
-                  <p className="font-nunito text-yellow-700 text-sm text-center">
-                    💡 Each player taps <strong>their side</strong> of the screen to answer.<br />
-                    First correct answer wins the round!
-                  </p>
+                  <span className={`shrink-0 w-12 text-right tabular-nums ${timeLeft <= 3 ? 'text-amber-300' : ''}`}>{timeLeft}s</span>
                 </div>
-              </div>
-              <motion.button
-                whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
-                onClick={startGame}
-                disabled={!names[0].trim() || !names[1].trim()}
-                className="w-full btn-kid font-fredoka text-xl py-4"
-              >
-                ⚔️ Start Battle! ({TOTAL_ROUNDS} rounds)
-              </motion.button>
-            </motion.div>
-          )}
-
-          {phase === 'countdown' && (
-            <motion.div key={`cd-${countdown}`} initial={{ scale: 2, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }}
-              className="text-center py-20">
-              <div className="text-9xl font-fredoka font-bold text-purple-600">
-                {countdown === 0 ? 'GO!' : countdown}
-              </div>
-              <p className="font-fredoka text-2xl text-gray-500 mt-4">Round {round + 1} of {TOTAL_ROUNDS}</p>
-            </motion.div>
-          )}
-
-          {(phase === 'battle' || phase === 'round_result') && (
-            <motion.div key="battle" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              {/* Scoreboard */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                {[0, 1].map(i => (
-                  <div key={i} className={`bg-gradient-to-r ${PLAYER_COLORS[i].bg} rounded-2xl p-3 text-center text-white shadow-lg`}>
-                    <p className="font-fredoka font-bold text-lg truncate">{names[i]}</p>
-                    <p className="font-fredoka text-3xl font-bold">{scores[i]}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Timer */}
-              <div className="mb-4">
-                <div className="flex justify-between text-sm font-nunito text-gray-500 mb-1">
-                  <span>Round {round + 1}/{TOTAL_ROUNDS}</span>
-                  <span className={timeLeft <= 3 ? 'text-red-500 font-bold animate-pulse' : ''}>{timeLeft}s</span>
+                <div className="rounded-3xl bg-indigo-900/80 border-2 border-white/20 px-4 py-4 text-center">
+                  {q.emoji && <div className="text-5xl mb-1">{q.emoji}</div>}
+                  <p className="font-fredoka text-2xl md:text-3xl leading-snug">{q.text}</p>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <motion.div
-                    className="h-3 rounded-full bg-gradient-to-r from-green-400 to-emerald-500"
-                    animate={{ width: `${(timeLeft / SECS_PER_Q) * 100}%` }}
-                    transition={{ duration: 0.3 }}
-                  />
+                <div className="grid grid-cols-2 gap-3 md:gap-6">
+                  {side(0)}
+                  {side(1)}
                 </div>
-              </div>
+                <AnimatePresence>
+                  {phase === 'reveal' && (
+                    <motion.div initial={{ opacity: 0, y: 20, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0 }}
+                      className={`rounded-2xl p-4 text-center font-fredoka text-2xl shadow-xl ${winner !== null ? `bg-gradient-to-r ${SIDE[winner].grad}` : 'bg-indigo-700'}`}>
+                      {winner !== null
+                        ? `${cheer} ${name(winner)} gets the point!`
+                        : `🤔 Tricky one! The answer was: ${q.options[q.correct]}`}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            )}
 
-              {/* Question */}
-              <div className="bg-white rounded-3xl p-5 shadow-xl border-2 border-purple-200 mb-4 text-center">
-                <p className="font-fredoka font-bold text-xl text-gray-800 leading-snug">{q.questionText}</p>
-              </div>
-
-              {/* Split answer grid */}
-              <div className="grid grid-cols-2 gap-3">
-                {q.answers.map((ans, idx) => (
-                  <div key={idx} className="grid grid-cols-2 gap-2">
-                    {/* Player 1 button (left half) */}
-                    <motion.button
-                      whileTap={!locked && answered[0] === null ? { scale: 0.92 } : {}}
-                      onClick={() => handleAnswer(0, idx)}
-                      disabled={locked || answered[0] !== null}
-                      className={`p-3 rounded-2xl border-2 font-nunito text-sm font-bold transition-all duration-200 ${
-                        phase === 'round_result' && ans.isCorrect
-                          ? 'bg-green-400 border-green-600 text-white'
-                          : answered[0] === idx && !ans.isCorrect
-                          ? 'bg-red-300 border-red-500 text-white'
-                          : answered[0] === idx && ans.isCorrect
-                          ? 'bg-green-400 border-green-600 text-white'
-                          : locked
-                          ? 'bg-gray-100 border-gray-200 text-gray-400 opacity-50'
-                          : `${PLAYER_COLORS[0].light} ${PLAYER_COLORS[0].border} text-gray-700 hover:bg-pink-100`
-                      }`}
-                    >
-                      {ans.answerText}
-                    </motion.button>
-                    {/* Player 2 button (right half) */}
-                    <motion.button
-                      whileTap={!locked && answered[1] === null ? { scale: 0.92 } : {}}
-                      onClick={() => handleAnswer(1, idx)}
-                      disabled={locked || answered[1] !== null}
-                      className={`p-3 rounded-2xl border-2 font-nunito text-sm font-bold transition-all duration-200 ${
-                        phase === 'round_result' && ans.isCorrect
-                          ? 'bg-green-400 border-green-600 text-white'
-                          : answered[1] === idx && !ans.isCorrect
-                          ? 'bg-red-300 border-red-500 text-white'
-                          : answered[1] === idx && ans.isCorrect
-                          ? 'bg-green-400 border-green-600 text-white'
-                          : locked
-                          ? 'bg-gray-100 border-gray-200 text-gray-400 opacity-50'
-                          : `${PLAYER_COLORS[1].light} ${PLAYER_COLORS[1].border} text-gray-700 hover:bg-blue-100`
-                      }`}
-                    >
-                      {ans.answerText}
-                    </motion.button>
+            {phase === 'final' && (
+              <motion.div key="final" initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
+                className="max-w-xl mx-auto w-full rounded-3xl bg-indigo-900/80 border-2 border-fuchsia-400/60 p-6 text-center flex flex-col gap-3">
+                <div className="text-7xl">{finalLeader !== null ? '🏆' : '🤝'}</div>
+                <h2 className="font-fredoka text-4xl text-yellow-300">{finalLeader !== null ? `${name(finalLeader)} wins!` : "It's a tie!"}</h2>
+                <p className="font-nunito text-lg text-violet-200">{finalLeader !== null ? 'What a battle — both of you were brilliant! 🌟' : 'Both players are equally brilliant! 🧠'}</p>
+                {([0, 1] as const).map(i => (
+                  <div key={i} className={`flex items-center justify-between rounded-2xl px-4 py-3 bg-gradient-to-r ${SIDE[i].grad} font-fredoka`}>
+                    <span className="text-xl truncate">{SLOTS[i].emoji} {name(i)}</span>
+                    <span className="text-3xl">{scores[i]} / {deck.length}</span>
                   </div>
                 ))}
-              </div>
-
-              {/* Labels */}
-              <div className="grid grid-cols-2 gap-3 mt-2">
-                <p className={`text-center font-fredoka font-bold ${PLAYER_COLORS[0].text} text-sm`}>👈 {names[0]}</p>
-                <p className={`text-center font-fredoka font-bold ${PLAYER_COLORS[1].text} text-sm`}>{names[1]} 👉</p>
-              </div>
-
-              {/* Round result banner */}
-              <AnimatePresence>
-                {phase === 'round_result' && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20, scale: 0.8 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0 }}
-                    className={`mt-4 p-4 rounded-2xl text-center font-fredoka font-bold text-2xl shadow-xl ${
-                      roundWinner !== null
-                        ? `bg-gradient-to-r ${PLAYER_COLORS[roundWinner].bg} text-white`
-                        : 'bg-gray-200 text-gray-600'
-                    }`}
-                  >
-                    {roundWinner !== null ? `${taunt} ${names[roundWinner]} gets the point!` : "⏰ Time's up — no point!"}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          )}
-
-          {phase === 'final' && (
-            <motion.div key="final" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 150 }}>
-              <div className="bg-white rounded-3xl p-6 shadow-2xl border-2 border-purple-200 text-center mb-4">
-                <div className="text-7xl mb-3">{finalWinner !== null ? '🏆' : '🤝'}</div>
-                <h2 className="text-4xl font-fredoka font-bold text-purple-600 mb-2">
-                  {finalWinner !== null ? `${names[finalWinner]} WINS!` : "It's a Tie!"}
-                </h2>
-                <p className="font-nunito text-gray-500 mb-6">
-                  {finalWinner !== null ? `${names[finalWinner]} dominated with ${scores[finalWinner]} rounds!` : 'Both players are equally brilliant!'}
-                </p>
-                {[0, 1].map(i => (
-                  <div key={i} className={`flex items-center justify-between p-4 rounded-2xl mb-3 bg-gradient-to-r ${PLAYER_COLORS[i].bg} text-white shadow`}>
-                    <span className="font-fredoka font-bold text-xl">{names[i]}</span>
-                    <span className="font-fredoka text-3xl font-bold">{scores[i]} / {TOTAL_ROUNDS}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex gap-3 justify-center">
-                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                  onClick={() => { setPhase('setup'); setScores([0, 0]); }} className="btn-kid font-fredoka text-lg">
-                  🔄 Rematch!
-                </motion.button>
-                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                  onClick={() => { playClick(); setGameState('game_mode'); }} className="btn-kid-secondary font-fredoka text-lg">
-                  🏠 Menu
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-
-        </AnimatePresence>
+                <button type="button" onClick={() => { playClick(); setStatus('over'); }}
+                  className="min-h-[56px] rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-400 font-fredoka text-2xl shadow-lg">
+                  🎉 Finish
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
-    </motion.div>
+    </GameShell>
   );
-};
-
-export default TriviaBattle;
+}

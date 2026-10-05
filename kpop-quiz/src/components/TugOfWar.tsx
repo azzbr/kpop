@@ -1,68 +1,73 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useGameStore } from '../store';
-import { playClick, playCorrect, playWin, playPop } from '../utils/sounds';
+import GameShell from '../games/engine/GameShell';
+import type { ShellStatus } from '../games/engine/GameShell';
+import { playClick, playCorrect, playWin, playPop, playTick } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
+import { NameSlots } from './games/partyNames';
+import { slotName } from './games/partyNamesLogic';
+import type { Slot } from './games/partyNamesLogic';
+import { matchScore, pullRope, roundWinner, LEFT_GOAL, RIGHT_GOAL, WIN_SCORE } from './games/tugOfWarLogic';
 
 type Phase = 'setup' | 'countdown' | 'battle' | 'round_result' | 'final';
 
-const WIN_SCORE = 2; // best of 3 rounds
-const PULL = 2.4; // % the lightstick moves per tap
-const LEFT_GOAL = 8;
-const RIGHT_GOAL = 92;
+const SLOTS: Slot[] = [
+  { fallback: 'Red', emoji: '🔴', tone: 'bg-rose-500' },
+  { fallback: 'Blue', emoji: '🔵', tone: 'bg-sky-500' },
+];
+const PAD = ['from-rose-500 to-red-600', 'from-sky-500 to-indigo-600'];
 
-const TugOfWar: React.FC = () => {
-  const { setGameState, addXP } = useGameStore();
+export default function TugOfWar() {
+  const [status, setStatus] = useState<ShellStatus>('ready');
+  const [game, setGame] = useState(0);
   const [phase, setPhase] = useState<Phase>('setup');
   const [names, setNames] = useState(['', '']);
-  const [scores, setScores] = useState([0, 0]);
+  const [scores, setScores] = useState<[number, number]>([0, 0]);
   const [round, setRound] = useState(1);
   const [pos, setPos] = useState(50);
   const [countdown, setCountdown] = useState(3);
-  const [roundWinner, setRoundWinner] = useState<number | null>(null);
-  const [matchWinner, setMatchWinner] = useState<number | null>(null);
+  const [lastWinner, setLastWinner] = useState<0 | 1 | null>(null);
+  const [pulls, setPulls] = useState<[number, number]>([0, 0]);
   const tapCount = useRef(0);
+  const name = (i: number) => slotName(names, SLOTS, i);
 
-  // Countdown before each round
+  // Pause when she switches apps.
   useEffect(() => {
-    if (phase !== 'countdown') return;
-    if (countdown <= 0) {
-      playCorrect();
-      setPhase('battle');
-      return;
-    }
-    const t = setTimeout(() => setCountdown(c => c - 1), 800);
-    return () => clearTimeout(t);
-  }, [countdown, phase]);
+    const onVis = () => { if (document.hidden) setStatus(s => (s === 'playing' ? 'paused' : s)); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
 
-  // A round ends when the lightstick reaches a goal zone
+  // 3-2-1 before each round
+  useEffect(() => {
+    if (status !== 'playing' || phase !== 'countdown') return;
+    if (countdown <= 0) { playCorrect(); setPhase('battle'); return; }
+    playTick();
+    const t = window.setTimeout(() => setCountdown(c => c - 1), 700);
+    return () => clearTimeout(t);
+  }, [countdown, phase, status]);
+
+  // A round ends when the ribbon reaches a goal.
   useEffect(() => {
     if (phase !== 'battle') return;
-    const winner = pos <= LEFT_GOAL ? 0 : pos >= RIGHT_GOAL ? 1 : null;
-    if (winner === null) return;
-    playWin();
-    const next = [...scores];
-    next[winner] += 1;
+    const w = roundWinner(pos);
+    if (w === null) return;
+    const next: [number, number] = w === 0 ? [scores[0] + 1, scores[1]] : [scores[0], scores[1] + 1];
     setScores(next);
-    setRoundWinner(winner);
-    if (next[winner] >= WIN_SCORE) {
-      setMatchWinner(winner);
-      setPhase('final');
-      addXP(30);
-    } else {
-      setPhase('round_result');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pos, phase]);
+    setLastWinner(w);
+    if (next[w] >= WIN_SCORE) { playWin(); setPhase('final'); }
+    else { playCorrect(); setPhase('round_result'); }
+  }, [pos, phase, scores]);
 
   const pull = useCallback((player: 0 | 1) => {
-    if (phase !== 'battle') return;
+    if (status !== 'playing' || phase !== 'battle') return;
     tapCount.current += 1;
     if (tapCount.current % 3 === 0) playPop();
-    setPos(p => Math.max(0, Math.min(100, player === 0 ? p - PULL : p + PULL)));
-  }, [phase]);
+    setPulls(p => (player === 0 ? [p[0] + 1, p[1]] : [p[0], p[1] + 1]));
+    setPos(p => pullRope(p, player));
+  }, [phase, status]);
 
-  // Keyboard controls: A = Player 1, L = Player 2 (held keys don't auto-repeat)
+  // Keyboard: A = left, L = right (held keys don't auto-repeat)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.repeat) return;
@@ -74,265 +79,162 @@ const TugOfWar: React.FC = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [pull]);
 
-  const startMatch = () => {
-    playClick();
-    setNames(n => [n[0].trim() || 'Player 1', n[1].trim() || 'Player 2']);
+  const start = () => {
     setScores([0, 0]);
+    setPulls([0, 0]);
     setRound(1);
     setPos(50);
-    setRoundWinner(null);
-    setMatchWinner(null);
-    setCountdown(3);
-    setPhase('countdown');
+    setLastWinner(null);
+    setPhase('setup');
+    setGame(g => g + 1);
+    setStatus('playing');
   };
+
+  const begin = () => { playClick(); setCountdown(3); setPhase('countdown'); };
 
   const nextRound = () => {
     playClick();
     setRound(r => r + 1);
     setPos(50);
-    setRoundWinner(null);
     setCountdown(3);
     setPhase('countdown');
   };
 
+  const champ = scores[0] >= WIN_SCORE ? 0 : scores[1] >= WIN_SCORE ? 1 : null;
+  const inMatch = phase !== 'setup';
+
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-900 to-fuchsia-900 text-white px-4 py-6 select-none"
+    <GameShell
+      celebrateEnd
+      gameId="tug_of_war"
+      title="Tug-of-War"
+      icon="🪢"
+      xpScale={6}
+      status={status}
+      score={matchScore(pulls)}
+      round={game}
+      formatScore={s => `${s} pulls`}
+      overTitle={champ !== null ? `${name(champ)} wins the tug! 🏆` : 'What a tug! 💪'}
+      overStats={[
+        { label: `${SLOTS[0].emoji} ${name(0)}`, value: `${pulls[0]} pulls` },
+        { label: `${SLOTS[1].emoji} ${name(1)}`, value: `${pulls[1]} pulls` },
+      ]}
+      onStart={start}
+      onPause={() => setStatus('paused')}
+      onResume={() => setStatus('playing')}
+      readyContent={
+        <div className="space-y-2 font-nunito text-lg text-violet-100">
+          <p>Tap your pad as fast as you can to pull the rope to <b>your</b> side! 🪢</p>
+          <p>Get the 🎀 ribbon into your goal to win the round. Best of 3!</p>
+          <p className="text-base text-violet-300">Keyboard: A = left, L = right</p>
+        </div>
+      }
     >
-      <button
-        onClick={() => { playClick(); setGameState('game_mode'); }}
-        className="absolute top-4 left-4 bg-white/10 hover:bg-white/20 rounded-full px-4 py-2 font-fredoka text-sm z-20"
-      >
-        ← Back
-      </button>
-
-      <div className="max-w-5xl mx-auto pt-10">
-        <h1 className="text-center font-fredoka font-bold text-3xl md:text-5xl mb-1">
-          🪢 Lightstick Tug-of-War
-        </h1>
-        <p className="text-center font-nunito text-purple-200 mb-6">
-          Mash your button — pull the lightstick to YOUR side!
-        </p>
-
-        {phase === 'setup' && (
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="max-w-lg mx-auto bg-white/10 rounded-3xl p-6 md:p-8 border border-white/20"
-          >
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="block font-fredoka text-pink-300 mb-2">💗 Player 1</label>
-                <input
-                  type="text"
-                  value={names[0]}
-                  maxLength={14}
-                  onChange={(e) => setNames(n => [e.target.value, n[1]])}
-                  placeholder="Player 1"
-                  className="w-full px-4 py-3 rounded-2xl bg-white/90 text-gray-800 font-nunito border-2 border-pink-400 focus:outline-none focus:ring-4 focus:ring-pink-300"
-                />
-              </div>
-              <div>
-                <label className="block font-fredoka text-blue-300 mb-2">💙 Player 2</label>
-                <input
-                  type="text"
-                  value={names[1]}
-                  maxLength={14}
-                  onChange={(e) => setNames(n => [n[0], e.target.value])}
-                  placeholder="Player 2"
-                  className="w-full px-4 py-3 rounded-2xl bg-white/90 text-gray-800 font-nunito border-2 border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-300"
-                />
-              </div>
+      <div className="absolute inset-0 overflow-y-auto overflow-x-hidden px-3 py-3" style={{ touchAction: phase === 'setup' ? 'pan-y' : 'none' }}>
+        {phase === 'final' && <ConfettiBurst count={80} durationMs={3500} />}
+        <div className="max-w-5xl mx-auto flex flex-col gap-4 min-h-full">
+          {phase === 'setup' && (
+            <div className="max-w-2xl mx-auto w-full flex flex-col gap-3">
+              <h2 className="font-fredoka text-3xl text-center">Who's pulling? 💪</h2>
+              <p className="font-nunito text-lg text-violet-200 text-center">🔴 pulls left, 🔵 pulls right. Names are optional.</p>
+              <NameSlots names={names} slots={SLOTS} onChange={setNames} />
+              <button type="button" onClick={begin}
+                className="min-h-[60px] rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-400 font-fredoka text-2xl shadow-lg">
+                🪢 Start the tug!
+              </button>
             </div>
-            <div className="bg-black/30 rounded-2xl p-4 mb-6 font-nunito text-sm md:text-base text-purple-100 leading-relaxed">
-              👈 Player 1 taps the <span className="text-pink-300 font-bold">LEFT</span> button (or presses <kbd className="bg-white/20 px-2 rounded">A</kbd>)
-              <br />
-              👉 Player 2 taps the <span className="text-blue-300 font-bold">RIGHT</span> button (or presses <kbd className="bg-white/20 px-2 rounded">L</kbd>)
-              <br />
-              First to drag the 🌟 into their goal wins the round. Best of 3!
-            </div>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={startMatch}
-              className="w-full py-4 rounded-full font-fredoka font-bold text-xl bg-gradient-to-r from-amber-400 to-pink-500 shadow-xl"
-            >
-              ⚡ START THE BATTLE! ⚡
-            </motion.button>
-          </motion.div>
-        )}
+          )}
 
-        {(phase === 'battle' || phase === 'countdown' || phase === 'round_result' || phase === 'final') && (
-          <>
-            <div className="flex items-center justify-between mb-4 font-fredoka gap-2">
-              <div className="text-pink-300 text-lg md:text-2xl font-bold truncate">
-                {names[0]} {'⭐'.repeat(scores[0])}
+          {inMatch && (
+            <>
+              <div className="flex items-center justify-between gap-2 font-fredoka">
+                <div className="text-xl md:text-2xl truncate">{SLOTS[0].emoji} {name(0)} {'⭐'.repeat(scores[0])}</div>
+                <div className="shrink-0 rounded-full bg-white/10 px-4 py-1 text-base md:text-lg">Round {round} · first to {WIN_SCORE} ⭐</div>
+                <div className="text-xl md:text-2xl truncate text-right">{'⭐'.repeat(scores[1])} {name(1)} {SLOTS[1].emoji}</div>
               </div>
-              <div className="bg-white/10 rounded-full px-4 py-1 text-xs md:text-base whitespace-nowrap">
-                Round {round} · first to {WIN_SCORE} ⭐
-              </div>
-              <div className="text-blue-300 text-lg md:text-2xl font-bold truncate text-right">
-                {'⭐'.repeat(scores[1])} {names[1]}
-              </div>
-            </div>
 
-            <div className="relative h-24 md:h-28 rounded-full bg-white/10 border-2 border-white/20 overflow-hidden mb-8">
-              <div className="absolute inset-y-0 left-0 w-[10%] bg-gradient-to-r from-pink-500/80 to-transparent flex items-center justify-center text-2xl">
-                🚩
+              {/* The rope */}
+              <div className="relative h-28 md:h-32 rounded-3xl bg-black/30 border-2 border-white/15 overflow-hidden">
+                <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-rose-500/70 to-transparent flex items-center pl-2 text-3xl" style={{ width: `${LEFT_GOAL + 4}%` }}>🏁</div>
+                <div className="absolute inset-y-0 right-0 bg-gradient-to-l from-sky-500/70 to-transparent flex items-center justify-end pr-2 text-3xl" style={{ width: `${100 - RIGHT_GOAL + 4}%` }}>🏁</div>
+                <div className="absolute inset-y-3 left-1/2 w-1 rounded bg-white/40 -translate-x-1/2" />
+                <div className="absolute top-1/2 left-0 right-0 h-5 -translate-y-1/2 rounded-full shadow-lg"
+                  style={{
+                    backgroundImage: 'repeating-linear-gradient(115deg, #d6a35c 0 10px, #b07a35 10px 20px)',
+                    backgroundPosition: `${(pos - 50) * 6}px 0`,
+                    transition: 'background-position 90ms linear',
+                  }} />
+                <div className="absolute top-1/2 text-5xl md:text-6xl"
+                  style={{ left: `${pos}%`, transform: 'translate(-50%, -50%)', transition: 'left 90ms linear', filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.6))' }}>
+                  🎀
+                </div>
               </div>
-              <div className="absolute inset-y-0 right-0 w-[10%] bg-gradient-to-l from-blue-500/80 to-transparent flex items-center justify-center text-2xl">
-                🚩
+
+              {/* Pull pads */}
+              <div className="grid grid-cols-2 gap-4 md:gap-8 flex-1 min-h-[220px]">
+                {([0, 1] as const).map(p => (
+                  <motion.button key={p} type="button" whileTap={{ scale: 0.94 }}
+                    onPointerDown={e => { e.preventDefault(); pull(p); }}
+                    onContextMenu={e => e.preventDefault()}
+                    style={{ touchAction: 'none' }}
+                    className={`min-h-[220px] rounded-3xl bg-gradient-to-br ${PAD[p]} shadow-2xl font-fredoka select-none flex flex-col items-center justify-center gap-2 active:brightness-110
+                      ${phase === 'battle' ? '' : 'opacity-70'}`}>
+                    <div className="text-5xl md:text-6xl">{p === 0 ? '👈💪' : '💪👉'}</div>
+                    <div className="text-3xl md:text-4xl truncate max-w-full px-2">{name(p)}</div>
+                    <div className="text-lg md:text-xl opacity-90">PULL! PULL! PULL!</div>
+                  </motion.button>
+                ))}
               </div>
-              <div className="absolute inset-y-2 left-1/2 w-0.5 bg-white/30 -translate-x-1/2" />
-              <div className="absolute top-1/2 left-[5%] right-[5%] h-2 -translate-y-1/2 bg-gradient-to-r from-pink-400 via-amber-300 to-blue-400 rounded-full opacity-60" />
-              <div
-                className="absolute top-1/2 text-5xl md:text-6xl"
-                style={{
-                  left: `${pos}%`,
-                  transform: 'translate(-50%, -50%)',
-                  transition: 'left 90ms linear',
-                  filter: 'drop-shadow(0 0 12px rgba(255, 220, 100, 0.9))',
-                }}
-              >
-                🌟
-              </div>
-            </div>
+            </>
+          )}
+        </div>
 
-            <div className="grid grid-cols-2 gap-4 md:gap-10">
-              <motion.button
-                whileTap={{ scale: 0.92 }}
-                onPointerDown={(e) => { e.preventDefault(); pull(0); }}
-                onContextMenu={(e) => e.preventDefault()}
-                style={{ touchAction: 'manipulation' }}
-                className="h-40 md:h-52 rounded-3xl bg-gradient-to-br from-pink-500 to-rose-600 shadow-2xl font-fredoka active:brightness-110"
-              >
-                <div className="text-4xl md:text-5xl mb-2">👈🌟</div>
-                <div className="text-2xl md:text-3xl font-bold truncate px-2">{names[0]}</div>
-                <div className="text-xs md:text-base opacity-80 font-nunito mt-1">TAP TAP TAP! (key A)</div>
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.92 }}
-                onPointerDown={(e) => { e.preventDefault(); pull(1); }}
-                onContextMenu={(e) => e.preventDefault()}
-                style={{ touchAction: 'manipulation' }}
-                className="h-40 md:h-52 rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-2xl font-fredoka active:brightness-110"
-              >
-                <div className="text-4xl md:text-5xl mb-2">🌟👉</div>
-                <div className="text-2xl md:text-3xl font-bold truncate px-2">{names[1]}</div>
-                <div className="text-xs md:text-base opacity-80 font-nunito mt-1">TAP TAP TAP! (key L)</div>
-              </motion.button>
-            </div>
-          </>
-        )}
-      </div>
-
-      <AnimatePresence>
-        {phase === 'countdown' && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-30 flex items-center justify-center bg-black/60"
-          >
-            <motion.div
-              key={countdown}
-              initial={{ scale: 2.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="font-fredoka font-bold text-8xl md:text-9xl text-amber-300"
-              style={{ textShadow: '0 0 30px rgba(255,200,0,0.8)' }}
-            >
-              {countdown > 0 ? countdown : 'GO!'}
-            </motion.div>
-          </motion.div>
-        )}
-
-        {phase === 'round_result' && roundWinner !== null && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-30 flex items-center justify-center bg-black/70"
-          >
-            <motion.div
-              initial={{ scale: 0.5, y: 40 }}
-              animate={{ scale: 1, y: 0 }}
-              transition={{ type: 'spring', stiffness: 260 }}
-              className="bg-gradient-to-br from-purple-800 to-fuchsia-900 border-4 border-amber-400 rounded-3xl p-8 text-center max-w-sm mx-4"
-            >
-              <div className="text-6xl mb-3">{roundWinner === 0 ? '💗' : '💙'}</div>
-              <h2 className="font-fredoka font-bold text-3xl mb-2 text-amber-300">
-                {names[roundWinner]} takes the round! ⭐
-              </h2>
-              <p className="font-nunito text-purple-200 mb-6">
-                {scores[0]} — {scores[1]}
-              </p>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={nextRound}
-                className="px-8 py-3 rounded-full font-fredoka font-bold text-lg bg-gradient-to-r from-amber-400 to-pink-500 shadow-xl"
-              >
-                Next Round! 🔥
-              </motion.button>
-            </motion.div>
-          </motion.div>
-        )}
-
-        {phase === 'final' && matchWinner !== null && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-30 flex items-center justify-center bg-black/70"
-          >
-            <ConfettiBurst count={80} durationMs={4000} />
-            <motion.div
-              initial={{ scale: 0.5, rotate: -4 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: 'spring', stiffness: 220 }}
-              className="bg-gradient-to-br from-purple-800 to-fuchsia-900 border-4 border-amber-400 rounded-3xl p-8 text-center max-w-sm mx-4"
-            >
-              <motion.div
-                animate={{ rotate: [0, -8, 8, 0], scale: [1, 1.15, 1] }}
-                transition={{ duration: 1, repeat: Infinity, repeatDelay: 0.4 }}
-                className="text-7xl mb-3"
-              >
-                🏆
+        <AnimatePresence>
+          {phase === 'countdown' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 flex items-center justify-center bg-black/55">
+              <motion.div key={countdown} initial={{ scale: 2.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                className="font-fredoka text-9xl text-amber-300" style={{ textShadow: '0 0 30px rgba(255,200,0,0.8)' }}>
+                {countdown > 0 ? countdown : 'GO!'}
               </motion.div>
-              <h2 className="font-fredoka font-bold text-3xl mb-1 text-amber-300">
-                {names[matchWinner]} WINS!
-              </h2>
-              <p className="font-nunito text-purple-200 mb-2">
-                Final score: {scores[0]} — {scores[1]}
-              </p>
-              <p className="font-fredoka text-green-300 mb-6">+30 XP! 🎉</p>
-              <div className="flex gap-3 justify-center">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={startMatch}
-                  className="px-6 py-3 rounded-full font-fredoka font-bold bg-gradient-to-r from-amber-400 to-pink-500 shadow-xl"
-                >
-                  Rematch! ⚡
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => { playClick(); setGameState('game_mode'); }}
-                  className="px-6 py-3 rounded-full font-fredoka font-bold bg-white/15 border border-white/30"
-                >
-                  All Games 🎮
-                </motion.button>
-              </div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-};
+          )}
 
-export default TugOfWar;
+          {phase === 'round_result' && lastWinner !== null && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 flex items-center justify-center bg-black/60 p-4">
+              <motion.div initial={{ scale: 0.6, y: 30 }} animate={{ scale: 1, y: 0 }}
+                className="w-full max-w-sm rounded-3xl bg-indigo-900/95 border-2 border-amber-400 p-6 text-center flex flex-col gap-3">
+                <div className="text-6xl">{SLOTS[lastWinner].emoji}</div>
+                <h2 className="font-fredoka text-3xl text-amber-300">{name(lastWinner)} takes round {round}! ⭐</h2>
+                <p className="font-fredoka text-2xl">{scores[0]} – {scores[1]}</p>
+                <p className="font-nunito text-lg text-violet-200">Great pulling, both of you! 💪</p>
+                <button type="button" onClick={nextRound}
+                  className="min-h-[56px] rounded-full bg-gradient-to-r from-amber-400 to-pink-500 font-fredoka text-2xl shadow-lg">
+                  Next round! 🪢
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {phase === 'final' && champ !== null && status !== 'over' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 flex items-center justify-center bg-black/60 p-4">
+              <motion.div initial={{ scale: 0.6 }} animate={{ scale: 1 }}
+                className="w-full max-w-sm rounded-3xl bg-indigo-900/95 border-2 border-amber-400 p-6 text-center flex flex-col gap-3">
+                <motion.div animate={{ rotate: [0, -8, 8, 0], scale: [1, 1.15, 1] }} transition={{ duration: 1, repeat: Infinity, repeatDelay: 0.4 }} className="text-7xl">🏆</motion.div>
+                <h2 className="font-fredoka text-4xl text-amber-300">{name(champ)} wins!</h2>
+                <p className="font-fredoka text-2xl">{scores[0]} – {scores[1]}</p>
+                <p className="font-nunito text-lg text-violet-200">{pulls[0] + pulls[1]} pulls together — what a team workout! 💪</p>
+                <button type="button" onClick={() => { playClick(); setStatus('over'); }}
+                  className="min-h-[56px] rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-400 font-fredoka text-2xl shadow-lg">
+                  🎉 Finish
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </GameShell>
+  );
+}

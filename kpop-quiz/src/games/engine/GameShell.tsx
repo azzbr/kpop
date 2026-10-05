@@ -27,6 +27,8 @@ interface GameShellProps {
   /** Shown on the start card (rules, difficulty picker…). */
   readyContent?: ReactNode;
   startLabel?: string;
+  /** Party games end on a celebration: always play the win sound, never the 'wrong' one. */
+  celebrateEnd?: boolean;
   onStart: () => void;
   onPause: () => void;
   onResume: () => void;
@@ -45,7 +47,8 @@ export default function GameShell(props: GameShellProps) {
     rewarded.current = round;
     const res = useGameStore.getState().finishRound(gameId, score, xpScale);
     setResult(res);
-    if (res.isBest && score > 0) playWin(); else playWrong();
+    if ((res.isBest && score > 0) || props.celebrateEnd) playWin(); else playWrong();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, round, score, gameId, xpScale]);
 
   useEffect(() => { if (status === 'playing') setResult(null); }, [status]);
