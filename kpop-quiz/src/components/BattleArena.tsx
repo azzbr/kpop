@@ -1,344 +1,213 @@
-import React, { useState, useCallback } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useGameStore } from '../store';
+import GameShell from '../games/engine/GameShell';
+import type { ShellStatus } from '../games/engine/GameShell';
 import { useSafeTimeout } from '../utils/useSafeTimeout';
-import { playClick, playHit, playWrong, playWin, playUnlock } from '../utils/sounds';
-import ConfettiBurst from './ConfettiBurst';
+import { playClick, playHit, playPop, playUnlock } from '../utils/sounds';
+import {
+  HEROES, VILLAINS, MOVES, CHEERS, MISS_LINES, GUARD_LINES, SPECIAL_COST,
+  pick, resolveTurn, newFighter, outcome, matchScore, canSpecial,
+} from './games/battleArenaLogic';
+import type { Fighter, Move, HitResult, Stats } from './games/battleArenaLogic';
 
-const HEROES = [
-  { id: 'storm',   name: 'STORM',   emoji: '⚡', color: 'from-blue-500 to-cyan-400',     atk: 90, def: 55, sp: 80, maxHp: 100, spec: '🌩️ Thunder Strike' },
-  { id: 'blaze',   name: 'BLAZE',   emoji: '🔥', color: 'from-orange-500 to-red-500',    atk: 85, def: 60, sp: 75, maxHp: 110, spec: '🔥 Inferno Combo' },
-  { id: 'frost',   name: 'FROST',   emoji: '❄️', color: 'from-sky-400 to-blue-300',      atk: 70, def: 82, sp: 88, maxHp: 95,  spec: '❄️ Ice Shatter' },
-  { id: 'phantom', name: 'PHANTOM', emoji: '👻', color: 'from-violet-600 to-purple-500', atk: 95, def: 45, sp: 92, maxHp: 88,  spec: '💀 Soul Crush' },
-];
-const VILLAINS = [
-  { id: 'dusk',   name: 'DUSK',   emoji: '🦹', color: 'from-red-800 to-red-600',     atk: 82, def: 64, sp: 72, maxHp: 100 },
-  { id: 'vortex',name: 'VORTEX', emoji: '🌀', color: 'from-gray-700 to-gray-500',    atk: 87, def: 52, sp: 78, maxHp: 98  },
-  { id: 'shadow',name: 'SHADOW', emoji: '😈', color: 'from-purple-900 to-purple-700',atk: 92, def: 48, sp: 83, maxHp: 92  },
-  { id: 'brute', name: 'BRUTE',  emoji: '🦣', color: 'from-amber-800 to-stone-700',  atk: 76, def: 88, sp: 64, maxHp: 118 },
-];
+// Battle Arena: turn-based duel against a bot. Rules in games/battleArenaLogic.ts.
+// Score per match (saved as 'battle_arena'): HP left × 10 on a win, 0 on a loss.
 
-type Move = 'punch' | 'kick' | 'special' | 'guard';
+const rng = Math.random;
+interface Line { id: number; text: string; who: 'you' | 'bot' | 'info' }
 
-const MOVE_INFO: Record<Move, { label: string; emoji: string; color: string; desc: string }> = {
-  punch:   { label: 'PUNCH',   emoji: '👊', color: 'from-yellow-500 to-orange-500', desc: 'Reliable medium damage' },
-  kick:    { label: 'KICK',    emoji: '🦵', color: 'from-red-500 to-pink-500',      desc: '20% miss, high damage' },
-  special: { label: 'SPECIAL', emoji: '✨', color: 'from-purple-500 to-fuchsia-500', desc: 'Big damage, costs 60 energy' },
-  guard:   { label: 'GUARD',   emoji: '🛡️', color: 'from-blue-500 to-cyan-500',     desc: 'Block 65% damage this turn' },
-};
-
-const HYPE = [
-  "That hit harder than a triple album drop! 💿",
-  "The crowd goes WILD! 🎤",
-  "DEVASTATING! This battle is insane! 🔥",
-  "Incredible combo! The fans are screaming! 🎵",
-  "What a move! Pure K-Pop power! ⭐",
-  "No way! An absolute BANGER hit! 💥",
-  "The arena is SHAKING! 🏟️",
-  "He came, he saw, he DEMOLISHED! 💪",
-];
-const MISS_LINES = ["Woah, they dodged it! 💨", "Missed by a mile! Try again! 😅", "The crowd groans... 😬"];
-const GUARD_LINES = ["They blocked it cold! 🛡️", "Not today! Solid defence! 💪", "Blocked! Back to the drawing board! 🧱"];
-
-function calcDamage(atk: number, def: number, move: Move, isGuarding: boolean): { dmg: number; miss: boolean } {
-  let base = 0;
-  const miss = false;
-  if (move === 'guard') return { dmg: 0, miss: false };
-  if (move === 'punch') base = atk * 0.38;
-  else if (move === 'kick') { if (Math.random() < 0.2) return { dmg: 0, miss: true }; base = atk * 0.58; }
-  else if (move === 'special') base = atk * 0.72;
-  base *= rnd(0.85, 1.2);
-  if (isGuarding) base *= 0.35;
-  base *= 1 - def / 380;
-  return { dmg: Math.max(2, Math.round(base)), miss };
-}
-function rnd(a: number, b: number) { return a + Math.random() * (b - a); }
-
-function cpuMove(energy: number, playerLastMove: Move | null): Move {
-  if (energy >= 60 && Math.random() < 0.38) return 'special';
-  if (playerLastMove === 'special' && Math.random() < 0.3) return 'guard';
-  const r = Math.random();
-  if (r < 0.38) return 'punch';
-  if (r < 0.66) return 'kick';
-  if (r < 0.8 && energy >= 60) return 'special';
-  return 'guard';
-}
-
-interface Fighter { hp: number; maxHp: number; energy: number; guarding: boolean; }
-
-const BattleArena: React.FC = () => {
-  const { setGameState } = useGameStore();
+export default function BattleArena() {
   const later = useSafeTimeout();
-  const [phase, setPhase] = useState<'pick' | 'fight' | 'result'>('pick');
+  const [status, setStatus] = useState<ShellStatus>('ready');
+  const [round, setRound] = useState(0);
   const [heroIdx, setHeroIdx] = useState(0);
-  const [vilIdx] = useState(() => Math.floor(Math.random() * VILLAINS.length));
+  const [vilIdx, setVilIdx] = useState(() => Math.floor(Math.random() * VILLAINS.length));
   const hero = HEROES[heroIdx];
   const vil = VILLAINS[vilIdx];
 
-  const [player, setPlayer] = useState<Fighter>({ hp: 0, maxHp: 0, energy: 0, guarding: false });
-  const [cpu, setCpu] = useState<Fighter>({ hp: 0, maxHp: 0, energy: 0, guarding: false });
-  const [log, setLog] = useState<string[]>([]);
-  const [round, setRound] = useState(0);
+  const [player, setPlayer] = useState<Fighter>(() => newFighter(HEROES[0]));
+  const [cpu, setCpu] = useState<Fighter>(() => newFighter(VILLAINS[0]));
+  const [log, setLog] = useState<Line[]>([]);
+  const [turn, setTurn] = useState(1);
   const [busy, setBusy] = useState(false);
   const [lastMove, setLastMove] = useState<Move | null>(null);
   const [hitAnim, setHitAnim] = useState<'player' | 'cpu' | null>(null);
-  const [confetti, setConfetti] = useState(false);
-  const [wins, setWins] = useState(() => useGameStore.getState().highScores.battle_arena ?? 0);
+  const [result, setResult] = useState({ score: 0, won: false, turns: 0, foe: '' });
+  const lineId = useRef(0);
+  const matchId = useRef(0);
 
-  const startFight = () => {
-    setPlayer({ hp: hero.maxHp, maxHp: hero.maxHp, energy: 0, guarding: false });
-    setCpu({ hp: vil.maxHp, maxHp: vil.maxHp, energy: 0, guarding: false });
-    setLog([`⚔️ ${hero.name} vs ${vil.name} — FIGHT!`]);
-    setRound(1);
+  const say = (text: string, who: Line['who']) =>
+    setLog(prev => [...prev, { id: ++lineId.current, text, who }].slice(-4));
+
+  const startFight = useCallback(() => {
+    matchId.current++;
+    setPlayer(newFighter(hero));
+    setCpu(newFighter(vil));
+    setLog([{ id: ++lineId.current, text: `${hero.emoji} ${hero.name} vs ${vil.emoji} ${vil.name} — let's go!`, who: 'info' }]);
+    setTurn(1);
     setLastMove(null);
-    setPhase('fight');
+    setBusy(false);
+    setRound(r => r + 1);
+    setStatus('playing');
     playUnlock();
+  }, [hero, vil]);
+
+  const describe = (attacker: Stats, target: Stats, move: Move, hit: HitResult) => {
+    const m = MOVES[move];
+    if (move === 'guard') return `${m.emoji} ${attacker.name} puts up a Bubble Shield!`;
+    if (hit.miss) return `${m.emoji} ${attacker.name}'s ${m.label} missed! ${pick(rng, MISS_LINES)}`;
+    if (hit.blocked) return `${m.emoji} ${m.label}: ${target.name} blocked most of it (−${hit.dmg}). ${pick(rng, GUARD_LINES)}`;
+    return `${m.emoji} ${attacker.name}'s ${m.label}: −${hit.dmg}! ${pick(rng, CHEERS)}`;
   };
 
-  const execMove = useCallback(async (pMove: Move) => {
-    if (busy) return;
+  const execMove = (pMove: Move) => {
+    if (busy || status !== 'playing') return;
+    const r = resolveTurn(hero, vil, player, cpu, pMove, lastMove, rng);
+    if (!r) return;
+    const id = matchId.current;
     setBusy(true);
     setLastMove(pMove);
+    playClick();
 
-    // deduct energy for special
-    let pEnergy = player.energy + 25;
-    if (pMove === 'special') { if (pEnergy < 60) { setBusy(false); return; } pEnergy -= 60; }
-    let cEnergy = cpu.energy + 25;
-    const cMove = cpuMove(cEnergy, lastMove);
-    if (cMove === 'special') cEnergy -= 60;
+    // Your move lands first…
+    say(describe(hero, vil, pMove, r.pHit), 'you');
+    setCpu(r.cpu);
+    setPlayer(p => ({ ...p, energy: r.player.energy }));
+    if (r.pHit.dmg > 0) { setHitAnim('cpu'); playPop(); }
 
-    const lines: string[] = [];
-    let pHp = player.hp, cHp = cpu.hp;
-    const pGuard = pMove === 'guard', cGuard = cMove === 'guard';
+    // …then the bot's.
+    later(() => {
+      if (id !== matchId.current) return;
+      say(describe(vil, hero, r.cMove, r.cHit), 'bot');
+      setPlayer(r.player);
+      if (r.cHit.dmg > 0) { setHitAnim('player'); playHit(); } else setHitAnim(null);
+      setTurn(t => t + 1);
 
-    // player attacks cpu
-    if (pMove !== 'guard') {
-      const { dmg, miss } = calcDamage(hero.atk, vil.def, pMove, cGuard);
-      if (miss) { lines.push(`${MOVE_INFO[pMove].emoji} ${hero.name} missed! ${MISS_LINES[Math.floor(Math.random() * MISS_LINES.length)]}`); }
-      else if (cGuard) { lines.push(`${MOVE_INFO[pMove].emoji} ${vil.name} blocked! ${GUARD_LINES[Math.floor(Math.random() * GUARD_LINES.length)]}`); cHp -= dmg; }
-      else { cHp -= dmg; lines.push(`${MOVE_INFO[pMove].emoji} ${hero.name} hits ${vil.name} for ${dmg} damage! ${HYPE[Math.floor(Math.random() * HYPE.length)]}`); setHitAnim('cpu'); }
-    } else { lines.push(`🛡️ ${hero.name} braces for impact!`); }
+      later(() => {
+        if (id !== matchId.current) return;
+        setHitAnim(null);
+        const end = outcome(r.player, r.cpu);
+        if (!end) { setBusy(false); return; }
+        const score = matchScore(r.player, end);
+        say(end === 'win' ? `🏆 ${vil.name} is knocked out! ${hero.name} wins!` : `😵 ${hero.name} is knocked out… so close!`, 'info');
+        setResult({ score, won: end === 'win', turns: turn, foe: vil.name });
+        later(() => {
+          if (id !== matchId.current) return;
+          setVilIdx(v => (v + 1 + Math.floor(Math.random() * (VILLAINS.length - 1))) % VILLAINS.length);
+          setStatus('over');
+        }, 900);
+      }, 450);
+    }, 550);
+  };
 
-    // cpu attacks player (slight delay)
-    await new Promise<void>(r => later(() => r(), 320));
-    if (cMove !== 'guard') {
-      const { dmg, miss } = calcDamage(vil.atk, hero.def, cMove, pGuard);
-      if (miss) { lines.push(`${MOVE_INFO[cMove].emoji} ${vil.name} missed! Lucky break! 😅`); playClick(); }
-      else if (pGuard) { pHp -= dmg; lines.push(`${MOVE_INFO[cMove].emoji} ${vil.name} hits — partially blocked! (-${dmg} HP) 🛡️`); playHit(); }
-      else { pHp -= dmg; lines.push(`${MOVE_INFO[cMove].emoji} ${vil.name} hits ${hero.name} for ${dmg}! ${HYPE[Math.floor(Math.random() * HYPE.length)]}`); setHitAnim('player'); playHit(); }
-    } else { lines.push(`🛡️ ${vil.name} guards!`); }
-
-    pHp = Math.max(0, pHp); cHp = Math.max(0, cHp);
-
-    setPlayer(f => ({ ...f, hp: pHp, energy: Math.min(100, pEnergy), guarding: pGuard }));
-    setCpu(f => ({ ...f, hp: cHp, energy: Math.min(100, cEnergy), guarding: cGuard }));
-    setLog(prev => [...prev, ...lines].slice(-12));
-    setRound(r => r + 1);
-
-    await new Promise<void>(r => later(() => r(), 180));
-    setHitAnim(null);
-
-    if (pHp <= 0 || cHp <= 0) {
-      await new Promise<void>(r => later(() => r(), 400));
-      if (cHp <= 0) {
-        const newWins = wins + 1;
-        setWins(newWins);
-        // Wins only ever go up, so the "best" score doubles as the lifetime win count.
-        useGameStore.getState().finishRound('battle_arena', newWins, 0.02);
-        setConfetti(true);
-        later(() => setConfetti(false), 3000);
-        playWin();
-        setLog(prev => [...prev, `🏆 ${hero.name} WINS! The arena erupts! 🎊`]);
-      } else {
-        playWrong();
-        useGameStore.getState().finishRound('battle_arena_losses', 0, 1);
-        setLog(prev => [...prev, `💀 ${vil.name} wins this round... but you'll come back stronger! 💪`]);
-      }
-      setPhase('result');
-    }
-    setBusy(false);
-  }, [busy, player, cpu, hero, vil, lastMove, wins, later]);
-
-  const hpBar = (cur: number, max: number, color: string) => (
-    <div className="w-full bg-gray-700 rounded-full h-4 overflow-hidden">
-      <motion.div
-        className={`h-4 rounded-full bg-gradient-to-r ${color}`}
-        animate={{ width: `${Math.max(0, (cur / max) * 100)}%` }}
-        transition={{ duration: 0.4 }}
-      />
+  const bar = (cur: number, max: number, color: string, h = 'h-5') => (
+    <div className={`w-full bg-black/40 rounded-full ${h} overflow-hidden`}>
+      <motion.div className={`${h} rounded-full bg-gradient-to-r ${color}`}
+        animate={{ width: `${Math.max(0, (cur / max) * 100)}%` }} transition={{ duration: 0.35 }} />
     </div>
   );
-  const energyBar = (e: number) => (
-    <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
-      <motion.div
-        className="h-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-400"
-        animate={{ width: `${e}%` }}
-        transition={{ duration: 0.3 }}
-      />
-    </div>
+
+  const fighterCard = (s: Stats, f: Fighter, side: 'player' | 'cpu') => (
+    <motion.div
+      animate={hitAnim === side ? { x: [-10, 10, -6, 6, 0] } : { x: 0 }}
+      transition={{ duration: 0.35 }}
+      className={`flex-1 rounded-3xl bg-black/30 border-2 p-3 md:p-4 ${side === 'player' ? 'border-sky-400/50' : 'border-rose-400/50'}`}
+    >
+      <div className={`flex items-center gap-3 mb-2 ${side === 'cpu' ? 'flex-row-reverse text-right' : ''}`}>
+        <motion.span className="text-5xl md:text-6xl" animate={hitAnim === side ? { rotate: [0, -15, 10, 0] } : {}}>{s.emoji}</motion.span>
+        <div className="min-w-0">
+          <p className="font-fredoka text-xl md:text-2xl">{s.name}</p>
+          <p className="font-nunito text-lg text-violet-100 tabular-nums">❤️ {f.hp}/{f.maxHp}</p>
+        </div>
+      </div>
+      {bar(f.hp, f.maxHp, side === 'player' ? 'from-sky-400 to-cyan-300' : 'from-rose-400 to-orange-300')}
+      <p className={`font-nunito text-base text-yellow-200 mt-2 ${side === 'cpu' ? 'text-right' : ''}`}>⚡ Energy {f.energy}</p>
+      {bar(f.energy, 100, 'from-yellow-300 to-orange-400', 'h-3')}
+    </motion.div>
   );
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="min-h-screen flex flex-col items-center p-4"
-      style={{ background: 'linear-gradient(135deg, #0f0c29 0%, #1a1a4e 50%, #0d1b3e 100%)' }}
-    >
-      {confetti && <ConfettiBurst count={80} durationMs={3000} />}
-      <div className="max-w-2xl w-full mx-auto">
-        <button onClick={() => { playClick(); setGameState('game_mode'); }}
-          className="mb-4 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full font-fredoka text-sm border border-white/20">
-          ← Back
-        </button>
-
-        <div className="text-center mb-4">
-          <h1 className="text-4xl font-fredoka font-bold text-white">⚡ Battle Arena</h1>
-          <p className="font-nunito text-blue-300 text-sm">Wins: {wins} 🏆</p>
+    <GameShell
+      gameId="battle_arena"
+      title="Battle Arena"
+      icon="⚔️"
+      xpScale={12}
+      status={status}
+      score={result.score}
+      round={round}
+      overTitle={result.won ? `${hero.name} wins!` : 'Knocked out — so close!'}
+      overStats={[
+        { label: 'Result', value: result.won ? '🏆 Win' : '💪 Try again' },
+        { label: 'HP left', value: result.won ? `❤️ ${result.score / 10}` : '0' },
+        { label: 'Turns', value: String(result.turns) },
+        { label: 'Next opponent', value: `${vil.emoji} ${vil.name}` },
+      ]}
+      startLabel="⚔️ Fight!"
+      onStart={() => { if (status === 'over') setStatus('ready'); else startFight(); }}
+      onPause={() => setStatus('paused')}
+      onResume={() => setStatus('playing')}
+      readyContent={
+        <div>
+          <p className="font-fredoka text-xl mb-2">Choose your hero!</p>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            {HEROES.map((h, i) => (
+              <button key={h.id} onClick={() => { playClick(); setHeroIdx(i); }}
+                className={`bg-gradient-to-br ${h.color} rounded-2xl p-2 border-4 ${heroIdx === i ? 'border-yellow-300 shadow-[0_0_18px_rgba(250,204,21,0.6)]' : 'border-transparent'}`}>
+                <div className="text-4xl">{h.emoji}</div>
+                <div className="font-fredoka text-xl">{h.name}</div>
+                <div className="font-nunito text-sm">{h.spec}</div>
+                <div className="font-nunito text-sm opacity-90">⚔️{h.atk} 🛡️{h.def} ❤️{h.maxHp}</div>
+              </button>
+            ))}
+          </div>
+          <div className="rounded-2xl bg-white/10 p-2 font-fredoka text-lg">
+            Opponent: {vil.emoji} {vil.name} <span className="font-nunito text-base text-violet-200">⚔️{vil.atk} 🛡️{vil.def} ❤️{vil.maxHp}</span>
+          </div>
+          <p className="font-nunito text-base text-violet-200 mt-2">Win with lots of ❤️ left for a big score!</p>
         </div>
+      }
+    >
+      <div className="absolute inset-0 flex flex-col items-center justify-center p-3 md:p-6">
+        <div className="w-full max-w-3xl flex flex-col gap-3 md:gap-4">
+          <div className="flex gap-3 items-stretch">
+            {fighterCard(hero, status === 'ready' ? newFighter(hero) : player, 'player')}
+            <div className="self-center font-fredoka text-2xl text-fuchsia-300">VS</div>
+            {fighterCard(vil, status === 'ready' ? newFighter(vil) : cpu, 'cpu')}
+          </div>
 
-        {/* HERO PICK */}
-        {phase === 'pick' && (
-          <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
-            <h2 className="font-fredoka font-bold text-white text-xl text-center mb-3">Choose your warrior!</h2>
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              {HEROES.map((h, i) => (
-                <motion.button
-                  key={h.id}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => { playClick(); setHeroIdx(i); }}
-                  className={`bg-gradient-to-br ${h.color} rounded-2xl p-4 text-white border-4 transition-all ${heroIdx === i ? 'border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.6)]' : 'border-transparent'}`}
-                >
-                  <div className="text-5xl mb-1">{h.emoji}</div>
-                  <div className="font-fredoka font-bold text-xl">{h.name}</div>
-                  <div className="font-nunito text-xs opacity-80 mt-1">{h.spec}</div>
-                  <div className="flex justify-between mt-2 text-xs font-fredoka">
-                    <span>ATK {h.atk}</span><span>DEF {h.def}</span><span>SP {h.sp}</span>
-                  </div>
-                  <div className="font-nunito text-xs opacity-70 mt-1">HP {h.maxHp}</div>
-                </motion.button>
-              ))}
-            </div>
-            <div className="bg-white/10 border border-white/20 rounded-2xl p-4 mb-4 text-center backdrop-blur">
-              <p className="text-2xl">{vil.emoji}</p>
-              <p className="font-fredoka font-bold text-red-300 text-lg">Your opponent: {vil.name}</p>
-              <div className="flex justify-center gap-4 mt-1 text-xs font-fredoka text-white/60">
-                <span>ATK {vil.atk}</span><span>DEF {vil.def}</span><span>HP {vil.maxHp}</span>
-              </div>
-            </div>
-            <button onClick={startFight} className="w-full py-4 bg-gradient-to-r from-blue-600 to-violet-600 text-white font-fredoka font-bold text-xl rounded-2xl shadow-lg hover:brightness-110 transition-all">
-              ⚔️ FIGHT!
-            </button>
-          </motion.div>
-        )}
-
-        {/* FIGHT PHASE */}
-        {phase === 'fight' && (
-          <div>
-            {/* HP Bars */}
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <motion.div
-                animate={hitAnim === 'player' ? { x: [-8, 8, -6, 6, 0] } : {}}
-                transition={{ duration: 0.35 }}
-                className="bg-white/10 border border-blue-400/40 rounded-2xl p-3 backdrop-blur"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-3xl">{hero.emoji}</span>
-                  <div>
-                    <p className="font-fredoka font-bold text-white">{hero.name}</p>
-                    <p className="font-nunito text-xs text-blue-200">{player.hp}/{hero.maxHp} HP</p>
-                  </div>
-                </div>
-                {hpBar(player.hp, hero.maxHp, 'from-blue-400 to-cyan-300')}
-                <p className="font-nunito text-xs text-yellow-300 mt-1">⚡ Energy</p>
-                {energyBar(player.energy)}
-              </motion.div>
-
-              <motion.div
-                animate={hitAnim === 'cpu' ? { x: [-8, 8, -6, 6, 0] } : {}}
-                transition={{ duration: 0.35 }}
-                className="bg-white/10 border border-red-400/40 rounded-2xl p-3 backdrop-blur"
-              >
-                <div className="flex items-center gap-2 mb-1 justify-end">
-                  <div className="text-right">
-                    <p className="font-fredoka font-bold text-white">{vil.name}</p>
-                    <p className="font-nunito text-xs text-red-200">{cpu.hp}/{vil.maxHp} HP</p>
-                  </div>
-                  <span className="text-3xl">{vil.emoji}</span>
-                </div>
-                {hpBar(cpu.hp, vil.maxHp, 'from-red-400 to-orange-300')}
-                <p className="font-nunito text-xs text-yellow-300 mt-1 text-right">⚡ Energy</p>
-                {energyBar(cpu.energy)}
-              </motion.div>
-            </div>
-
-            {/* Battle log */}
-            <div className="bg-black/50 border border-white/10 rounded-2xl p-3 mb-4 h-36 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-              {log.map((line, i) => (
-                <motion.p
-                  key={i}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="font-nunito text-sm text-white/80 mb-0.5"
-                >
-                  {line}
+          <div className="rounded-3xl bg-black/40 border border-white/10 p-3 min-h-[148px] flex flex-col justify-end">
+            <AnimatePresence initial={false}>
+              {log.map(line => (
+                <motion.p key={line.id} layout initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
+                  className={`font-nunito text-lg leading-snug ${line.who === 'you' ? 'text-sky-200' : line.who === 'bot' ? 'text-rose-200' : 'text-yellow-200 font-bold'}`}>
+                  {line.text}
                 </motion.p>
               ))}
-            </div>
-
-            {/* Move buttons */}
-            <div className="grid grid-cols-2 gap-3">
-              {(Object.keys(MOVE_INFO) as Move[]).map(move => {
-                const info = MOVE_INFO[move];
-                const disabled = busy || (move === 'special' && player.energy < 60);
-                return (
-                  <motion.button
-                    key={move}
-                    whileTap={{ scale: 0.93 }}
-                    onClick={() => execMove(move)}
-                    disabled={disabled}
-                    className={`bg-gradient-to-r ${info.color} rounded-2xl p-3 text-white flex items-center gap-3 transition-all
-                      ${disabled ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-110 shadow-lg'}`}
-                  >
-                    <span className="text-3xl">{info.emoji}</span>
-                    <div className="text-left">
-                      <p className="font-fredoka font-bold text-lg">{info.label}</p>
-                      <p className="font-nunito text-xs opacity-80">{info.desc}</p>
-                      {move === 'special' && <p className="font-nunito text-xs text-yellow-200">Energy: {player.energy}/60</p>}
-                    </div>
-                  </motion.button>
-                );
-              })}
-            </div>
-            <p className="text-center font-nunito text-white/30 text-xs mt-2">Round {round}</p>
+            </AnimatePresence>
           </div>
-        )}
 
-        {/* RESULT */}
-        <AnimatePresence>
-          {phase === 'result' && (
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="bg-white/10 border-2 border-yellow-400/50 rounded-3xl p-8 text-center backdrop-blur"
-            >
-              <div className="text-6xl mb-2">{cpu.hp <= 0 ? '🏆' : '💀'}</div>
-              <h2 className="text-3xl font-fredoka font-bold text-white mb-1">
-                {cpu.hp <= 0 ? `${hero.name} WINS!` : `${vil.name} wins...`}
-              </h2>
-              <p className="font-nunito text-white/70 mb-1">{cpu.hp <= 0 ? '+60 XP earned!' : '+15 XP for trying!'}</p>
-              <p className="font-nunito text-yellow-300 mb-4">Total arena wins: {wins} 🏆</p>
-              <div className="flex gap-3 justify-center flex-wrap">
-                <button onClick={() => { setPhase('pick'); playClick(); }} className="btn-kid">🔄 Rematch</button>
-                <button onClick={() => setGameState('game_mode')} className="btn-kid-secondary">← Zone</button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+          <div className="grid grid-cols-2 gap-3">
+            {(Object.keys(MOVES) as Move[]).map(move => {
+              const info = MOVES[move];
+              const locked = move === 'special' && !canSpecial(player);
+              const disabled = busy || locked || status !== 'playing';
+              return (
+                <motion.button key={move} whileTap={{ scale: 0.94 }} onClick={() => execMove(move)} disabled={disabled}
+                  className={`min-h-[84px] bg-gradient-to-r ${info.color} rounded-3xl px-3 flex items-center gap-3 shadow-lg ${disabled ? 'opacity-40' : ''}`}>
+                  <span className="text-4xl">{info.emoji}</span>
+                  <span className="text-left">
+                    <span className="block font-fredoka text-xl md:text-2xl leading-tight">{info.label}</span>
+                    <span className="block font-nunito text-base opacity-90">
+                      {move === 'special' && locked ? `⚡ ${player.energy}/${SPECIAL_COST}` : info.desc}
+                    </span>
+                  </span>
+                </motion.button>
+              );
+            })}
+          </div>
+          <p className="text-center font-nunito text-base text-violet-200">Turn {turn}</p>
+        </div>
       </div>
-    </motion.div>
+    </GameShell>
   );
-};
-
-export default BattleArena;
+}

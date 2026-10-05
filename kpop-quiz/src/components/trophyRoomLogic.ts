@@ -55,7 +55,7 @@ export function formatBest(id: string, v: number): string {
     case 'paper_clash': return `${Math.round(v) / 10}% of the map`;
     case 'snake_arena': return `length ${v.toLocaleString()}`;
     case 'real_or_fake': return `streak of ${v}`;
-    case 'battle_arena': return `${v} ${v === 1 ? 'win' : 'wins'}`;
+    case 'battle_arena': return `${Math.round(v / 10)} ❤️ left`;
     case 'pattern_memory': return `round ${v}`;
     case 'emoji_guess': return `${v} / 10 right`;
     case 'heads_up': return `${v} ${v === 1 ? 'card' : 'cards'}`;

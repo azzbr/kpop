@@ -110,9 +110,10 @@ export const GAME_BADGES: GameBadge[] = [
   best('rl_500', 'rocket_launch', 'Star Pilot', '🌌', 500, 'Score 500 in Rocket Launch'),
 
   // ⚔️ Battle Arena — lifetime wins
+  // Score = ❤️ left × 10 on a win (since Oct 2026; older saves held a win count).
   best('ba_1', 'battle_arena', 'First Victory', '⚔️', 1, 'Win a battle in Battle Arena'),
-  best('ba_10', 'battle_arena', 'Arena Hero', '🛡️', 10, 'Win 10 battles in Battle Arena'),
-  best('ba_25', 'battle_arena', 'Arena Champion', '🏆', 25, 'Win 25 battles in Battle Arena'),
+  best('ba_10', 'battle_arena', 'Arena Hero', '🛡️', 500, 'Win a Battle Arena match with 50+ ❤️ left'),
+  best('ba_25', 'battle_arena', 'Arena Champion', '🏆', 800, 'Win a Battle Arena match with 80+ ❤️ left'),
 
   // 🧠 Pattern Memory — round reached
   best('pm_5', 'pattern_memory', 'Good Memory', '💡', 5, 'Reach round 5 in Pattern Memory'),

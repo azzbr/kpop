@@ -14,7 +14,7 @@ const KNOWN_GAMES = [
 const PLAUSIBLE: Record<string, number> = {
   paper_clash: 120, snake_arena: 60, game_2048: 2500, block_blast: 400, word_guess: 1, quiz_arena: 4000,
   quiz_party: 3000, real_or_fake: 5, emoji_guess: 6, would_you_rather: 6, kpop_rush: 800, ninja_slice: 150,
-  rocket_launch: 200, battle_arena: 1, pattern_memory: 6, sparkle_match: 300, tower_defense: 400, heads_up: 7, imposter: 2,
+  rocket_launch: 200, battle_arena: 300, pattern_memory: 6, sparkle_match: 300, tower_defense: 400, heads_up: 7, imposter: 2,
 };
 
 const check = (gameId: string, score: number, extra: Partial<BadgeCheck> = {}): BadgeCheck => ({

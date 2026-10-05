@@ -1,13 +1,17 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { useGameStore } from '../store';
-import { useSafeTimeout } from '../utils/useSafeTimeout';
-import { playPop, playCoin, playWrong, playWin, playUnlock } from '../utils/sounds';
-import ConfettiBurst from './ConfettiBurst';
+import { playPop, playCoin, playWrong, playUnlock, playClick } from '../utils/sounds';
+import GameShell from '../games/engine/GameShell';
+import type { ShellStatus } from '../games/engine/GameShell';
+import { useGameLoop, useCanvasSize } from '../games/engine/useGameLoop';
+import { useSwipeInput } from '../games/engine/useSwipeInput';
+import type { SwipeDir } from '../games/engine/useSwipeInput';
 
 /* ====================================================================
-   K-POP RUSH — endless runner
+   RUSH RUNNER — endless runner (saved as 'kpop_rush' so old bests count)
    Parallax city · day/night cycle · weather · funny power-ups
+   Logic runs on the engine's fixed 60 Hz tick; the canvas is drawn in an
+   800×400 logical space scaled to the device pixel ratio.
    ==================================================================== */
 
 const W = 800;
@@ -21,11 +25,11 @@ const PLAYER_X = 96;
 const CHARACTERS = ['🐻', '🐰', '🐱', '🦊', '🐯', '🐼', '🐨', '🐸'];
 const BUDDIES = ['🐥', '🐧', '🐣', '🐹', '🐶', '🦄', '🐷', '🐢'];
 
-type PowerKind = 'star' | 'magnet' | 'mic' | 'shield' | 'wings';
+type PowerKind = 'star' | 'magnet' | 'double' | 'shield' | 'wings';
 const POWER_INFO: Record<PowerKind, { emoji: string; label: string; color: string }> = {
   star:   { emoji: '⭐', label: 'STAR POWER!',    color: '#fbbf24' },
   magnet: { emoji: '🧲', label: 'COIN MAGNET!',   color: '#ef4444' },
-  mic:    { emoji: '🎤', label: 'DOUBLE POINTS!', color: '#a855f7' },
+  double: { emoji: '🎧', label: 'DOUBLE POINTS!', color: '#a855f7' },
   shield: { emoji: '🛡️', label: 'SHIELD UP!',     color: '#3b82f6' },
   wings:  { emoji: '🪽', label: 'TRIPLE JUMP!',   color: '#22d3ee' },
 };
@@ -67,7 +71,12 @@ interface GameData {
   obstacleTimer: number;
   coinTimer: number;
   powerTimer: number;
-  powers: { star: number; magnet: number; mic: number; wings: number };
+  powers: { star: number; magnet: number; double: number; wings: number };
+  /** Ticks of duck left from a swipe-down / key tap. */
+  duckTimer: number;
+  /** True while the DUCK button (or ↓ key) is held. */
+  duckHeld: boolean;
+  bestCombo: number;
   shield: boolean;
   timeOfDay: number;
   weather: Weather;
@@ -94,28 +103,29 @@ function mixC(a: number[], b: number[], t: number) {
   return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
 }
 
-const KPopRushGame: React.FC = () => {
-  const { setGameState } = useGameStore();
-  const later = useSafeTimeout();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const gameRef = useRef<GameData | null>(null);
-  const controlsRef = useRef<{ start: () => void; jump: () => void; duckDown: () => void; duckUp: () => void } | null>(null);
+interface Engine { update: () => void; draw: () => void; start: () => void; jump: () => void; duckFor: (ticks: number) => void; duckHold: (on: boolean) => void }
 
-  const [status, setStatus] = useState<'ready' | 'playing' | 'over'>('ready');
+export default function KPopRushGame() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const areaRef = useRef<HTMLDivElement>(null);
+  const gameRef = useRef<GameData | null>(null);
+  const engineRef = useRef<Engine | null>(null);
+  const size = useCanvasSize(canvasRef);
+
+  const [status, setStatus] = useState<ShellStatus>('ready');
+  const [round, setRound] = useState(0);
   const [charIdx, setCharIdx] = useState(0);
   const charIdxRef = useRef(0);
-  const [hud, setHud] = useState({ score: 0, coins: 0, combo: 0 });
-  const [over, setOver] = useState({ score: 0, coins: 0, high: 0, isHigh: false, xp: 0 });
-  const [confetti, setConfetti] = useState(false);
-  const [highScore, setHighScore] = useState<number>(() => useGameStore.getState().highScores.kpop_rush ?? 0);
-
-  useEffect(() => { charIdxRef.current = charIdx; }, [charIdx]);
+  charIdxRef.current = charIdx;
+  const [over, setOver] = useState({ score: 0, coins: 0, combo: 0 });
+  const bestRef = useRef(0);
+  bestRef.current = useGameStore(s => s.highScores.kpop_rush ?? 0);
+  const lastJump = useRef(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d')!;
-    let raf = 0;
 
     /* ---------- initial state ---------- */
     function freshGame(charIdx: number): GameData {
@@ -143,7 +153,8 @@ const KPopRushGame: React.FC = () => {
         score: 0, distance: 0, coinCount: 0, combo: 0, comboTimer: 0,
         speed: 6, frame: 0,
         obstacleTimer: 70, coinTimer: 150, powerTimer: 520,
-        powers: { star: 0, magnet: 0, mic: 0, wings: 0 },
+        powers: { star: 0, magnet: 0, double: 0, wings: 0 },
+        duckTimer: 0, duckHeld: false, bestCombo: 0,
         shield: false,
         timeOfDay: 0, weather: 'clear', weatherTimer: 700,
         shake: 0, groundX: 0, running: false, charIdx,
@@ -187,8 +198,6 @@ const KPopRushGame: React.FC = () => {
     function start() {
       gameRef.current = freshGame(charIdxRef.current);
       gameRef.current.running = true;
-      setStatus('playing');
-      setHud({ score: 0, coins: 0, combo: 0 });
     }
     function jump() {
       const g = gameRef.current;
@@ -197,20 +206,20 @@ const KPopRushGame: React.FC = () => {
       if (g.player.jumps < allowed) {
         g.player.vy = g.player.jumps === 0 ? JUMP_V : AIR_JUMP_V;
         g.player.jumps++;
+        g.duckTimer = 0;
         g.player.ducking = false;
         playPop();
         spawnParticles(PLAYER_X + 20, GROUND_Y, 8, '#ffffff', 3, false);
       }
     }
-    function duckDown() {
+    function duckFor(ticks: number) {
       const g = gameRef.current;
-      if (g && g.running) g.player.ducking = true;
+      if (g && g.running) g.duckTimer = ticks;
     }
-    function duckUp() {
+    function duckHold(on: boolean) {
       const g = gameRef.current;
-      if (g) g.player.ducking = false;
+      if (g) g.duckHeld = on && g.running;
     }
-    controlsRef.current = { start, jump, duckDown, duckUp };
 
     /* ---------- spawning ---------- */
     function spawnObstacle() {
@@ -236,7 +245,7 @@ const KPopRushGame: React.FC = () => {
     }
     function spawnPower() {
       const g = gameRef.current!;
-      const kinds: PowerKind[] = ['star', 'magnet', 'mic', 'shield', 'wings'];
+      const kinds: PowerKind[] = ['star', 'magnet', 'double', 'shield', 'wings'];
       const kind = kinds[rndInt(0, kinds.length - 1)];
       g.powerups.push({ kind, x: W + 20, y: rnd(GROUND_Y - 150, GROUND_Y - 70), w: 38, h: 38, collected: false, bob: rnd(0, 6) });
     }
@@ -246,15 +255,7 @@ const KPopRushGame: React.FC = () => {
       g.running = false;
       g.shake = 16;
       playWrong();
-      const finalScore = Math.floor(g.score);
-      const { isBest: isHigh, best: newHigh, xp } = useGameStore.getState().finishRound('kpop_rush', finalScore, 18);
-      if (isHigh) {
-        setHighScore(finalScore);
-        setConfetti(true);
-        later(() => setConfetti(false), 3000);
-        playWin();
-      }
-      setOver({ score: finalScore, coins: g.coinCount, high: newHigh, isHigh, xp });
+      setOver({ score: Math.floor(g.score), coins: g.coinCount, combo: g.bestCombo });
       setStatus('over');
     }
 
@@ -268,11 +269,12 @@ const KPopRushGame: React.FC = () => {
       // speed ramp
       g.speed = Math.min(6 + g.distance / 900, 14.5);
       g.distance += g.speed;
-      const mult = g.powers.mic > 0 ? 2 : 1;
+      const mult = g.powers.double > 0 ? 2 : 1;
       g.score += g.speed * 0.05 * mult;
 
       // player physics
       const p = g.player;
+      p.ducking = g.duckHeld || g.duckTimer > 0;
       p.vy += GRAVITY;
       if (p.ducking && p.y < GROUND_Y - 47) p.vy += GRAVITY * 0.8; // fast-fall
       p.y += p.vy;
@@ -284,9 +286,10 @@ const KPopRushGame: React.FC = () => {
       g.buddy.y += ((p.y + 10) - g.buddy.y) * 0.12;
 
       // active powers countdown
-      (['star', 'magnet', 'mic', 'wings'] as const).forEach(k => {
+      (['star', 'magnet', 'double', 'wings'] as const).forEach(k => {
         if (g.powers[k] > 0) g.powers[k]--;
       });
+      if (g.duckTimer > 0) g.duckTimer--;
       if (g.comboTimer > 0) { g.comboTimer--; if (g.comboTimer === 0) g.combo = 0; }
       if (g.shake > 0) g.shake--;
 
@@ -386,6 +389,7 @@ const KPopRushGame: React.FC = () => {
           c.collected = true;
           g.coinCount++;
           g.combo++;
+          g.bestCombo = Math.max(g.bestCombo, g.combo);
           g.comboTimer = 90;
           const cm = 1 + Math.floor(g.combo / 5);
           g.score += 12 * cm * mult;
@@ -406,6 +410,11 @@ const KPopRushGame: React.FC = () => {
           spawnParticles(pw.x + 19, pw.y + 19, 20, info.color, 6);
           playUnlock();
         }
+      }
+
+      // running dust
+      if (p.y >= GROUND_Y - 47 && g.frame % 8 === 0) {
+        spawnParticles(PLAYER_X + 4, GROUND_Y - 2, 2, '#cdeac0', 2);
       }
 
       // particles & floats
@@ -431,6 +440,10 @@ const KPopRushGame: React.FC = () => {
     function draw() {
       const g = gameRef.current!;
       const sk = sky(g.timeOfDay);
+      const { w, h, dpr } = size.current;
+      if (!w || !h) return;
+      // Logical 800×400 space → canvas pixels (the CSS box keeps the 2:1 shape).
+      ctx.setTransform((dpr * w) / W, 0, 0, (dpr * h) / H, 0, 0);
 
       ctx.save();
       if (g.shake > 0) ctx.translate(rnd(-g.shake, g.shake) * 0.5, rnd(-g.shake, g.shake) * 0.5);
@@ -603,11 +616,6 @@ const KPopRushGame: React.FC = () => {
       ctx.textAlign = 'left';
       ctx.restore();
 
-      // jump dust when grounded running
-      if (p.y >= GROUND_Y - 47 && g.frame % 8 === 0 && g.running) {
-        spawnParticles(PLAYER_X + 4, GROUND_Y - 2, 2, sk.dark > 0.5 ? '#555' : '#cdeac0', 2);
-      }
-
       // particles
       g.particles.forEach(pt => {
         ctx.globalAlpha = pt.life / pt.max;
@@ -668,7 +676,7 @@ const KPopRushGame: React.FC = () => {
 
       ctx.textAlign = 'right';
       ctx.font = 'bold 18px Fredoka, sans-serif';
-      ctx.fillText(`🏆 ${Math.max(highScore, Math.floor(g.score))}`, W - 16, 30);
+      ctx.fillText(`🏆 ${Math.max(bestRef.current, Math.floor(g.score))}`, W - 16, 30);
       ctx.fillText(`🪙 ${g.coinCount}`, W - 16, 54);
       ctx.textAlign = 'left';
 
@@ -681,7 +689,7 @@ const KPopRushGame: React.FC = () => {
       // active power timers
       let hx = 16;
       const hy = g.combo >= 5 ? 96 : 76;
-      (['star', 'magnet', 'mic', 'wings'] as const).forEach(k => {
+      (['star', 'magnet', 'double', 'wings'] as const).forEach(k => {
         if (g.powers[k] > 0) {
           const info = POWER_INFO[k];
           ctx.font = '20px serif';
@@ -698,219 +706,137 @@ const KPopRushGame: React.FC = () => {
       }
     }
 
-    /* ---------- loop ---------- */
-    // Physics are tuned per 1/60 s step. Run them on a fixed 60 Hz clock so the game is the
-    // same speed on a 120 Hz iPad as on a 60 Hz screen.
-    const STEP_MS = 1000 / 60;
-    let hudTick = 0;
-    let last = performance.now();
-    let acc = 0;
-    function loop(now: number) {
-      acc += Math.min(now - last, 250);
-      last = now;
-      while (acc >= STEP_MS) {
-        update();
-        acc -= STEP_MS;
-        const g = gameRef.current!;
-        if (g.running && ++hudTick % 6 === 0) {
-          setHud({ score: Math.floor(g.score), coins: g.coinCount, combo: g.combo });
-        }
-      }
-      draw();
-      raf = requestAnimationFrame(loop);
-    }
+    engineRef.current = { update, draw, start, jump, duckFor, duckHold };
+    gameRef.current = freshGame(charIdxRef.current);
+  }, [size]);
 
-    /* ---------- input ---------- */
-    function onKeyDown(e: KeyboardEvent) {
-      const g = gameRef.current;
-      if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
-        e.preventDefault();
-        if (!g || !g.running) start();
-        else jump();
-      } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
-        e.preventDefault();
-        duckDown();
-      }
-    }
-    function onKeyUp(e: KeyboardEvent) {
-      if (e.code === 'ArrowDown' || e.code === 'KeyS') duckUp();
-    }
-    window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('keyup', onKeyUp);
+  const running = status === 'playing';
+  useGameLoop({
+    tickHz: 60,
+    running,
+    update: () => engineRef.current?.update(),
+    draw: () => engineRef.current?.draw(),
+    onHidden: () => { if (gameRef.current?.running) setStatus(s => (s === 'playing' ? 'paused' : s)); },
+  });
 
-    raf = requestAnimationFrame(loop);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener('keydown', onKeyDown);
-      window.removeEventListener('keyup', onKeyUp);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const start = useCallback(() => {
+    engineRef.current?.start();
+    setRound(r => r + 1);
+    setStatus('playing');
   }, []);
 
-  /* ---------- pointer (mobile) ---------- */
-  const handleJumpDown = () => {
-    if (status === 'playing') controlsRef.current?.jump();
-    else controlsRef.current?.start();
-  };
+  const jump = useCallback(() => {
+    lastJump.current = performance.now();
+    engineRef.current?.jump();
+  }, []);
+
+  // Swipe up = jump, swipe down = duck for a moment. Arrow keys / WASD come through here too.
+  const onDir = useCallback((d: SwipeDir) => {
+    if (d === 0) {
+      // A tap on the canvas already jumped for this finger — don't double-jump on the swipe.
+      if (performance.now() - lastJump.current > 250) jump();
+    } else if (d === 2) {
+      engineRef.current?.duckFor(36);
+    }
+  }, [jump]);
+  useSwipeInput(areaRef, onDir, 26);
+
+  // Space jumps; releasing ↓ / S stops ducking straight away.
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) jump(); }
+    };
+    const up = (e: KeyboardEvent) => {
+      if (e.code === 'ArrowDown' || e.code === 'KeyS') engineRef.current?.duckFor(0);
+    };
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
+    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
+  }, [jump]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="min-h-screen bg-kid-pattern flex flex-col items-center p-4"
-    >
-      {confetti && <ConfettiBurst count={80} durationMs={3000} />}
-
-      <div className="w-full max-w-3xl mx-auto">
-        <button onClick={() => setGameState('game_mode')} className="btn-kid-secondary mb-3">← Back</button>
-
-        <div className="text-center mb-3">
-          <h1 className="text-3xl md:text-4xl font-fredoka font-bold text-purple-600 text-kid-glow">
-            🏃 Rush Runner
-          </h1>
-          <p className="font-nunito text-gray-500 text-sm">
-            Jump 🆙 · Duck ⬇️ · Grab coins & power-ups · Survive the city!
-          </p>
-        </div>
-
-        {/* Canvas + overlays */}
-        <div className="relative w-full rounded-2xl overflow-hidden shadow-xl border-4 border-purple-300">
-          <canvas
-            ref={canvasRef}
-            width={W}
-            height={H}
-            onPointerDown={() => { if (status === 'playing') controlsRef.current?.jump(); }}
-            className="w-full block bg-sky-200 touch-none cursor-pointer"
-            style={{ aspectRatio: '2 / 1' }}
-          />
-
-          {/* Ready overlay */}
-          <AnimatePresence>
-            {status === 'ready' && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-purple-900/70 flex flex-col items-center justify-center text-center p-4"
+    <GameShell
+      gameId="kpop_rush"
+      title="Rush Runner"
+      icon="🏃"
+      xpScale={18}
+      status={status}
+      score={over.score}
+      round={round}
+      overTitle="Bonk! Nice run!"
+      overStats={[
+        { label: 'Coins grabbed', value: `🪙 ${over.coins}` },
+        { label: 'Best combo', value: `🔥 ${over.combo}` },
+      ]}
+      startLabel="▶ Start running!"
+      onStart={start}
+      onPause={() => setStatus('paused')}
+      onResume={() => setStatus('playing')}
+      readyContent={
+        <div>
+          <p className="font-fredoka text-xl mb-2">Pick your runner!</p>
+          <div className="grid grid-cols-4 gap-2 justify-items-center mb-2">
+            {CHARACTERS.map((c, i) => (
+              <button
+                key={c}
+                onClick={() => { playClick(); setCharIdx(i); }}
+                aria-label={`Runner ${c}`}
+                className={`text-3xl w-14 h-14 rounded-2xl border-2 transition-transform ${
+                  charIdx === i ? 'bg-yellow-300 border-yellow-200 scale-110' : 'bg-white/15 border-white/20'
+                }`}
               >
-                <h2 className="text-2xl md:text-3xl font-fredoka font-bold text-white mb-1">Pick your runner!</h2>
-                <div className="flex flex-wrap gap-2 justify-center my-3 max-w-md">
-                  {CHARACTERS.map((c, i) => (
-                    <button
-                      key={c}
-                      onClick={() => setCharIdx(i)}
-                      className={`text-3xl w-14 h-14 rounded-2xl border-2 transition-all ${
-                        charIdx === i ? 'bg-yellow-300 border-yellow-500 scale-110' : 'bg-white/80 border-white/40'
-                      }`}
-                    >
-                      {c}
-                    </button>
-                  ))}
-                </div>
-                <p className="font-nunito text-white/80 text-sm mb-3">
-                  Runner {CHARACTERS[charIdx]} + buddy {BUDDIES[charIdx % BUDDIES.length]}
-                </p>
-                <button
-                  onClick={handleJumpDown}
-                  className="btn-kid text-xl px-8 py-3"
-                >
-                  ▶️ Start Running!
-                </button>
-                <p className="font-nunito text-white/60 text-xs mt-3">Press SPACE or tap to jump</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Game over overlay */}
-          <AnimatePresence>
-            {status === 'over' && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-purple-900/80 flex flex-col items-center justify-center text-center p-4"
-              >
-                <motion.div initial={{ scale: 0.7 }} animate={{ scale: 1 }} className="text-5xl mb-1">
-                  {over.isHigh ? '🏆' : '💥'}
-                </motion.div>
-                <h2 className="text-2xl md:text-3xl font-fredoka font-bold text-white">
-                  {over.isHigh ? 'NEW HIGH SCORE!' : 'Game Over!'}
-                </h2>
-                <div className="flex gap-4 my-3">
-                  <div className="bg-white/15 rounded-xl px-4 py-2">
-                    <p className="font-fredoka text-2xl font-bold text-yellow-300">{over.score}</p>
-                    <p className="font-nunito text-white/70 text-xs">SCORE</p>
-                  </div>
-                  <div className="bg-white/15 rounded-xl px-4 py-2">
-                    <p className="font-fredoka text-2xl font-bold text-yellow-300">🪙 {over.coins}</p>
-                    <p className="font-nunito text-white/70 text-xs">COINS</p>
-                  </div>
-                  <div className="bg-white/15 rounded-xl px-4 py-2">
-                    <p className="font-fredoka text-2xl font-bold text-green-300">+{over.xp}</p>
-                    <p className="font-nunito text-white/70 text-xs">XP</p>
-                  </div>
-                </div>
-                <p className="font-nunito text-white/80 text-sm mb-3">Best: {over.high}</p>
-                <div className="flex gap-3">
-                  <button onClick={handleJumpDown} className="btn-kid px-6 py-2">🔄 Run Again</button>
-                  <button onClick={() => setGameState('game_mode')} className="btn-kid-secondary px-6 py-2">🏠 Home</button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Live HUD chips */}
-        {status === 'playing' && (
-          <div className="flex justify-center gap-3 mt-3">
-            <span className="bg-white rounded-full px-4 py-1 shadow font-fredoka text-purple-600">⭐ {hud.score}</span>
-            <span className="bg-white rounded-full px-4 py-1 shadow font-fredoka text-yellow-600">🪙 {hud.coins}</span>
-            {hud.combo >= 5 && (
-              <span className="bg-orange-100 rounded-full px-4 py-1 shadow font-fredoka text-orange-600">
-                🔥 x{1 + Math.floor(hud.combo / 5)}
-              </span>
-            )}
+                {c}
+              </button>
+            ))}
           </div>
-        )}
-
-        {/* Mobile controls */}
-        <div className="flex gap-3 mt-4 md:hidden">
-          <button
-            onPointerDown={(e) => { e.preventDefault(); handleJumpDown(); }}
-            className="flex-1 py-5 bg-gradient-to-b from-purple-400 to-purple-600 text-white rounded-2xl font-fredoka font-bold text-xl shadow-lg active:scale-95"
-          >
-            ⬆️ JUMP
-          </button>
-          <button
-            onPointerDown={(e) => { e.preventDefault(); controlsRef.current?.duckDown(); }}
-            onPointerUp={(e) => { e.preventDefault(); controlsRef.current?.duckUp(); }}
-            onPointerLeave={() => controlsRef.current?.duckUp()}
-            className="flex-1 py-5 bg-gradient-to-b from-blue-400 to-blue-600 text-white rounded-2xl font-fredoka font-bold text-xl shadow-lg active:scale-95"
-          >
-            ⬇️ DUCK
-          </button>
-        </div>
-
-        {/* Power-up legend */}
-        <div className="mt-4 bg-white rounded-2xl p-4 shadow border-2 border-purple-100">
-          <h3 className="font-fredoka font-bold text-purple-600 mb-2 text-center">✨ Power-Ups</h3>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-center">
+          <p className="font-nunito text-base text-violet-200 mb-3">
+            Runner {CHARACTERS[charIdx]} + buddy {BUDDIES[charIdx % BUDDIES.length]}
+          </p>
+          <ul className="text-left font-nunito text-base text-violet-100 space-y-1 mb-2">
+            <li>⬆️ <b>JUMP</b> over 🌵 — tap the screen or swipe up</li>
+            <li>⬇️ <b>DUCK</b> under 🐦 — hold DUCK or swipe down</li>
+            <li>🪙 Grab coins in a row for a combo!</li>
+          </ul>
+          <div className="grid grid-cols-5 gap-1">
             {(Object.keys(POWER_INFO) as PowerKind[]).map(k => (
-              <div key={k} className="bg-purple-50 rounded-xl p-2">
+              <div key={k} className="rounded-xl bg-white/10 py-1">
                 <div className="text-2xl">{POWER_INFO[k].emoji}</div>
-                <div className="font-fredoka text-xs text-gray-600">{POWER_INFO[k].label}</div>
+                <div className="font-nunito text-[13px] leading-tight text-violet-100">{POWER_INFO[k].label.replace('!', '')}</div>
               </div>
             ))}
           </div>
-          <p className="font-nunito text-gray-400 text-xs text-center mt-2">
-            🌵 Jump over cactus · 🐦 Duck under birds · 🪙 Chain coins for combos!
-          </p>
+        </div>
+      }
+    >
+      <div ref={areaRef} className="absolute inset-0 game-surface flex flex-col items-center justify-center gap-3 p-3">
+        <canvas
+          ref={canvasRef}
+          onPointerDown={() => { if (running) jump(); }}
+          className="block rounded-2xl border-2 border-fuchsia-400/40 shadow-2xl bg-sky-200"
+          style={{ width: 'min(100%, calc((100dvh - 230px) * 2))', aspectRatio: '2 / 1' }}
+        />
+        <div className="flex gap-4 w-full" style={{ maxWidth: 'min(100%, calc((100dvh - 230px) * 2))' }}>
+          <button
+            onPointerDown={e => { e.preventDefault(); engineRef.current?.duckHold(true); }}
+            onPointerUp={() => engineRef.current?.duckHold(false)}
+            onPointerCancel={() => engineRef.current?.duckHold(false)}
+            onPointerLeave={() => engineRef.current?.duckHold(false)}
+            onContextMenu={e => e.preventDefault()}
+            disabled={!running}
+            className="flex-1 min-h-[88px] rounded-3xl bg-gradient-to-b from-sky-400 to-blue-600 font-fredoka text-3xl shadow-lg active:scale-95 disabled:opacity-40"
+          >
+            ⬇️ DUCK
+          </button>
+          <button
+            onPointerDown={e => { e.preventDefault(); jump(); }}
+            onContextMenu={e => e.preventDefault()}
+            disabled={!running}
+            className="flex-1 min-h-[88px] rounded-3xl bg-gradient-to-b from-fuchsia-400 to-purple-600 font-fredoka text-3xl shadow-lg active:scale-95 disabled:opacity-40"
+          >
+            ⬆️ JUMP
+          </button>
         </div>
       </div>
-    </motion.div>
+    </GameShell>
   );
-};
-
-export default KPopRushGame;
+}

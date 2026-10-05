@@ -229,7 +229,7 @@ const AgentHQ: React.FC = () => {
       { id: 'dec3', emoji: '🔓', label: 'Crack 3 secret codes', done: solved >= 3, prog: `${Math.min(solved, 3)}/3` },
       { id: 'dec10', emoji: '🗝️', label: 'Crack 10 secret codes', done: solved >= 10, prog: `${Math.min(solved, 10)}/10` },
       { id: 'lvl1', emoji: '⭐', label: `Reach ${LEVEL_NAMES[1]} rank`, done: level >= 1, prog: `${xp} XP` },
-      { id: 'win1', emoji: '🏆', label: 'Win 1 Arena battle', done: arenaWins >= 1, prog: `${arenaWins} wins` },
+      { id: 'win1', emoji: '🏆', label: 'Win 1 Arena battle', done: arenaWins >= 1, prog: arenaWins >= 1 ? '✓' : '0/1' },
       { id: 'sty1', emoji: '🎨', label: 'Save a Style Studio look', done: styleSaves >= 1, prog: `${styleSaves} saved` },
       { id: 'nin1', emoji: '🥷', label: 'Score 100+ in Ninja Slice', done: ninjaBest >= 100, prog: `Best: ${ninjaBest}` },
       { id: 'day3', emoji: '🔥', label: 'Play on 3 different days', done: days >= 3, prog: `${days} ${days === 1 ? 'day' : 'days'}` },
