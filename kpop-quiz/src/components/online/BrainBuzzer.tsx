@@ -8,8 +8,8 @@ const BrainBuzzer: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, c
   return (
     <TapRace
       room={room}
-      gp="bb"
-      title="Brain Buzzer"
+      gp="tf"
+      title="True or False Race"
       icon="🎯"
       themeClass="from-rose-950 via-red-950 to-orange-950"
       accent="text-rose-300"

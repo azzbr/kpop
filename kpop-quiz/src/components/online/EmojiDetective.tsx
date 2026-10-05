@@ -20,7 +20,7 @@ const EmojiDetective: React.FC<{ room: RoomApi }> = ({ room }) => (
     renderPrompt={({ prompt, hint, len }) => (
       <div className="text-center">
         <div className="text-6xl md:text-7xl mb-3 tracking-wide leading-tight">{prompt}</div>
-        <div className="font-nunito text-fuchsia-200 text-sm">
+        <div className="font-nunito text-fuchsia-200 text-lg">
           {hint ? `Hint: ${hint} · ` : ''}{len} letters
         </div>
       </div>

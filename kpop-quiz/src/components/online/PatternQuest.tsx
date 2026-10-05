@@ -121,6 +121,7 @@ const PatternQuest: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, 
     <GuessRace
       room={room}
       gp="pq"
+      answerKind="digits"
       title="Pattern Quest"
       icon="🔢"
       themeClass="from-purple-950 via-violet-950 to-indigo-950"
@@ -132,7 +133,7 @@ const PatternQuest: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, 
       renderPrompt={({ prompt }) => (
         <div className="text-center">
           <div className="font-fredoka font-bold text-3xl md:text-5xl tracking-wide">{prompt}</div>
-          <div className="font-nunito text-violet-200 text-sm mt-2">Find the next number in the pattern</div>
+          <div className="font-nunito text-violet-200 text-lg mt-2">Find the next number in the pattern</div>
         </div>
       )}
     />

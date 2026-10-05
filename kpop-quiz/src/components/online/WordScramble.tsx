@@ -6,8 +6,9 @@ import { pickScrambleWords, scramble } from '../../online/doodleWords';
 const WordScramble: React.FC<{ room: RoomApi }> = ({ room }) => (
   <GuessRace
     room={room}
-    gp="ws"
-    title="Word Scramble"
+    gp="scr"
+    fuzzy={false}
+    title="Scramble Race"
     icon="🔤"
     themeClass="from-sky-950 via-blue-950 to-indigo-950"
     accent="text-sky-300"
@@ -32,7 +33,7 @@ const WordScramble: React.FC<{ room: RoomApi }> = ({ room }) => (
             </span>
           ))}
         </div>
-        <div className="font-nunito text-sky-200 text-sm">
+        <div className="font-nunito text-sky-200 text-lg">
           Category: {prompt.category} · {len} letters
         </div>
       </div>

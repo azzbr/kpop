@@ -6,7 +6,7 @@ import { pickRiddles } from '../../online/riddles';
 const RiddleRush: React.FC<{ room: RoomApi }> = ({ room }) => (
   <GuessRace
     room={room}
-    gp="rr"
+    gp="rid"
     title="Riddle Rush"
     icon="🧩"
     themeClass="from-emerald-950 via-teal-950 to-cyan-950"
@@ -21,7 +21,7 @@ const RiddleRush: React.FC<{ room: RoomApi }> = ({ room }) => (
       <div className="text-center">
         <div className="text-4xl mb-3">🧩</div>
         <p className="font-fredoka text-xl md:text-2xl mb-3 leading-snug">{prompt}</p>
-        <div className="font-nunito text-emerald-200 text-sm">
+        <div className="font-nunito text-emerald-200 text-lg">
           {hint ? `Hint: ${hint} · ` : ''}{len} letters
         </div>
       </div>

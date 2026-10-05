@@ -51,10 +51,10 @@ const GAMES: { id: GameId; icon: string; title: string; desc: string; min: numbe
   { id: 'rocket_race', icon: '🚀', title: 'Rocket Tap Race', desc: 'Mash to blast off! Every rocket races on screen — first to the moon!', min: 2, max: 30, tag: 'whole class!' },
   { id: 'copy_cat', icon: '🧠', title: 'Copy Cat', desc: 'Watch the pattern, repeat it perfectly. One slip = out. Last one standing wins!', min: 2, max: 30, tag: 'whole class!' },
   { id: 'emoji_detective', icon: '🕵️', title: 'Emoji Detective', desc: 'Crack the emoji puzzle — 🦁👑, 🌧️🏹 — and race to type the answer first!', min: 2, max: 30, tag: 'whole class!' },
-  { id: 'word_scramble', icon: '🔤', title: 'Word Scramble', desc: 'The letters are jumbled — unscramble the word fastest to win the round!', min: 2, max: 30, tag: 'whole class!' },
+  { id: 'word_scramble', icon: '🔤', title: 'Scramble Race', desc: 'The letters are jumbled — unscramble the word fastest to win the round!', min: 2, max: 30, tag: 'whole class!' },
   { id: 'riddle_rush', icon: '🧩', title: 'Riddle Rush', desc: 'Solve the brain-teasing riddle and type your answer before your friends!', min: 2, max: 30, tag: 'whole class!' },
   { id: 'picture_phone', icon: '✏️', title: 'Picture Telephone', desc: 'Draw → guess → draw! Your word travels the room, then the silly reveal!', min: 3, max: 12, tag: 'pass it on!' },
-  { id: 'math_sprint', icon: '➗', title: 'Math Sprint', desc: 'First to solve the sum wins the round! Pick Easy, Medium or Hard.', min: 2, max: 30, tag: 'brain game!' },
+  { id: 'math_sprint', icon: '➗', title: 'Math Sprint', desc: 'First to solve the sum wins the round! Six levels, from Easy to Legend.', min: 2, max: 30, tag: 'brain game!' },
   { id: 'code_breaker', icon: '🔢', title: 'Code Breaker', desc: 'Crack the secret colour code with logic clues — everyone races!', min: 2, max: 30, tag: 'brain game!' },
   { id: 'odd_one_out', icon: '🔎', title: 'Odd One Out', desc: 'Four things appear — tap the one that doesn’t belong. Think fast!', min: 2, max: 30, tag: 'brain game!' },
   { id: 'whats_missing', icon: '🧠', title: 'What’s Missing?', desc: 'Memorise the tray, then spot which object vanished. Sharp eyes win!', min: 2, max: 30, tag: 'brain game!' },
@@ -63,7 +63,7 @@ const GAMES: { id: GameId; icon: string; title: string; desc: string; min: numbe
   { id: 'sudoku_mini', icon: '🔳', title: 'Sudoku Mini', desc: 'Fill the grid with logic — no repeats in a row, column or box. First to solve wins!', min: 2, max: 30, tag: 'brain game!' },
   { id: 'make_24', icon: '🔢', title: 'Make 24', desc: 'Combine the numbers with + − × ÷ to hit the target. Mega number puzzle!', min: 2, max: 30, tag: 'brain game!' },
   { id: 'hangman', icon: '🔡', title: 'Hangman', desc: 'Guess the hidden word letter by letter before your lives run out. Race to reveal it!', min: 2, max: 30, tag: 'brain game!' },
-  { id: 'brain_buzzer', icon: '🎯', title: 'Brain Buzzer', desc: 'TRUE or FALSE? Tap fast on maths & trivia before the buzzer. Sharp minds win!', min: 2, max: 30, tag: 'brain game!' },
+  { id: 'brain_buzzer', icon: '✅', title: 'True or False Race', desc: 'TRUE or FALSE? Tap fast on maths & trivia before the buzzer. Sharp minds win!', min: 2, max: 30, tag: 'brain game!' },
   { id: 'minesweeper', icon: '💣', title: 'Minesweeper', desc: 'Use the number clues to dodge the hidden mines and clear the field first!', min: 2, max: 30, tag: 'brain game!' },
   { id: 'sliding_puzzle', icon: '🧩', title: 'Sliding Puzzle', desc: 'Slide the jumbled tiles back into order. First to solve the puzzle wins!', min: 2, max: 30, tag: 'brain game!' },
   { id: 'colour_clash', icon: '🌈', title: 'Colour Clash', desc: 'Tap the COLOUR of the word, not the word itself! Brain-bending and fast.', min: 2, max: 30, tag: 'brain game!' },
@@ -187,6 +187,9 @@ const OnlineHub: React.FC = () => {
     const before = prevHost.current;
     prevHost.current = room.hostId;
     if (!before || !room.hostId || before === room.hostId) return;
+    // Only a real hand-over counts: when presence arrives out of order a device can briefly
+    // think it's the host before the real (earlier-joined) host shows up. No toast for that.
+    if (room.players.some(p => p.id === before)) return;
     setHostChanged(true);
     window.setTimeout(() => setHostChanged(false), 5000);
     if (room.isHost && activeGame && !LATE_JOIN_GAMES.includes(activeGame)) room.send({ t: 'to_lobby' });

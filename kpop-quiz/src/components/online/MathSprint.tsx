@@ -87,12 +87,13 @@ const MathSprint: React.FC<{ room: RoomApi; config?: GameConfig }> = ({ room, co
   return (
     <GuessRace
       room={room}
-      gp="ms"
+      gp="msp"
+      answerKind="digits"
       title="Math Sprint"
       icon="➗"
       themeClass="from-blue-950 via-indigo-950 to-violet-950"
       accent="text-cyan-300"
-      inputPlaceholder="Type the answer…"
+      inputPlaceholder="Tap the answer…"
       roundMs={20000}
       rounds={12}
       buildRounds={() => makeMathRounds(difficulty, 12)}
