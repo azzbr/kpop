@@ -1,285 +1,276 @@
-import React, { useState, useEffect } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { localDateKey } from '../utils/dates';
 import { useSafeTimeout } from '../utils/useSafeTimeout';
-import { playClick, playPop, playWin, playUnlock } from '../utils/sounds';
+import { playClick, playPop, playUnlock, playWin, playTick } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
+import ScreenFrame from './ui/ScreenFrame';
+import {
+  MODELS, HATS, OUTFITS, SHOES, ACCESSORIES, BACKDROPS, DEFAULT_LOOK, JUDGES, MAX_REWARDED_PER_DAY, STYLE_XP_SCALE,
+  scoreLook, vibeOf, rewardCheck, recordReward, rewardsLeft, parseLog, sanitizeLook,
+  type Look, type RunwayResult, type StrutLog,
+} from './styleStudioLogic';
 
-const MODELS = ['👩', '🧑‍🎤', '👸', '🦸‍♀️', '🧚‍♀️', '👩‍🎤', '🧙‍♀️', '👩‍🦰', '👩‍🦱'];
-const HATS = ['—', '👑', '🎀', '🎩', '👒', '🧢', '⛑️', '🪖', '🎓'];
-const OUTFITS = ['👗', '👘', '🥻', '👚', '👕', '🎽', '🥋', '🦺', '🥼'];
-const SHOES = ['👠', '👟', '🥿', '👢', '🩴', '🥾', '🩰', '👞'];
-const ACCESSORIES = ['—', '✨', '💎', '🌹', '🎤', '⭐', '💖', '🎁', '🪄', '🌸', '🦋', '🍭'];
-const BACKDROPS = [
-  { name: 'Sunset',  grad: 'from-orange-200 via-pink-200 to-purple-300' },
-  { name: 'Beach',   grad: 'from-sky-200 via-cyan-200 to-yellow-200' },
-  { name: 'Stage',   grad: 'from-purple-900 via-fuchsia-700 to-pink-600' },
-  { name: 'Garden',  grad: 'from-green-200 via-emerald-200 to-pink-200' },
-  { name: 'Galaxy',  grad: 'from-indigo-900 via-purple-800 to-fuchsia-700' },
-  { name: 'Cafe',    grad: 'from-amber-100 via-orange-200 to-rose-200' },
-];
+// Style Studio — dress up, then a runway round: Strut → three judges score the look → done.
+// Reward: finishRound('style_studio', score, STYLE_XP_SCALE) only for a look never rewarded before,
+// at most MAX_REWARDED_PER_DAY times a day (log in STRUT_KEY). Saving a look gives no XP.
 
-// "Vibe" themed combos that grant bonus
-const VIBES: { name: string; emoji: string; check: (s: Look) => boolean; bonus: number }[] = [
-  { name: 'Royal', emoji: '👑', check: s => s.hat === '👑' && (s.outfit === '👗' || s.outfit === '👘'), bonus: 30 },
-  { name: 'Stage Idol', emoji: '🎤', check: s => s.accessory === '🎤' && s.bg === 2, bonus: 35 },
-  { name: 'Galaxy Hero', emoji: '🦸‍♀️', check: s => s.model === '🦸‍♀️' && s.bg === 4, bonus: 30 },
-  { name: 'Beach Babe', emoji: '🌺', check: s => s.shoes === '🩴' && s.bg === 1, bonus: 25 },
-  { name: 'Sparkle Fairy', emoji: '🧚‍♀️', check: s => s.model === '🧚‍♀️' && s.accessory === '✨', bonus: 30 },
-  { name: 'Sweetheart', emoji: '💖', check: s => s.accessory === '💖' && (s.outfit === '👗' || s.outfit === '🥻'), bonus: 20 },
-];
+const GAME_ID = 'style_studio';
+const LOOKS_KEY = 'style_looks';
+const SAVES_KEY = 'style_saves'; // read by Agent HQ
+const STRUT_KEY = 'funquest-style_studio-struts';
 
-interface Look {
-  model: string; hat: string; outfit: string; shoes: string; accessory: string; bg: number;
+function loadLooks(): Look[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(LOOKS_KEY) || '[]');
+    return Array.isArray(raw) ? raw.map(sanitizeLook).filter((l): l is Look => !!l) : [];
+  } catch { return []; }
+}
+function storeLooks(looks: Look[]) {
+  try {
+    localStorage.setItem(LOOKS_KEY, JSON.stringify(looks));
+    localStorage.setItem(SAVES_KEY, String(looks.length));
+  } catch { /* storage blocked */ }
+}
+function loadLog(today: string): StrutLog {
+  try { return parseLog(JSON.parse(localStorage.getItem(STRUT_KEY) || 'null'), today); } catch { return parseLog(null, today); }
 }
 
-const defaultLook: Look = {
-  model: MODELS[0], hat: HATS[0], outfit: OUTFITS[0], shoes: SHOES[0], accessory: ACCESSORIES[0], bg: 0,
-};
+type Phase = 'design' | 'runway' | 'scored';
 
-const StyleStudio: React.FC = () => {
-  const { setGameState, addXP } = useGameStore();
+function LookView({ look, small = false }: { look: Look; small?: boolean }) {
+  const bg = BACKDROPS[look.bg];
+  return (
+    <div className={`relative rounded-3xl overflow-hidden border-2 border-white/40 bg-gradient-to-b ${bg.grad}`}
+      style={{ width: small ? '100%' : '100%', height: small ? 150 : 300 }}>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        {look.hat !== '—' && <div style={{ fontSize: small ? 26 : 54, lineHeight: 1, marginBottom: -8 }}>{look.hat}</div>}
+        <div style={{ fontSize: small ? 40 : 84, lineHeight: 1 }}>{look.model}</div>
+        <div style={{ fontSize: small ? 34 : 66, lineHeight: 1, marginTop: -6 }}>{look.outfit}</div>
+        <div style={{ fontSize: small ? 22 : 42, lineHeight: 1, marginTop: -4 }}>{look.shoes}</div>
+      </div>
+      {look.accessory !== '—' && (
+        <div className="absolute" style={{ right: small ? 8 : 18, bottom: small ? 34 : 84, fontSize: small ? 24 : 44 }}>{look.accessory}</div>
+      )}
+      {!small && <div className="absolute top-2 left-2 bg-black/40 px-3 py-1 rounded-full font-nunito text-base text-white">{bg.name}</div>}
+    </div>
+  );
+}
+
+export default function StyleStudio() {
   const later = useSafeTimeout();
-  const [look, setLook] = useState<Look>(defaultLook);
-  const [savedLooks, setSavedLooks] = useState<Look[]>(() => {
-    try { return JSON.parse(localStorage.getItem('style_looks') || '[]'); } catch { return []; }
-  });
+  const [look, setLook] = useState<Look>(DEFAULT_LOOK);
+  const [savedLooks, setSavedLooks] = useState<Look[]>(loadLooks);
   const [tab, setTab] = useState<'design' | 'closet'>('design');
-  const [strut, setStrut] = useState(false);
+  const [phase, setPhase] = useState<Phase>('design');
+  const [result, setResult] = useState<RunwayResult | null>(null);
+  const [shown, setShown] = useState(0);
+  const [reward, setReward] = useState<{ xp: number; coins: number; isBest: boolean } | null>(null);
+  const [noReward, setNoReward] = useState<'seen' | 'limit' | null>(null);
   const [confetti, setConfetti] = useState(false);
-  const [vibeMatched, setVibeMatched] = useState<typeof VIBES[0] | null>(null);
-  const [showVibePop, setShowVibePop] = useState(false);
+  const [log, setLog] = useState<StrutLog>(() => loadLog(localDateKey()));
+  const [savedMsg, setSavedMsg] = useState(false);
+  const runId = useRef(0);
 
-  useEffect(() => {
-    const match = VIBES.find(v => v.check(look));
-    setVibeMatched(match || null);
-  }, [look]);
+  const vibe = vibeOf(look);
+  const today = localDateKey();
+  const left = rewardsLeft(log, today);
 
-  const cycle = (key: keyof Look, options: (string | number)[], dir: 1 | -1) => {
-    playPop();
-    setLook(l => {
-      const cur = options.indexOf(l[key] as never);
-      const next = (cur + dir + options.length) % options.length;
-      return { ...l, [key]: options[next] };
-    });
+  const change = (patch: Partial<Look>) => { playPop(); setLook(l => ({ ...l, ...patch })); setSavedMsg(false); };
+  const cycle = <K extends 'model' | 'hat' | 'outfit' | 'shoes' | 'accessory'>(key: K, options: string[], dir: 1 | -1) => {
+    const i = options.indexOf(look[key]);
+    change({ [key]: options[(i + dir + options.length) % options.length] } as Partial<Look>);
   };
 
   const randomize = () => {
+    const r = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
     playClick();
-    setLook({
-      model: MODELS[Math.floor(Math.random() * MODELS.length)],
-      hat: HATS[Math.floor(Math.random() * HATS.length)],
-      outfit: OUTFITS[Math.floor(Math.random() * OUTFITS.length)],
-      shoes: SHOES[Math.floor(Math.random() * SHOES.length)],
-      accessory: ACCESSORIES[Math.floor(Math.random() * ACCESSORIES.length)],
-      bg: Math.floor(Math.random() * BACKDROPS.length),
-    });
+    setLook({ model: r(MODELS), hat: r(HATS), outfit: r(OUTFITS), shoes: r(SHOES), accessory: r(ACCESSORIES), bg: Math.floor(Math.random() * BACKDROPS.length) });
+    setSavedMsg(false);
   };
 
   const saveLook = () => {
-    const newLooks = [look, ...savedLooks].slice(0, 24);
-    setSavedLooks(newLooks);
-    localStorage.setItem('style_looks', JSON.stringify(newLooks));
-    localStorage.setItem('style_saves', String(newLooks.length));
     playUnlock();
-    addXP(10);
+    const next = [look, ...savedLooks].slice(0, 24);
+    setSavedLooks(next);
+    storeLooks(next);
+    setSavedMsg(true);
   };
 
-  const doStrut = () => {
-    playWin();
-    setStrut(true);
-    setConfetti(true);
-    const bonus = vibeMatched ? vibeMatched.bonus : 0;
-    addXP(20 + bonus);
-    if (vibeMatched) { setShowVibePop(true); later(() => setShowVibePop(false), 1800); }
-    later(() => { setStrut(false); setConfetti(false); }, 2800);
+  const strut = () => {
+    if (phase !== 'design') return;
+    playClick();
+    const res = scoreLook(look);
+    const day = localDateKey();
+    const fresh = loadLog(day);
+    const check = rewardCheck(fresh, look, day);
+    setResult(res);
+    setShown(0);
+    setReward(null);
+    setNoReward(check.ok ? null : check.reason ?? null);
+    setPhase('runway');
+    // The reward is decided and given now (once), so leaving the runway early can't skip or repeat it.
+    if (check.ok) {
+      const r = useGameStore.getState().finishRound(GAME_ID, res.score, STYLE_XP_SCALE);
+      const nextLog = recordReward(fresh, look, day);
+      try { localStorage.setItem(STRUT_KEY, JSON.stringify(nextLog)); } catch { /* ignore */ }
+      setLog(nextLog);
+      setReward({ xp: r.xp, coins: r.coins, isBest: r.isBest });
+    }
+    // Runway walk, then the judges one by one, then the total.
+    const id = ++runId.current;
+    JUDGES.forEach((_, i) => later(() => { if (runId.current === id) { playTick(); setShown(i + 1); } }, 1600 + i * 600));
+    later(() => {
+      if (runId.current !== id) return;
+      setPhase('scored');
+      playWin();
+      setConfetti(true);
+      later(() => setConfetti(false), 2500);
+    }, 1600 + JUDGES.length * 600 + 300);
   };
 
-  const renderModel = (lookData: Look, size: 'big' | 'small' = 'big') => {
-    const isSmall = size === 'small';
-    const bg = BACKDROPS[lookData.bg];
-    return (
-      <div className={`relative rounded-3xl overflow-hidden border-2 border-pink-300 shadow-inner bg-gradient-to-b ${bg.grad}`}
-           style={{ width: isSmall ? 110 : '100%', height: isSmall ? 140 : 280 }}>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          {lookData.hat !== '—' && (
-            <div style={{ fontSize: isSmall ? 24 : 50, lineHeight: 1, marginBottom: -8 }}>{lookData.hat}</div>
-          )}
-          <div style={{ fontSize: isSmall ? 38 : 80, lineHeight: 1 }}>{lookData.model}</div>
-          <div style={{ fontSize: isSmall ? 32 : 64, lineHeight: 1, marginTop: -6 }}>{lookData.outfit}</div>
-          <div style={{ fontSize: isSmall ? 20 : 40, lineHeight: 1, marginTop: -4 }}>{lookData.shoes}</div>
-        </div>
-        {lookData.accessory !== '—' && (
-          <div className="absolute" style={{ right: isSmall ? 6 : 14, bottom: isSmall ? 30 : 80, fontSize: isSmall ? 22 : 40 }}>
-            {lookData.accessory}
-          </div>
-        )}
-        {!isSmall && (
-          <div className="absolute top-2 left-2 bg-white/70 px-2 py-0.5 rounded-full font-nunito text-xs text-pink-700">
-            {bg.name}
-          </div>
-        )}
-      </div>
-    );
-  };
+  const backToDesign = () => { playClick(); runId.current++; setPhase('design'); setResult(null); setConfetti(false); };
 
-  const slotPicker = (label: string, key: keyof Look, options: (string | number)[]) => (
-    <div className="bg-white/70 border-2 border-pink-200 rounded-2xl p-2">
-      <div className="text-xs font-fredoka text-pink-600 mb-1">{label}</div>
-      <div className="flex items-center justify-between gap-2">
-        <button onClick={() => cycle(key, options, -1)} className="w-8 h-8 bg-pink-200 hover:bg-pink-300 rounded-full font-fredoka text-pink-700 active:scale-95">◀</button>
-        <div className="text-3xl">
-          {key === 'bg' ? `🖼️` : look[key] === '—' ? <span className="text-pink-300 text-base">none</span> : (look[key] as string)}
-        </div>
-        <button onClick={() => cycle(key, options, 1)} className="w-8 h-8 bg-pink-200 hover:bg-pink-300 rounded-full font-fredoka text-pink-700 active:scale-95">▶</button>
+  const picker = (label: string, value: ReactNode, onPrev: () => void, onNext: () => void) => (
+    <div className="rounded-2xl bg-white/10 border border-white/15 p-2">
+      <div className="font-fredoka text-base text-violet-100 mb-1 text-center">{label}</div>
+      <div className="flex items-center justify-between gap-1">
+        <button onClick={onPrev} aria-label={`Previous ${label}`}
+          className="w-12 h-12 shrink-0 rounded-full bg-white/15 active:bg-white/30 font-fredoka text-xl">◀</button>
+        <div className="text-4xl text-center min-w-0 truncate">{value}</div>
+        <button onClick={onNext} aria-label={`Next ${label}`}
+          className="w-12 h-12 shrink-0 rounded-full bg-white/15 active:bg-white/30 font-fredoka text-xl">▶</button>
       </div>
     </div>
   );
+  const none = <span className="font-nunito text-lg text-white/60">none</span>;
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="min-h-screen flex flex-col items-center p-4"
-      style={{ background: 'linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%)' }}
-    >
-      {confetti && <ConfettiBurst count={80} durationMs={2800} />}
+    <ScreenFrame title="Style Studio" icon="👗" width="max-w-4xl"
+      onBack={phase !== 'design' ? backToDesign : undefined}
+      right={<span className="font-fredoka text-base bg-white/15 rounded-full px-3 py-2 shrink-0" title="Rewarded struts left today">🎟️ {left}/{MAX_REWARDED_PER_DAY}</span>}>
+      {confetti && <ConfettiBurst count={80} durationMs={2500} />}
 
-      <div className="max-w-md w-full mx-auto">
-        <button onClick={() => { playClick(); setGameState('game_mode'); }}
-          className="mb-3 px-4 py-2 bg-white/70 hover:bg-white text-pink-700 rounded-full font-fredoka text-sm border-2 border-pink-200">
-          ← Back
-        </button>
-
-        <div className="text-center mb-3">
-          <h1 className="text-3xl font-fredoka font-bold text-pink-700">👗 Style Studio</h1>
-          <p className="font-nunito text-pink-500 text-sm">Mix, match & strut!</p>
+      {phase === 'design' && (
+        <div className="grid grid-cols-2 gap-2 mb-4 max-w-md mx-auto">
+          {(['design', 'closet'] as const).map(t => (
+            <button key={t} onClick={() => { playClick(); setTab(t); }}
+              className={`min-h-[52px] rounded-full font-fredoka text-xl ${tab === t ? 'bg-fuchsia-500' : 'bg-white/10 active:bg-white/20'}`}>
+              {t === 'design' ? '✨ Design' : `👜 Closet (${savedLooks.length})`}
+            </button>
+          ))}
         </div>
+      )}
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-4 bg-white/70 rounded-2xl p-1 border-2 border-pink-200">
-          <button onClick={() => { playClick(); setTab('design'); }}
-            className={`flex-1 py-2 rounded-xl font-fredoka text-sm ${tab === 'design' ? 'bg-pink-500 text-white' : 'text-pink-600'}`}>
-            ✨ Design
-          </button>
-          <button onClick={() => { playClick(); setTab('closet'); }}
-            className={`flex-1 py-2 rounded-xl font-fredoka text-sm ${tab === 'closet' ? 'bg-pink-500 text-white' : 'text-pink-600'}`}>
-            👜 Closet ({savedLooks.length})
-          </button>
-        </div>
-
-        {tab === 'design' && (
-          <>
-            {/* Preview */}
-            <motion.div
-              animate={strut ? { x: [0, 20, -20, 15, -15, 0], rotate: [0, -3, 3, -2, 2, 0] } : {}}
-              transition={{ duration: 1.8 }}
-              className="mb-3"
-            >
-              {renderModel(look)}
-            </motion.div>
-
-            {/* Vibe indicator */}
+      {phase === 'design' && tab === 'design' && (
+        <div className="grid md:grid-cols-2 gap-4 items-start">
+          <div>
+            <LookView look={look} />
             <AnimatePresence>
-              {vibeMatched && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="bg-yellow-200 border-2 border-yellow-400 rounded-2xl p-2 text-center mb-3"
-                >
-                  <p className="font-fredoka font-bold text-yellow-800 text-sm">
-                    ✨ VIBE MATCH: {vibeMatched.emoji} {vibeMatched.name}! +{vibeMatched.bonus} XP bonus on Strut!
-                  </p>
-                </motion.div>
+              {vibe && (
+                <motion.p initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  className="mt-2 rounded-2xl bg-yellow-300 text-stone-900 font-fredoka text-lg text-center py-2">
+                  ✨ Vibe match: {vibe.emoji} {vibe.name}! Bonus on the runway
+                </motion.p>
               )}
             </AnimatePresence>
-
-            {/* Slot pickers */}
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              {slotPicker('Model', 'model', MODELS)}
-              {slotPicker('Hat', 'hat', HATS)}
-              {slotPicker('Outfit', 'outfit', OUTFITS)}
-              {slotPicker('Shoes', 'shoes', SHOES)}
-              {slotPicker('Accessory', 'accessory', ACCESSORIES)}
-              <div className="bg-white/70 border-2 border-pink-200 rounded-2xl p-2">
-                <div className="text-xs font-fredoka text-pink-600 mb-1">Backdrop</div>
-                <div className="flex items-center justify-between gap-2">
-                  <button onClick={() => { playPop(); setLook(l => ({ ...l, bg: (l.bg - 1 + BACKDROPS.length) % BACKDROPS.length })); }}
-                    className="w-8 h-8 bg-pink-200 hover:bg-pink-300 rounded-full text-pink-700">◀</button>
-                  <span className="font-fredoka text-pink-600 text-sm">{BACKDROPS[look.bg].name}</span>
-                  <button onClick={() => { playPop(); setLook(l => ({ ...l, bg: (l.bg + 1) % BACKDROPS.length })); }}
-                    className="w-8 h-8 bg-pink-200 hover:bg-pink-300 rounded-full text-pink-700">▶</button>
-                </div>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="grid grid-cols-3 gap-2 mb-3">
-              <button onClick={randomize} className="py-3 bg-purple-500 text-white rounded-2xl font-fredoka shadow active:scale-95">🎲 Random</button>
-              <button onClick={() => { playClick(); saveLook(); }} className="py-3 bg-pink-500 text-white rounded-2xl font-fredoka shadow active:scale-95">💾 Save</button>
-              <button onClick={doStrut} className="py-3 bg-gradient-to-r from-fuchsia-500 to-pink-500 text-white rounded-2xl font-fredoka font-bold shadow active:scale-95">💃 Strut!</button>
-            </div>
-          </>
-        )}
-
-        {tab === 'closet' && (
-          <div>
-            {savedLooks.length === 0 ? (
-              <div className="bg-white/70 border-2 border-pink-200 rounded-2xl p-8 text-center">
-                <div className="text-4xl mb-2">👜</div>
-                <p className="font-fredoka text-pink-700">Your closet is empty!</p>
-                <p className="font-nunito text-pink-500 text-sm">Design and save looks to fill it up ✨</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-2">
-                {savedLooks.map((l, i) => (
-                  <motion.button
-                    key={i}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => { setLook(l); setTab('design'); playPop(); }}
-                    className="relative"
-                  >
-                    {renderModel(l, 'small')}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const next = savedLooks.filter((_, j) => j !== i);
-                        setSavedLooks(next);
-                        localStorage.setItem('style_looks', JSON.stringify(next));
-                        localStorage.setItem('style_saves', String(next.length));
-                        playClick();
-                      }}
-                      className="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center"
-                    >
-                      ×
-                    </button>
-                  </motion.button>
-                ))}
-              </div>
-            )}
           </div>
-        )}
+          <div>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              {picker('Player', look.model, () => cycle('model', MODELS, -1), () => cycle('model', MODELS, 1))}
+              {picker('Hat', look.hat === '—' ? none : look.hat, () => cycle('hat', HATS, -1), () => cycle('hat', HATS, 1))}
+              {picker('Outfit', look.outfit, () => cycle('outfit', OUTFITS, -1), () => cycle('outfit', OUTFITS, 1))}
+              {picker('Shoes', look.shoes, () => cycle('shoes', SHOES, -1), () => cycle('shoes', SHOES, 1))}
+              {picker('Extra', look.accessory === '—' ? none : look.accessory, () => cycle('accessory', ACCESSORIES, -1), () => cycle('accessory', ACCESSORIES, 1))}
+              {picker('Backdrop', <span className="font-fredoka text-lg">{BACKDROPS[look.bg].name}</span>,
+                () => change({ bg: (look.bg - 1 + BACKDROPS.length) % BACKDROPS.length }),
+                () => change({ bg: (look.bg + 1) % BACKDROPS.length }))}
+            </div>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <button onClick={randomize} className="min-h-[52px] rounded-2xl bg-violet-500 active:bg-violet-600 font-fredoka text-lg">🎲 Random</button>
+              <button onClick={saveLook} disabled={savedMsg} className="min-h-[52px] rounded-2xl bg-sky-500 active:bg-sky-600 font-fredoka text-lg disabled:opacity-60">
+                {savedMsg ? '✅ Saved' : '💾 Save look'}
+              </button>
+            </div>
+            <button onClick={strut}
+              className="w-full min-h-[60px] rounded-full bg-gradient-to-r from-yellow-300 to-amber-400 text-stone-900 font-fredoka text-2xl shadow-lg active:scale-95">
+              💃 Strut the runway!
+            </button>
+            <p className="font-nunito text-base text-violet-100 text-center mt-2">
+              {left > 0 ? `New outfits earn XP on the runway (${left} left today).` : 'Runway rewards are done for today. Strut just for fun!'}
+            </p>
+          </div>
+        </div>
+      )}
 
-        {/* Vibe pop */}
-        <AnimatePresence>
-          {showVibePop && vibeMatched && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="fixed inset-0 flex items-center justify-center pointer-events-none z-50"
-            >
-              <div className="bg-gradient-to-r from-yellow-300 to-pink-400 rounded-3xl p-6 shadow-2xl text-center border-4 border-yellow-500">
-                <div className="text-6xl mb-2">{vibeMatched.emoji}</div>
-                <p className="font-fredoka font-bold text-white text-2xl">{vibeMatched.name.toUpperCase()}!</p>
-                <p className="font-fredoka text-white text-lg">+{vibeMatched.bonus} XP bonus!</p>
+      {phase === 'design' && tab === 'closet' && (
+        savedLooks.length === 0 ? (
+          <div className="rounded-3xl bg-white/10 p-8 text-center">
+            <div className="text-5xl mb-2" aria-hidden>👜</div>
+            <p className="font-fredoka text-2xl">Your closet is empty!</p>
+            <p className="font-nunito text-lg text-violet-100">Design a look and tap Save look.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {savedLooks.map((l, i) => (
+              <div key={i} className="rounded-3xl bg-white/10 p-2">
+                <button onClick={() => { playPop(); setLook(l); setTab('design'); setSavedMsg(true); }} className="w-full block" aria-label="Wear this look">
+                  <LookView look={l} small />
+                </button>
+                <button onClick={() => {
+                  playClick();
+                  const next = savedLooks.filter((_, j) => j !== i);
+                  setSavedLooks(next);
+                  storeLooks(next);
+                }} className="mt-2 w-full min-h-[44px] rounded-full bg-rose-500/70 active:bg-rose-500 font-fredoka text-base">🗑️ Remove</button>
               </div>
+            ))}
+          </div>
+        )
+      )}
+
+      {phase !== 'design' && result && (
+        <div className="max-w-xl mx-auto text-center">
+          <motion.div initial={{ x: -40, opacity: 0 }}
+            animate={phase === 'runway' ? { x: [-40, 30, -20, 0], opacity: 1, rotate: [0, -3, 3, 0] } : { x: 0, opacity: 1 }}
+            transition={{ duration: 1.5 }}>
+            <LookView look={look} />
+          </motion.div>
+          <div className="grid grid-cols-3 gap-2 mt-4">
+            {JUDGES.map((j, i) => (
+              <div key={j.id} className="rounded-2xl bg-white/10 p-3 min-h-[120px]">
+                <div className="text-4xl" aria-hidden>{j.emoji}</div>
+                <p className="font-nunito text-base text-violet-100">{j.name}</p>
+                {shown > i
+                  ? <motion.p initial={{ scale: 0 }} animate={{ scale: 1 }} className="font-fredoka text-3xl text-yellow-200">{result.judges[i]}⭐</motion.p>
+                  : <p className="font-fredoka text-3xl text-white/40">…</p>}
+              </div>
+            ))}
+          </div>
+          {phase === 'scored' && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-3xl bg-white/10 p-4">
+              <p className="font-nunito text-lg">
+                Judges {result.judges.reduce((a, b) => a + b, 0)}
+                {result.complete && ' · complete look +2'}
+                {result.vibe && ` · ${result.vibe.emoji} ${result.vibe.name} +5`}
+              </p>
+              <p className="font-fredoka text-4xl my-1">Runway score: {result.score}</p>
+              {reward && (
+                <p className="font-fredoka text-xl text-yellow-200">
+                  +{reward.xp} XP · +{reward.coins} 🪙{reward.isBest ? ' · New best! 🏆' : ''}
+                </p>
+              )}
+              {noReward === 'seen' && <p className="font-nunito text-lg text-violet-100">This look already walked the runway. Change something to earn XP!</p>}
+              {noReward === 'limit' && <p className="font-nunito text-lg text-violet-100">You used today’s {MAX_REWARDED_PER_DAY} runway rewards. Come back tomorrow for more!</p>}
+              <button onClick={backToDesign}
+                className="mt-3 w-full min-h-[56px] rounded-full bg-gradient-to-r from-yellow-300 to-amber-400 text-stone-900 font-fredoka text-xl">
+                ✨ Design a new look
+              </button>
             </motion.div>
           )}
-        </AnimatePresence>
-      </div>
-    </motion.div>
+        </div>
+      )}
+    </ScreenFrame>
   );
-};
-
-export default StyleStudio;
+}

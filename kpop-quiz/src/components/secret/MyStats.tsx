@@ -1,29 +1,15 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { gameName as trophyName } from '../trophyRoomLogic';
 import { useGameStore, getLevel, xpToNextLevel, LEVEL_NAMES, LEVEL_THRESHOLDS } from '../../store';
 import { GAME_BADGES } from '../../data/gameBadges';
 import { SECRETS } from '../../data/secrets';
 import { localDateKey } from '../../utils/dates';
 import { playClick } from '../../utils/sounds';
+import { loadCard } from '../../data/playerCard';
+import PlayerCardView from '../PlayerCardView';
 
-/** Friendly names for game ids passed to finishRound (titles match the game grid tiles). */
-const NAMES: Record<string, string> = {
-  paper_clash: '🗺️ Paper Clash', snake_arena: '🐍 Snake Arena', kpop_rush: '🏃 Rush Runner', ninja_slice: '🥷 Ninja Slice',
-  rocket_launch: '🚀 Rocket Launch', tower_defense: '🏰 Tower Defense', battle_arena: '⚔️ Battle Arena',
-  word_guess: '🟩 Word Guess', game_2048: '🧮 2048', block_blast: '🧱 Block Blast', mini_sudoku: '🔢 Mini Sudoku',
-  zip_game: '🔗 Zip', word_ladder: '🪜 Word Ladder', crossword_mini: '📰 Crossword Mini', word_scramble: '🔤 Word Scramble',
-  pattern_memory: '🧠 Pattern Memory', memory_speed: '🃏 Speed Memory', sparkle_match: '💎 Gem Match',
-  quiz_arena: '❓ Quiz Arena', real_or_fake: '🤔 Real or Fake?', emoji_guess: '🕵️ Emoji Guess',
-  idol_personality_quiz: '🌟 Which Star Are You?', quiz_party: '🎉 Quiz Party', imposter: '🤫 Imposter',
-  tug_of_war: '🪢 Tug-of-War', heads_up: '🙆 Heads Up', would_you_rather: '🤷 Would You Rather',
-  truth_or_dare: '🎯 Truth or Dare', trivia_battle: '🛎️ Buzzer Battle', reaction_duel: '👆 Reaction Duel',
-  talent_show: '🎭 Talent Show', beat_maker: '🎛️ Beat Maker', guess_intro: '🎧 Guess the Intro',
-  dance_battle: '💃 Dance Battle', freeze_dance: '❄️ Freeze Dance',
-};
-
-/** Unknown ids still read nicely: "guess_race" → "🎮 Guess Race". */
-const gameName = (id: string) =>
-  NAMES[id] ?? `🎮 ${id.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}`;
+const gameName = (id: string) => { const g = trophyName(id); return `${g.icon} ${g.name}`; };
 
 const isRealGame = (id: string) => !id.endsWith('_losses');
 
@@ -40,6 +26,8 @@ export default function MyStats() {
   const coins = useGameStore(s => s.userCurrency);
   const secretStats = useGameStore(s => s.secretStats);
   const secretsFound = useGameStore(s => s.secretsFound);
+  const userName = useGameStore(s => s.userName);
+  const playerCard = useMemo(() => loadCard(), []);
 
   const stats = useMemo(() => {
     const games = Object.entries(rounds).filter(([id, n]) => isRealGame(id) && n > 0);
@@ -89,6 +77,13 @@ export default function MyStats() {
           </button>
           <h1 className="font-fredoka text-3xl md:text-4xl">📊 My Stats</h1>
         </div>
+
+        {/* Player Card (made in the Player Card screen) */}
+        <section className="mb-5">
+          {playerCard
+            ? <PlayerCardView card={playerCard} name={userName} small />
+            : <p className="rounded-3xl bg-white/10 p-4 font-nunito text-lg text-violet-100">🎴 Make your Player Card in Create &amp; Music and it will show up here!</p>}
+        </section>
 
         {/* Level progress */}
         <section className="rounded-3xl bg-white/10 p-5 mb-5">

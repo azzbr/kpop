@@ -37,11 +37,11 @@ const TILES: Tile[] = [
   // Arcade
   { id: 'paper_clash', title: 'Paper Clash', description: 'Grab land, cut trails, rule the map. Swipe to steer!', icon: '🗺️', color: 'from-sky-500 to-fuchsia-600', category: 'arcade', isNew: true },
   { id: 'snake_arena', title: 'Snake Arena', description: 'Eat, grow, boost — make the other snakes crash into you!', icon: '🐍', color: 'from-lime-500 to-emerald-600', category: 'arcade', isNew: true },
-  { id: 'kpop_rush', title: 'Rush Runner', description: 'Endless runner — jump, duck, grab power-ups.', icon: '🏃', color: 'from-fuchsia-500 to-purple-600', category: 'arcade' },
+  { id: 'kpop_rush', title: 'Rush Runner', description: 'Jump, duck and dash through the city — grab power-ups!', icon: '🏃', color: 'from-fuchsia-500 to-purple-600', category: 'arcade' },
   { id: 'ninja_slice', title: 'Ninja Slice', description: 'Swipe to slice fruit. Dodge the bombs!', icon: '🥷', color: 'from-red-500 to-orange-500', category: 'arcade' },
-  { id: 'rocket_launch', title: 'Rocket Launch', description: 'Aim, set power, hit the planets.', icon: '🚀', color: 'from-sky-500 to-indigo-600', category: 'arcade' },
+  { id: 'rocket_launch', title: 'Rocket Launch', description: 'Pull back, let go, and hit 5 stars!', icon: '🚀', color: 'from-sky-500 to-indigo-600', category: 'arcade' },
   { id: 'tower_defense', title: 'Tower Defense', description: 'Answer questions to earn coins, build towers, stop the snails!', icon: '🏰', color: 'from-emerald-500 to-sky-600', category: 'arcade', isNew: true },
-  { id: 'battle_arena', title: 'Battle Arena', description: 'Turn-based duels against a crafty bot.', icon: '⚔️', color: 'from-slate-500 to-blue-700', category: 'arcade' },
+  { id: 'battle_arena', title: 'Battle Arena', description: 'Pick a hero and out-bonk a crafty bot!', icon: '⚔️', color: 'from-slate-500 to-blue-700', category: 'arcade' },
 
   // Puzzles
   { id: 'word_guess', title: 'Word Guess', description: 'Find the secret 5-letter word in 6 tries. New one every day!', icon: '🟩', color: 'from-green-500 to-emerald-600', category: 'puzzle', isNew: true },
@@ -61,31 +61,31 @@ const TILES: Tile[] = [
   { id: 'real_or_fake', title: 'Real or Fake?', description: 'Weird facts — swipe right if it\'s real, left if it\'s fake.', icon: '🤔', color: 'from-teal-500 to-cyan-600', category: 'quiz', isNew: true },
   { id: 'emoji_guess', title: 'Emoji Guess', description: '🦁👑 = ? Crack the emoji clues.', icon: '🕵️', color: 'from-yellow-500 to-orange-600', category: 'quiz', isNew: true },
   { id: 'quiz_maker', title: 'Quiz Maker', description: 'Write your own quiz — then host it for friends in Quiz Party!', icon: '🛠️', color: 'from-fuchsia-500 to-pink-600', category: 'quiz', isNew: true },
-  { id: 'idol_personality_quiz', title: 'Which Star Are You?', description: 'A personality quiz with a surprise result.', icon: '🌟', color: 'from-pink-500 to-violet-600', category: 'quiz' },
+  { id: 'idol_personality_quiz', title: 'Which Arcade Hero Are You?', description: '10 quick questions: are you a Speedster, Puzzler, Party Star or Inventor?', icon: '🦸', color: 'from-pink-500 to-violet-600', category: 'quiz' },
 
   // Party
   { id: 'online_hub', title: 'Friends Arena — Online', description: 'Share a 4-letter code and play on different devices: Quiz Party (Kahoot-style, Gold Quest, Racing, Cash Climb), doodles, Monopoly Deal & 30 more.', icon: '🌐', color: 'from-emerald-500 to-cyan-600', category: 'party', isNew: true },
-  { id: 'tug_of_war', title: 'Tug-of-War', description: 'Two players mash buttons to drag the rope to their side. Best of 3!', icon: '🪢', color: 'from-amber-500 to-pink-600', category: 'party' },
+  { id: 'tug_of_war', title: 'Tug-of-War', description: 'Tap like crazy to pull the rope to your side. Best of 3!', icon: '🪢', color: 'from-amber-500 to-pink-600', category: 'party' },
   { id: 'heads_up', title: 'Heads Up', description: 'Hold the iPad on your forehead, friends act it out — tilt down if you get it!', icon: '🙆', color: 'from-sky-500 to-pink-500', category: 'party', isNew: true },
   { id: 'would_you_rather', title: 'Would You Rather', description: 'Silly choices — see what everyone else picked. Pass the iPad!', icon: '🤷', color: 'from-pink-500 to-orange-500', category: 'party', isNew: true },
   { id: 'truth_or_dare', title: 'Truth or Dare', description: 'Spin the wheel! Silly truths and funny dares for 2–8 players.', icon: '🎯', color: 'from-orange-500 to-red-600', category: 'party', isNew: true },
-  { id: 'trivia_battle', title: 'Buzzer Battle', description: 'Two players race to hit the right answer.', icon: '🛎️', color: 'from-rose-500 to-pink-600', category: 'party' },
-  { id: 'reaction_duel', title: 'Reaction Duel', description: 'Tap your side first when the signal flashes.', icon: '👆', color: 'from-red-500 to-pink-500', category: 'party' },
-  { id: 'talent_show', title: 'Talent Show', description: 'Perform, get judged, crown the star.', icon: '🎭', color: 'from-purple-500 to-fuchsia-600', category: 'party' },
+  { id: 'trivia_battle', title: 'Buzzer Battle', description: 'Two players race to tap the right answer — pick any quiz topic!', icon: '🛎️', color: 'from-rose-500 to-pink-600', category: 'party' },
+  { id: 'reaction_duel', title: 'Reaction Duel', description: 'Tap your side first when it turns green — watch out for decoys!', icon: '👆', color: 'from-red-500 to-pink-500', category: 'party' },
+  { id: 'talent_show', title: 'Talent Show', description: 'Take turns on stage, collect stars, and everyone wins an award!', icon: '🎭', color: 'from-purple-500 to-fuchsia-600', category: 'party' },
   { id: 'team_maker', title: 'Team Picker', description: 'Random fair teams for any game.', icon: '👥', color: 'from-indigo-500 to-purple-600', category: 'party' },
 
   // Create & music
-  { id: 'beat_maker', title: 'Beat Maker', description: 'Build a beat on a 16-step drum machine.', icon: '🎛️', color: 'from-red-500 to-orange-500', category: 'create' },
-  { id: 'guess_intro', title: 'Guess the Intro', description: 'Name the song from a 1.5-second clip.', icon: '🎧', color: 'from-violet-500 to-fuchsia-600', category: 'create' },
-  { id: 'style_studio', title: 'Style Studio', description: 'Design outfits and save your looks.', icon: '👗', color: 'from-pink-500 to-fuchsia-500', category: 'create' },
-  { id: 'idol_profile', title: 'Superstar Card', description: 'Make your own trading card with stats.', icon: '🪪', color: 'from-pink-500 to-purple-600', category: 'create' },
-  { id: 'idol_diary', title: 'Secret Diary', description: 'Fill in the blanks for a ridiculous story.', icon: '📔', color: 'from-amber-500 to-rose-500', category: 'create' },
+  { id: 'beat_maker', title: 'Beat Maker', description: 'Build a beat on a 16-step drum machine — save up to 5!', icon: '🎛️', color: 'from-red-500 to-orange-500', category: 'create' },
+  { id: 'guess_intro', title: 'Guess the Intro', description: 'Name the song from a quick clip — Easy, Medium or Hard.', icon: '🎧', color: 'from-violet-500 to-fuchsia-600', category: 'create' },
+  { id: 'style_studio', title: 'Style Studio', description: 'Dress up, strut the runway and get scored by the judges.', icon: '👗', color: 'from-pink-500 to-fuchsia-500', category: 'create' },
+  { id: 'idol_profile', title: 'Player Card', description: 'Build your own trading card: avatar, title, superpower and motto.', icon: '🎴', color: 'from-pink-500 to-purple-600', category: 'create' },
+  { id: 'idol_diary', title: 'Adventure Diary', description: 'Choose your path in 8 adventures with 56 endings to find!', icon: '📖', color: 'from-amber-500 to-rose-500', category: 'create' },
 
   // Me
   { id: 'pet_pal', title: 'Pet Pal', description: 'Adopt a pet that grows every day you play. Feed it, decorate its room!', icon: '🐾', color: 'from-pink-500 to-amber-500', category: 'me', isNew: true },
   { id: 'quest_map', title: 'Quest Map', description: '30 quests to complete — claim coins along the trail.', icon: '🧭', color: 'from-teal-500 to-indigo-600', category: 'me', isNew: true },
   { id: 'locker', title: 'Locker', description: 'Spend coins on avatars, colours, trails and titles.', icon: '🎒', color: 'from-yellow-500 to-fuchsia-600', category: 'me', isNew: true },
-  { id: 'achievement_showcase', title: 'Trophy Room', description: 'Your level, badges, themes and best scores.', icon: '🏆', color: 'from-yellow-500 to-amber-600', category: 'me' },
+  { id: 'achievement_showcase', title: 'Trophy Room', description: 'Your badges, best scores and daily streak.', icon: '🏆', color: 'from-yellow-500 to-amber-600', category: 'me' },
 
   // Teacher (hidden unless Jarvis mode is unlocked)
   { id: 'jarvis_hq', title: "Mr. Jarvis's Lounge", description: 'Pop Quiz, Roll Call, Boss Battle & more.', icon: '👨‍🏫', color: 'from-amber-500 to-red-600', category: 'teacher' },

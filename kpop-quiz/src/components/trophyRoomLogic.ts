@@ -37,6 +37,12 @@ export const GAME_NAMES: Record<string, { icon: string; name: string }> = {
   beat_maker: { icon: '🎛️', name: 'Beat Maker' },
   guess_intro: { icon: '🎧', name: 'Guess the Intro' },
   agent_hq: { icon: '🕶️', name: 'Agent HQ' },
+  idol_personality_quiz: { icon: '🦸', name: 'Which Arcade Hero?' },
+  idol_profile: { icon: '🎴', name: 'Player Card' },
+  idol_diary: { icon: '📖', name: 'Adventure Diary' },
+  style_studio: { icon: '👗', name: 'Style Studio' },
+  friends_arena: { icon: '🌐', name: 'Friends Arena' },
+  freeze_dance: { icon: '❄️', name: 'Freeze Dance' },
   any: { icon: '🌍', name: 'All games' },
 };
 

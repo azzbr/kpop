@@ -1,346 +1,284 @@
-import React, { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
+import { localDateKey } from '../utils/dates';
 import { useSafeTimeout } from '../utils/useSafeTimeout';
-import { playClick, playPop, playWin, playUnlock } from '../utils/sounds';
+import { playClick, playPop, playUnlock, playWin } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
+import ScreenFrame from './ui/ScreenFrame';
+import { ADVENTURE_STORIES, endingsOf, isValidPath, pathText, storyById, type AdventureStory } from '../data/adventureStories';
 
-const WORD_LISTS: Record<string, string[]> = {
-  ADJECTIVE:  ['sparkly', 'fluffy', 'magical', 'silly', 'huge', 'tiny', 'golden', 'fierce', 'spicy', 'rainbow'],
-  COLOR:      ['pink', 'purple', 'blue', 'gold', 'silver', 'neon green', 'sunset orange', 'rainbow'],
-  NUMBER:     ['7', '100', '5000', 'a million', 'three', 'eleven', 'forty-two'],
-  NAME:       ['Rumi', 'Mira', 'Zoey', 'Romance', 'Mystery', 'Star', 'Luna', 'Kai'],
-  FOOD:       ['kimbap', 'ramen', 'ice cream', 'kimchi', 'mochi', 'bingsu', 'tteokbokki', 'cotton candy'],
-  ANIMAL:     ['bear', 'cat', 'dragon', 'dolphin', 'panda', 'fox', 'unicorn', 'penguin'],
-  OBJECT:     ['microphone', 'crown', 'plushie', 'sticker album', 'sparkly wand', 'photo card', 'phone'],
-  BODYPART:   ['feet', 'hands', 'knees', 'head', 'pinky finger', 'elbow', 'cheeks'],
-  VEHICLE:    ['hot air balloon', 'rocket', 'scooter', 'pink limousine', 'flying carpet', 'submarine'],
-  PLACE:      ['Seoul', 'Tokyo', 'the Moon', 'Disneyland', 'a giant cupcake', 'the school cafeteria'],
-  BUILDING:   ['castle', 'glittery tower', 'museum', 'café shaped like a strawberry', 'underwater dome'],
-  CLOTHING:   ['hoodie', 'sparkly dress', 'sneakers', 'pajamas', 'rainbow jacket', 'glitter cape'],
-  VERB:       ['twirl', 'sing', 'sparkle', 'giggle', 'wiggle', 'dance', 'fly', 'bounce'],
-  DRINK:      ['bubble tea', 'strawberry milk', 'smoothie', 'lemonade', 'unicorn juice', 'hot chocolate'],
-};
+// "Adventure Diary" — screen id idol_diary. Choose-your-path stories; finished adventures can be
+// saved to the diary shelf ('diary_list', shared with the old fill-in-the-blanks pages).
+// Reward: finishRound once per story per local day (score = total different endings found).
 
-interface StoryTemplate {
-  id: string; title: string; emoji: string;
-  blanks: { label: string; type: keyof typeof WORD_LISTS | string }[];
-  // segments alternated with blank indices: "Today was..." [0] "..." [1] ...
-  render: (w: string[]) => string;
+const GAME_ID = 'idol_diary';
+const LIST_KEY = 'diary_list';
+const ENDINGS_KEY = 'funquest-idol_diary-endings';
+const DAY_KEY = 'funquest-idol_diary-day';
+
+interface AdventureEntry { id: number; kind: 'adventure'; storyId: string; path: string[]; date: string; title: string }
+/** Pages saved by the old fill-in-the-blanks diary. */
+interface LegacyEntry { id: number; storyId: string; words: string[]; date: string; title: string }
+type DiaryEntry = AdventureEntry | LegacyEntry;
+const isAdventure = (e: DiaryEntry): e is AdventureEntry => (e as AdventureEntry).kind === 'adventure';
+
+function readJson<T>(key: string, fallback: T): T {
+  try {
+    const s = localStorage.getItem(key);
+    return s ? (JSON.parse(s) as T) : fallback;
+  } catch { return fallback; }
+}
+function writeJson(key: string, value: unknown) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage full or blocked */ }
 }
 
-const STORIES: StoryTemplate[] = [
-  {
-    id: 'academy', title: 'First Day at K-Pop Academy', emoji: '🎓',
-    blanks: [
-      { label: 'A describing word', type: 'ADJECTIVE' },
-      { label: 'Something to wear', type: 'CLOTHING' },
-      { label: 'A magical object', type: 'OBJECT' },
-      { label: 'A name', type: 'NAME' },
-      { label: 'An action word', type: 'VERB' },
-      { label: 'Something big', type: 'OBJECT' },
-      { label: 'A friend\'s name', type: 'NAME' },
-      { label: 'A color', type: 'COLOR' },
-      { label: 'A yummy food', type: 'FOOD' },
-    ],
-    render: w => `Today was my FIRST DAY at K-Pop Academy! 🎤 I wore my favorite ${w[0]} ${w[1]} and brought my lucky ${w[2]}. My new dance teacher, Ms. ${w[3]}, taught us how to ${w[4]} in front of a giant ${w[5]}. I made friends with ${w[6]}, who has ${w[7]} hair and loves ${w[8]}. BEST. DAY. EVER! ✨`,
-  },
-  {
-    id: 'concert', title: 'Concert Day Adventure', emoji: '🎤',
-    blanks: [
-      { label: 'A place', type: 'PLACE' },
-      { label: 'An action word', type: 'VERB' },
-      { label: 'A describing word', type: 'ADJECTIVE' },
-      { label: 'A number', type: 'NUMBER' },
-      { label: 'An object', type: 'OBJECT' },
-      { label: 'A body part', type: 'BODYPART' },
-      { label: 'A food', type: 'FOOD' },
-      { label: 'A drink', type: 'DRINK' },
-    ],
-    render: w => `It was finally concert day! 🎉 My group HUNTR/X was performing at ${w[0]}. Backstage, I ${w[1]} my ${w[2]} microphone. The crowd was holding ${w[3]} ${w[4]}s in the air! I danced so hard that my ${w[5]} hurt, but the fans LOVED it! After the show, we celebrated with ${w[6]} and ${w[7]}. 🌟`,
-  },
-  {
-    id: 'lost', title: 'Lost in Seoul', emoji: '🗺️',
-    blanks: [
-      { label: 'A place', type: 'PLACE' },
-      { label: 'A describing word', type: 'ADJECTIVE' },
-      { label: 'An animal', type: 'ANIMAL' },
-      { label: 'An action word', type: 'VERB' },
-      { label: 'A color', type: 'COLOR' },
-      { label: 'A food', type: 'FOOD' },
-      { label: 'A vehicle', type: 'VEHICLE' },
-      { label: 'An action word', type: 'VERB' },
-      { label: 'A describing word', type: 'ADJECTIVE' },
-      { label: 'A building', type: 'BUILDING' },
-    ],
-    render: w => `I got separated from my group in ${w[0]}! 😱 First I asked a ${w[1]} ${w[2]} for help, but it just ${w[3]}-ed at me. Then I met a kid who gave me a ${w[4]} ${w[5]}. We rode a giant ${w[6]} across the city. I finally found my friends ${w[7]}-ing in front of a ${w[8]} ${w[9]}! 🎊`,
-  },
-];
+function loadEntries(): DiaryEntry[] {
+  const raw = readJson<unknown>(LIST_KEY, []);
+  return Array.isArray(raw) ? raw.filter((e): e is DiaryEntry => !!e && typeof e === 'object' && typeof (e as DiaryEntry).id === 'number') : [];
+}
 
-interface DiaryEntry { id: number; storyId: string; words: string[]; date: string; title: string; }
-
-const IdolDiary: React.FC = () => {
-  const { setGameState, addXP } = useGameStore();
+export default function IdolDiary() {
   const later = useSafeTimeout();
-  const [tab, setTab] = useState<'new' | 'shelf'>('new');
-  const [storyIdx, setStoryIdx] = useState<number | null>(null);
-  const [step, setStep] = useState(0);
-  const [words, setWords] = useState<string[]>([]);
-  const [showResult, setShowResult] = useState(false);
+  const [tab, setTab] = useState<'play' | 'shelf'>('play');
+  const [story, setStory] = useState<AdventureStory | null>(null);
+  const [path, setPath] = useState<string[]>([]);
+  const [entries, setEntries] = useState<DiaryEntry[]>(loadEntries);
+  const [found, setFound] = useState<Record<string, string[]>>(() => readJson(ENDINGS_KEY, {}));
+  const [view, setView] = useState<DiaryEntry | null>(null);
   const [confetti, setConfetti] = useState(false);
-  const [entries, setEntries] = useState<DiaryEntry[]>(() => {
-    try { return JSON.parse(localStorage.getItem('diary_list') || '[]'); } catch { return []; }
-  });
-  const [viewEntry, setViewEntry] = useState<DiaryEntry | null>(null);
+  const [reward, setReward] = useState<string>('');
+  const [savedThis, setSavedThis] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
-  const story = storyIdx !== null ? STORIES[storyIdx] : null;
+  const nodeId = path[path.length - 1];
+  const node = story && nodeId ? story.nodes[nodeId] : null;
 
-  const pickStory = (i: number) => {
+  useEffect(() => {
+    if (path.length > 1) bottomRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'end' });
+  }, [path.length]);
+
+  const start = (s: AdventureStory) => {
     playClick();
-    setStoryIdx(i);
-    setStep(0);
-    setWords([]);
-    setShowResult(false);
+    setStory(s);
+    setPath([s.start]);
+    setReward('');
+    setSavedThis(false);
   };
 
-  const pickWord = (word: string) => {
-    if (!story) return;
+  const choose = (to: string) => {
+    if (!story || !story.nodes[to]) return;
     playPop();
-    const newWords = [...words, word];
-    setWords(newWords);
-    if (newWords.length === story.blanks.length) {
-      setShowResult(true);
-      playWin();
-      setConfetti(true);
-      addXP(15);
-      later(() => setConfetti(false), 2500);
+    const next = [...path, to];
+    setPath(next);
+    const target = story.nodes[to];
+    if (!target.end) return;
+
+    // Ending reached.
+    playWin();
+    setConfetti(true);
+    later(() => setConfetti(false), 2500);
+    const mine = found[story.id] ?? [];
+    const isNewEnding = !mine.includes(to);
+    const nextFound = isNewEnding ? { ...found, [story.id]: [...mine, to] } : found;
+    if (isNewEnding) { setFound(nextFound); writeJson(ENDINGS_KEY, nextFound); }
+
+    const today = localDateKey();
+    const day = readJson<{ date: string; stories: string[] }>(DAY_KEY, { date: today, stories: [] });
+    const doneToday = day.date === today && Array.isArray(day.stories) ? day.stories : [];
+    if (!doneToday.includes(story.id)) {
+      const totalFound = Object.values(nextFound).reduce((n, ids) => n + ids.length, 0);
+      const r = useGameStore.getState().finishRound(GAME_ID, totalFound, 1);
+      writeJson(DAY_KEY, { date: today, stories: [...doneToday, story.id] });
+      setReward(`+${r.xp} XP · +${r.coins} 🪙`);
     } else {
-      setStep(s => s + 1);
+      setReward('');
     }
   };
 
-  const saveEntry = () => {
-    if (!story) return;
+  const saveToDiary = () => {
+    if (!story || !node?.end || savedThis) return;
     playUnlock();
-    const newEntry: DiaryEntry = {
-      id: Date.now(),
-      storyId: story.id,
-      words,
-      date: new Date().toLocaleDateString(),
-      title: story.title,
+    const entry: AdventureEntry = {
+      id: Date.now(), kind: 'adventure', storyId: story.id, path,
+      date: new Date().toLocaleDateString(), title: `${story.title}: ${node.end.title}`,
     };
-    const next = [newEntry, ...entries].slice(0, 30);
+    const next = [entry, ...entries].slice(0, 30);
     setEntries(next);
-    localStorage.setItem('diary_list', JSON.stringify(next));
-    localStorage.setItem('diary_entries', String(next.length));
-    addXP(10);
-    setStoryIdx(null);
-    setWords([]);
-    setShowResult(false);
-    setTab('shelf');
+    writeJson(LIST_KEY, next);
+    setSavedThis(true);
   };
 
-  const newStory = () => { setStoryIdx(null); setWords([]); setShowResult(false); setStep(0); };
-
-  const deleteEntry = (id: number) => {
+  const remove = (id: number) => {
     playClick();
     const next = entries.filter(e => e.id !== id);
     setEntries(next);
-    localStorage.setItem('diary_list', JSON.stringify(next));
-    localStorage.setItem('diary_entries', String(next.length));
-    setViewEntry(null);
+    writeJson(LIST_KEY, next);
+    setView(null);
   };
 
-  const wordOptions = (type: string): string[] => WORD_LISTS[type] || [];
+  const backToList = () => { playClick(); setStory(null); setPath([]); };
+  const totalEndings = ADVENTURE_STORIES.reduce((n, s) => n + endingsOf(s).length, 0);
+  const totalFound = ADVENTURE_STORIES.reduce((n, s) => n + (found[s.id]?.filter(id => s.nodes[id]?.end).length ?? 0), 0);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="min-h-screen flex flex-col items-center p-4"
-      style={{ background: 'linear-gradient(135deg, #fff1f2 0%, #fce7f3 100%)' }}
-    >
+    <ScreenFrame title="Adventure Diary" icon="📖" width="max-w-3xl"
+      onBack={story ? backToList : undefined}
+      right={<span className="font-fredoka text-lg bg-white/15 rounded-full px-3 py-2 shrink-0">🏁 {totalFound}/{totalEndings}</span>}>
       {confetti && <ConfettiBurst count={70} durationMs={2500} />}
 
-      <div className="max-w-md w-full mx-auto">
-        <button onClick={() => { playClick(); setGameState('game_mode'); }}
-          className="mb-3 px-4 py-2 bg-white/70 hover:bg-white text-rose-700 rounded-full font-fredoka text-sm border-2 border-rose-200">
-          ← Back
-        </button>
-
-        <div className="text-center mb-3">
-          <h1 className="text-3xl font-fredoka font-bold text-rose-700">📔 Secret Diary</h1>
-          <p className="font-nunito text-rose-500 text-sm">Fill in the blanks · Save funny stories!</p>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-2 mb-4 bg-white/70 rounded-2xl p-1 border-2 border-rose-200">
-          <button onClick={() => { playClick(); setTab('new'); newStory(); }}
-            className={`flex-1 py-2 rounded-xl font-fredoka text-sm ${tab === 'new' ? 'bg-rose-500 text-white' : 'text-rose-600'}`}>
-            ✍️ Write
-          </button>
-          <button onClick={() => { playClick(); setTab('shelf'); }}
-            className={`flex-1 py-2 rounded-xl font-fredoka text-sm ${tab === 'shelf' ? 'bg-rose-500 text-white' : 'text-rose-600'}`}>
-            📚 Shelf ({entries.length})
-          </button>
-        </div>
-
-        {/* WRITE tab */}
-        {tab === 'new' && storyIdx === null && (
-          <div className="space-y-3">
-            <p className="font-nunito text-rose-700 text-center text-sm">Pick a story to start:</p>
-            {STORIES.map((s, i) => (
-              <motion.button
-                key={s.id}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => pickStory(i)}
-                className="w-full bg-white/85 border-2 border-rose-200 rounded-2xl p-4 text-left hover:bg-white hover:shadow transition-all flex items-center gap-3"
-              >
-                <div className="text-3xl">{s.emoji}</div>
-                <div className="flex-1">
-                  <h3 className="font-fredoka font-bold text-rose-700">{s.title}</h3>
-                  <p className="font-nunito text-rose-500 text-xs">{s.blanks.length} blanks to fill</p>
-                </div>
-                <div className="text-rose-400">▶</div>
-              </motion.button>
-            ))}
-          </div>
-        )}
-
-        {/* Word picking phase */}
-        {tab === 'new' && story && !showResult && (
-          <div>
-            <div className="bg-white/85 border-2 border-rose-200 rounded-2xl p-4 mb-3">
-              <p className="font-fredoka text-rose-700 text-sm mb-1">
-                Word {step + 1} of {story.blanks.length}
-              </p>
-              <div className="bg-rose-100 rounded-full h-2 overflow-hidden">
-                <motion.div
-                  className="h-2 bg-gradient-to-r from-pink-400 to-rose-400"
-                  animate={{ width: `${((step) / story.blanks.length) * 100}%` }}
-                />
-              </div>
-              <p className="font-fredoka font-bold text-rose-900 text-lg mt-3">
-                {story.blanks[step].label}
-              </p>
-              <p className="font-nunito text-rose-500 text-xs">({story.blanks[step].type.toLowerCase()})</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              {wordOptions(story.blanks[step].type).map(w => (
-                <motion.button
-                  key={w}
-                  whileTap={{ scale: 0.93 }}
-                  onClick={() => pickWord(w)}
-                  className="bg-gradient-to-br from-pink-100 to-rose-100 border-2 border-pink-200 hover:border-pink-400 rounded-xl py-3 px-2 font-fredoka text-rose-700 hover:bg-pink-100 transition-colors text-sm"
-                >
-                  {w}
-                </motion.button>
-              ))}
-            </div>
-
-            <button onClick={newStory} className="w-full mt-3 py-2 bg-rose-100 text-rose-500 rounded-full font-fredoka text-sm">
-              ← Pick different story
+      {!story && (
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          {(['play', 'shelf'] as const).map(t => (
+            <button key={t} onClick={() => { playClick(); setTab(t); }}
+              className={`min-h-[52px] rounded-full font-fredoka text-xl ${tab === t ? 'bg-fuchsia-500' : 'bg-white/10 active:bg-white/20'}`}>
+              {t === 'play' ? '🧭 Adventures' : `📚 My Diary (${entries.length})`}
             </button>
-          </div>
-        )}
+          ))}
+        </div>
+      )}
 
-        {/* Story result */}
-        {tab === 'new' && story && showResult && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-gradient-to-br from-white to-rose-50 border-4 border-rose-300 rounded-3xl p-5 shadow-xl"
-          >
-            <div className="text-center mb-3">
-              <div className="text-5xl">{story.emoji}</div>
-              <h2 className="font-fredoka font-bold text-rose-700 text-xl">{story.title}</h2>
-            </div>
-            <p className="font-nunito text-gray-800 leading-relaxed text-base mb-4">
-              {story.render(words).split(new RegExp(`(${words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`)).map((part, i) => {
-                if (words.includes(part)) {
-                  return <span key={i} className="bg-yellow-200 font-bold text-rose-700 px-1 rounded">{part}</span>;
-                }
-                return <span key={i}>{part}</span>;
-              })}
-            </p>
-            <p className="text-center font-nunito text-rose-600 text-sm mb-3">+15 XP for finishing the story!</p>
-            <div className="flex gap-2">
-              <button onClick={saveEntry} className="flex-1 btn-kid">💾 Save to Diary</button>
-              <button onClick={newStory} className="flex-1 btn-kid-secondary">✏️ New Story</button>
-            </div>
+      {/* Story list */}
+      {!story && tab === 'play' && (
+        <div className="grid sm:grid-cols-2 gap-3">
+          {ADVENTURE_STORIES.map(s => {
+            const ends = endingsOf(s);
+            const got = ends.filter(([id]) => found[s.id]?.includes(id)).length;
+            return (
+              <button key={s.id} onClick={() => start(s)}
+                className="min-h-[96px] rounded-3xl bg-white/10 border border-white/15 active:bg-white/20 p-4 text-left flex items-center gap-4">
+                <span className="text-5xl" aria-hidden>{s.emoji}</span>
+                <span className="flex-1 min-w-0">
+                  <span className="block font-fredoka text-xl">{s.title}</span>
+                  <span className="block font-nunito text-base text-violet-100">{s.blurb}</span>
+                  <span className="block font-nunito text-base text-yellow-200 mt-1">🏁 Endings found: {got}/{ends.length}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Playing a story */}
+      {story && node && (
+        <div>
+          <h2 className="font-fredoka text-2xl mb-3 text-center">{story.emoji} {story.title}</h2>
+          <div className="space-y-3">
+            {pathText(story, path).slice(0, -1).map((p, i) => (
+              <div key={i} className="rounded-2xl bg-white/5 p-3 opacity-80">
+                <p className="font-nunito text-lg">{p.text}</p>
+                {p.choice && <p className="font-fredoka text-lg text-yellow-200 mt-1">➜ {p.choice}</p>}
+              </div>
+            ))}
+            <AnimatePresence mode="wait">
+              <motion.div key={nodeId} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}
+                className={`rounded-3xl p-5 border ${node.end ? 'bg-gradient-to-br from-amber-400/40 to-fuchsia-600/40 border-yellow-200/60' : 'bg-white/10 border-white/15'}`}>
+                {node.end && (
+                  <div className="text-center mb-2">
+                    <div className="text-6xl" aria-hidden>{node.end.emoji}</div>
+                    <p className="font-fredoka text-base text-yellow-100">{node.end.kind === 'funny' ? '😂 Funny ending' : '🌟 Happy ending'}</p>
+                    <h3 className="font-fredoka text-3xl">{node.end.title}</h3>
+                  </div>
+                )}
+                <p className="font-nunito text-xl leading-relaxed">{node.text}</p>
+                {node.choices && (
+                  <div className="grid gap-3 mt-4">
+                    <p className="font-fredoka text-lg text-violet-100">What do you do?</p>
+                    {node.choices.map(ch => (
+                      <button key={ch.to + ch.label} onClick={() => choose(ch.to)}
+                        className="min-h-[60px] rounded-2xl bg-white/15 active:bg-white/25 px-5 text-left font-fredoka text-xl">
+                        {ch.emoji} {ch.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {node.end && (
+                  <div className="mt-4 text-center">
+                    {reward
+                      ? <p className="font-fredoka text-xl text-yellow-200 mb-3">{reward}</p>
+                      : <p className="font-nunito text-base text-violet-100 mb-3">You already got today’s reward for this story. Try another story for more!</p>}
+                    <div className="grid sm:grid-cols-3 gap-2">
+                      <button onClick={saveToDiary} disabled={savedThis}
+                        className="min-h-[52px] rounded-full bg-gradient-to-r from-yellow-300 to-amber-400 text-stone-900 font-fredoka text-lg disabled:opacity-60">
+                        {savedThis ? '✅ Saved' : '💾 Save to diary'}
+                      </button>
+                      <button onClick={() => start(story)} className="min-h-[52px] rounded-full bg-white/15 active:bg-white/25 font-fredoka text-lg">🔄 Try another path</button>
+                      <button onClick={backToList} className="min-h-[52px] rounded-full bg-white/15 active:bg-white/25 font-fredoka text-lg">🧭 More stories</button>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
+            <div ref={bottomRef} />
+          </div>
+        </div>
+      )}
+
+      {/* Diary shelf */}
+      {!story && tab === 'shelf' && (
+        entries.length === 0 ? (
+          <div className="rounded-3xl bg-white/10 p-8 text-center">
+            <div className="text-5xl mb-2" aria-hidden>📚</div>
+            <p className="font-fredoka text-2xl">Your diary is empty!</p>
+            <p className="font-nunito text-lg text-violet-100">Finish an adventure and save it here.</p>
+          </div>
+        ) : (
+          <div className="grid gap-2">
+            {entries.map(e => {
+              const s = isAdventure(e) ? storyById(e.storyId) : undefined;
+              return (
+                <button key={e.id} onClick={() => { playPop(); setView(e); }}
+                  className="min-h-[64px] rounded-2xl bg-white/10 active:bg-white/20 p-3 text-left flex items-center gap-3">
+                  <span className="text-3xl" aria-hidden>{s?.emoji ?? '📔'}</span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block font-fredoka text-lg truncate">{isAdventure(e) ? e.title : 'Old fill-in story'}</span>
+                    <span className="block font-nunito text-base text-violet-100">{e.date}</span>
+                  </span>
+                  <span aria-hidden>▶</span>
+                </button>
+              );
+            })}
+          </div>
+        )
+      )}
+
+      {/* View a saved page */}
+      <AnimatePresence>
+        {view && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={() => setView(null)}>
+            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} onClick={ev => ev.stopPropagation()}
+              className="arcade-bg rounded-3xl border-2 border-white/30 p-5 max-w-lg w-full max-h-[85dvh] overflow-y-auto text-white">
+              {isAdventure(view) && storyById(view.storyId) && isValidPath(storyById(view.storyId)!, view.path) ? (
+                <>
+                  <h2 className="font-fredoka text-2xl mb-1">{storyById(view.storyId)!.emoji} {view.title}</h2>
+                  <p className="font-nunito text-base text-violet-100 mb-3">{view.date}</p>
+                  {pathText(storyById(view.storyId)!, view.path).map((p, i) => (
+                    <div key={i} className="mb-2">
+                      <p className="font-nunito text-lg">{p.text}</p>
+                      {p.choice && <p className="font-fredoka text-lg text-yellow-200">➜ {p.choice}</p>}
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <>
+                  <h2 className="font-fredoka text-2xl mb-1">📔 Old fill-in story</h2>
+                  <p className="font-nunito text-base text-violet-100 mb-3">{view.date}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {('words' in view && Array.isArray(view.words) ? view.words : []).map((w, i) => (
+                      <span key={i} className="rounded-full bg-white/15 px-3 py-1 font-nunito text-lg">{String(w)}</span>
+                    ))}
+                  </div>
+                </>
+              )}
+              <div className="grid grid-cols-2 gap-2 mt-4">
+                <button onClick={() => { playClick(); setView(null); }} className="min-h-[52px] rounded-full bg-white/15 active:bg-white/25 font-fredoka text-lg">Close</button>
+                <button onClick={() => remove(view.id)} className="min-h-[52px] rounded-full bg-rose-500/80 active:bg-rose-500 font-fredoka text-lg">🗑️ Delete</button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
-
-        {/* SHELF tab */}
-        {tab === 'shelf' && (
-          <div>
-            {entries.length === 0 ? (
-              <div className="bg-white/85 border-2 border-rose-200 rounded-2xl p-8 text-center">
-                <div className="text-4xl mb-2">📚</div>
-                <p className="font-fredoka text-rose-700">Your diary is empty!</p>
-                <p className="font-nunito text-rose-500 text-sm">Write a story to add your first page ✨</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {entries.map(e => {
-                  const tmpl = STORIES.find(s => s.id === e.storyId);
-                  return (
-                    <motion.button
-                      key={e.id}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => { setViewEntry(e); playPop(); }}
-                      className="w-full bg-white/85 border-2 border-rose-200 rounded-2xl p-3 text-left flex items-center gap-3 hover:bg-white"
-                    >
-                      <div className="text-2xl">{tmpl?.emoji || '📔'}</div>
-                      <div className="flex-1">
-                        <p className="font-fredoka font-bold text-rose-700 text-sm">{e.title}</p>
-                        <p className="font-nunito text-rose-400 text-xs">{e.date} · {e.words.length} words</p>
-                      </div>
-                      <div className="text-rose-400">▶</div>
-                    </motion.button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* View saved entry */}
-        <AnimatePresence>
-          {viewEntry && (() => {
-            const tmpl = STORIES.find(s => s.id === viewEntry.storyId);
-            if (!tmpl) return null;
-            return (
-              <motion.div
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50"
-                onClick={() => setViewEntry(null)}
-              >
-                <motion.div
-                  initial={{ scale: 0.8 }} animate={{ scale: 1 }}
-                  onClick={e => e.stopPropagation()}
-                  className="bg-gradient-to-br from-white to-rose-50 rounded-3xl p-5 max-w-md w-full border-4 border-rose-300"
-                >
-                  <div className="text-center mb-3">
-                    <div className="text-5xl">{tmpl.emoji}</div>
-                    <h2 className="font-fredoka font-bold text-rose-700 text-xl">{viewEntry.title}</h2>
-                    <p className="font-nunito text-rose-400 text-xs">{viewEntry.date}</p>
-                  </div>
-                  <p className="font-nunito text-gray-800 leading-relaxed mb-4">
-                    {tmpl.render(viewEntry.words)}
-                  </p>
-                  <div className="flex gap-2">
-                    <button onClick={() => setViewEntry(null)} className="flex-1 btn-kid-secondary">Close</button>
-                    <button onClick={() => deleteEntry(viewEntry.id)} className="flex-1 bg-red-100 text-red-600 rounded-full font-fredoka py-2 hover:bg-red-200">🗑️ Delete</button>
-                  </div>
-                </motion.div>
-              </motion.div>
-            );
-          })()}
-        </AnimatePresence>
-      </div>
-    </motion.div>
+      </AnimatePresence>
+    </ScreenFrame>
   );
-};
-
-export default IdolDiary;
+}

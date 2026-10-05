@@ -322,7 +322,11 @@ export function migrateSave(persisted: unknown, version: number): Partial<GameSt
 }
 
 /** Content keys outside the main save that "Reset all progress" also clears. */
-const RESET_KEYS = ['cipher_*', 'ciphers_solved', 'jarvis_students', 'jarvis_seen_intro', 'style_saves', 'style_*', 'funquest-quests-claimed', 'diary_list', 'zip_best', 'wordladder_solved'];
+const RESET_KEYS = [
+  'cipher_*', 'ciphers_solved', 'jarvis_students', 'jarvis_seen_intro', 'style_saves', 'style_*', 'funquest-quests-claimed',
+  'diary_list', 'diary_entries', 'zip_best', 'wordladder_solved', 'funquest-idol_*', 'funquest-player-card',
+  'funquest-style_studio-struts', 'funquest-beats', 'funquest-welcome-visits',
+];
 const RESET_DBS = ['funquest-doodles', 'TLDRAW_DOCUMENT_v2kpop-fun-quest-mural-v2'];
 
 
