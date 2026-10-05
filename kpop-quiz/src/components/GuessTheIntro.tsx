@@ -1,237 +1,216 @@
-import { useState, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useGameStore } from '../store';
-import { useSafeTimeout } from '../utils/useSafeTimeout';
-import { playClick, playCorrect, playWrong, playWin, playPop } from '../utils/sounds';
+import { useGameStore, TRACKS } from '../store';
+import GameShell from '../games/engine/GameShell';
+import type { ShellStatus } from '../games/engine/GameShell';
+import { createRng } from '../games/engine/rng';
+import { playClick, playCorrect, playWrong } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
+import {
+  songsFrom, pickRounds, pickOptions, isRight, clipStart, verdict, LEVELS,
+} from './guessIntroLogic';
+import type { IntroRound, LevelId, Song } from './guessIntroLogic';
 
-interface Track {
-  file: string;
-  title: string;
-  startSec: number;
-}
+// Guess the Intro: hear a short clip from the soundtrack and pick the song.
+// Score = songs guessed right (out of 5); GameShell gives the reward via finishRound('guess_intro', …).
 
-const TRACKS: Track[] = [
-  { file: '01-takedown-twice.m4a', title: 'Takedown (TWICE version)', startSec: 12 },
-  { file: '02-hows-it-done.m4a', title: "How It's Done", startSec: 8 },
-  { file: '03-soda-pop.m4a', title: 'Soda Pop', startSec: 15 },
-  { file: '04-golden.m4a', title: 'Golden', startSec: 6 },
-  { file: '05-strategy.m4a', title: 'Strategy', startSec: 18 },
-  { file: '06-takedown.m4a', title: 'Takedown (HUNTR/X version)', startSec: 10 },
-  { file: '07-your-idol.m4a', title: 'Your Idol', startSec: 14 },
-  { file: '08-free.m4a', title: 'Free', startSec: 9 },
-]
+const SONGS = songsFrom(TRACKS);
 
-const CLIP_LENGTHS = [1.5, 2.5, 4]; // progressively easier
-const CLIP_LABELS = ['🔥 SUPER SHORT', '⚡ SHORT', '🎵 LONGER'];
-
-function pickOptions(correct: Track): Track[] {
-  const others = TRACKS.filter((t) => t.file !== correct.file);
-  const shuffled = [...others].sort(() => Math.random() - 0.5).slice(0, 3);
-  return [...shuffled, correct].sort(() => Math.random() - 0.5);
-}
+interface Feedback { ok: boolean; picked: string }
 
 export default function GuessTheIntro() {
-  const { setGameState, addXP } = useGameStore();
-  const later = useSafeTimeout();
-  const [round, setRound] = useState(0);
-  const [score, setScore] = useState(0);
-  const [clipIdx, setClipIdx] = useState(0);
-  const [target, setTarget] = useState<Track>(() => TRACKS[Math.floor(Math.random() * TRACKS.length)]);
-  const [options, setOptions] = useState<Track[]>(() => pickOptions(target));
-  const [feedback, setFeedback] = useState<null | { ok: boolean; answer: string }>(null);
-  const [playing, setPlaying] = useState(false);
-  const [done, setDone] = useState(false);
-  const [confetti, setConfetti] = useState(false);
+  const [status, setStatus] = useState<ShellStatus>('ready');
+  const [game, setGame] = useState(0);
+  const [level, setLevel] = useState<LevelId>('medium');
+  const [rounds, setRounds] = useState<IntroRound[]>([]);
+  const [options, setOptions] = useState<Song[][]>([]);
+  const [n, setN] = useState(0);
+  const [correct, setCorrect] = useState(0);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [listening, setListening] = useState(false);
+
+  const lv = LEVELS.find(l => l.id === level) ?? LEVELS[1];
+  const round = rounds[n];
 
   // A plain <audio> element (not decodeAudioData) so only the needed bytes stream in, and so
   // it works on iPad Safari, which requires play() to be called directly inside the tap.
   const clipRef = useRef<HTMLAudioElement | null>(null);
   const stopTimerRef = useRef<number | null>(null);
+  const onPlayingRef = useRef<(() => void) | null>(null);
   const setIsPlaying = useGameStore(s => s.setIsPlaying);
+
+  const stopClip = useCallback(() => {
+    const el = clipRef.current;
+    if (stopTimerRef.current !== null) window.clearTimeout(stopTimerRef.current);
+    stopTimerRef.current = null;
+    if (el && onPlayingRef.current) el.removeEventListener('playing', onPlayingRef.current);
+    onPlayingRef.current = null;
+    el?.pause();
+    setListening(false);
+  }, []);
 
   // Pause the background music while guessing (Safari ignores volume changes, so no fading),
   // and put it back the way it was when leaving.
   useEffect(() => {
     const wasPlaying = useGameStore.getState().isPlaying;
     setIsPlaying(false);
-    clipRef.current = new Audio();
-    clipRef.current.preload = 'auto';
+    const el = new Audio();
+    el.preload = 'auto';
+    clipRef.current = el;
     return () => {
-      clipRef.current?.pause();
+      if (stopTimerRef.current !== null) window.clearTimeout(stopTimerRef.current);
+      el.pause();
+      el.removeAttribute('src');
       clipRef.current = null;
-      if (stopTimerRef.current) clearTimeout(stopTimerRef.current);
       if (wasPlaying) setIsPlaying(true);
     };
   }, [setIsPlaying]);
 
-  // Preload the round's track so the seek is instant when she taps play.
-  useEffect(() => {
+  const loadFile = (file: string) => {
     const el = clipRef.current;
     if (!el) return;
-    el.src = `/musickpop/${target.file}`;
-    el.load();
-  }, [target]);
+    const url = `/musickpop/${file}`;
+    if (el.getAttribute('src') !== url) { el.src = url; el.load(); }
+  };
 
-  const playClip = () => {
+  /** Call from a tap. The clip length is timed from when sound actually starts. */
+  const playClip = (file: string, seconds: number) => {
     const el = clipRef.current;
-    if (playing || feedback || !el) return;
-    playClick();
-    setPlaying(true);
-    const dur = CLIP_LENGTHS[clipIdx];
-    const seekAndStop = () => {
-      try { el.currentTime = target.startSec; } catch { /* metadata not ready yet */ }
-      if (stopTimerRef.current) clearTimeout(stopTimerRef.current);
-      stopTimerRef.current = window.setTimeout(() => { el.pause(); setPlaying(false); }, dur * 1000);
+    if (!el) return;
+    stopClip();
+    loadFile(file);
+    const seek = () => { try { el.currentTime = clipStart(file); } catch { /* not seekable yet */ } };
+    if (el.readyState >= 1) seek(); else el.addEventListener('loadedmetadata', seek, { once: true });
+    const onPlaying = () => {
+      onPlayingRef.current = null;
+      stopTimerRef.current = window.setTimeout(() => { el.pause(); setListening(false); }, seconds * 1000);
     };
-    if (el.readyState >= 1) seekAndStop();
-    else el.addEventListener('loadedmetadata', seekAndStop, { once: true });
-    el.play().catch(() => setPlaying(false));
+    onPlayingRef.current = onPlaying;
+    el.addEventListener('playing', onPlaying, { once: true });
+    setListening(true);
+    el.play().catch(() => setListening(false));
   };
 
-  const giveHint = () => {
-    if (clipIdx < CLIP_LENGTHS.length - 1) {
-      setClipIdx(clipIdx + 1);
-      playPop();
-    }
+  // Pause when she switches apps.
+  useEffect(() => {
+    const onVis = () => {
+      if (!document.hidden) return;
+      stopClip();
+      setStatus(s => (s === 'playing' ? 'paused' : s));
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [stopClip]);
+
+  const start = () => {
+    const rng = createRng(Date.now() % 1e9);
+    const rs = pickRounds(SONGS, rng);
+    setRounds(rs);
+    setOptions(rs.map(r => pickOptions(r.song, SONGS, rng)));
+    setN(0);
+    setCorrect(0);
+    setFeedback(null);
+    setGame(g => g + 1);
+    setStatus('playing');
+    if (rs[0]) playClip(rs[0].file, lv.clip);
   };
 
-  const answer = (t: Track) => {
-    if (feedback) return;
-    const ok = t.file === target.file;
-    if (ok) {
-      const points = clipIdx === 0 ? 30 : clipIdx === 1 ? 20 : 10;
-      setScore((s) => s + points);
-      addXP(points);
-      playCorrect();
-    } else {
-      playWrong();
-    }
-    setFeedback({ ok, answer: target.title });
+  const answer = (song: Song) => {
+    if (!round || feedback) return;
+    stopClip();
+    const ok = isRight(song, round);
+    if (ok) { playCorrect(); setCorrect(c => c + 1); } else playWrong();
+    setFeedback({ ok, picked: song.key });
+    const nextRound = rounds[n + 1];
+    if (nextRound) loadFile(nextRound.file);
   };
 
   const next = () => {
-    clipRef.current?.pause();
-    if (stopTimerRef.current) clearTimeout(stopTimerRef.current);
-    setPlaying(false);
-    if (round >= 4) {
-      setDone(true);
-      setConfetti(true);
-      playWin();
-      later(() => setConfetti(false), 3000);
+    if (n + 1 >= rounds.length) {
+      stopClip();
+      setStatus('over');
       return;
     }
-    const nextTarget = TRACKS[Math.floor(Math.random() * TRACKS.length)];
-    setTarget(nextTarget);
-    setOptions(pickOptions(nextTarget));
-    setRound((r) => r + 1);
-    setClipIdx(0);
     setFeedback(null);
+    setN(n + 1);
+    playClip(rounds[n + 1].file, lv.clip);
   };
 
-  const restart = () => {
-    const t = TRACKS[Math.floor(Math.random() * TRACKS.length)];
-    setTarget(t);
-    setOptions(pickOptions(t));
-    setRound(0);
-    setScore(0);
-    setClipIdx(0);
-    setFeedback(null);
-    setDone(false);
-  };
+  const total = rounds.length || 5;
+
+  const readyContent = (
+    <div className="space-y-3">
+      <p className="font-nunito text-lg text-violet-100">Listen to a tiny clip — which HUNTR/X song is it?</p>
+      <p className="font-fredoka text-lg text-violet-200">How long is the clip?</p>
+      <div className="grid grid-cols-3 gap-2">
+        {LEVELS.map(l => (
+          <button key={l.id} onClick={() => { playClick(); setLevel(l.id); }}
+            aria-pressed={level === l.id}
+            className={`min-h-[64px] rounded-2xl font-fredoka text-lg leading-tight border-2 ${level === l.id ? 'bg-fuchsia-500 border-yellow-300' : 'bg-white/10 border-white/15'}`}>
+            {l.label}
+            <span className="block font-nunito text-base">{l.clip} {l.clip === 1 ? 'second' : 'seconds'}</span>
+          </button>
+        ))}
+      </div>
+      <p className="font-nunito text-base text-violet-200">{total} songs · tap the big button to hear a clip again</p>
+    </div>
+  );
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="min-h-screen bg-kid-pattern flex flex-col items-center p-4"
+    <GameShell
+      gameId="guess_intro"
+      title="Guess the Intro"
+      icon="🎧"
+      xpScale={lv.xpScale}
+      status={status}
+      score={correct}
+      round={game}
+      formatScore={s => `${s} right`}
+      overTitle={verdict(correct, total)}
+      overStats={[
+        { label: 'Level', value: lv.label },
+        { label: 'Songs right', value: `${correct} / ${total}` },
+      ]}
+      readyContent={readyContent}
+      onStart={start}
+      onPause={() => { stopClip(); setStatus('paused'); }}
+      onResume={() => setStatus('playing')}
     >
-      {confetti && <ConfettiBurst count={80} durationMs={3000} />}
-
-      <div className="w-full max-w-2xl">
-        <button
-          onClick={() => setGameState('game_mode')}
-          className="btn-kid-secondary mb-4 font-fredoka"
-        >
-          ← Back
-        </button>
-
-        <div className="card-kid bg-gradient-to-br from-violet-500 to-fuchsia-600 text-white mb-4">
-          <h1 className="text-3xl md:text-4xl font-fredoka font-bold text-center mb-1">
-            🎧 Guess the Intro
-          </h1>
-          <p className="text-center font-nunito text-violet-100">
-            Listen to a tiny snippet — which HUNTR/X song is it?
-          </p>
-          <div className="flex justify-around mt-3 text-center">
-            <div>
-              <div className="text-xs uppercase text-violet-200">Round</div>
-              <div className="font-fredoka text-2xl">{round + 1} / 5</div>
-            </div>
-            <div>
-              <div className="text-xs uppercase text-violet-200">Score</div>
-              <div className="font-fredoka text-2xl">{score}</div>
-            </div>
-          </div>
-        </div>
-
-        {!done && (
-          <>
-            <div className="card-kid bg-white mb-4 text-center">
-              <p className="font-nunito text-sm text-gray-600 mb-2">Clip length</p>
-              <div className="font-fredoka text-lg text-purple-700 mb-3">
-                {CLIP_LABELS[clipIdx]} · {CLIP_LENGTHS[clipIdx]}s
-              </div>
-
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={playClip}
-                disabled={playing || !!feedback}
-                className={`w-32 h-32 rounded-full text-6xl shadow-xl mx-auto block ${
-                  playing
-                    ? 'bg-gradient-to-br from-pink-500 to-rose-600 animate-pulse'
-                    : 'bg-gradient-to-br from-violet-500 to-fuchsia-600'
-                } text-white disabled:opacity-50`}
-              >
-                {playing ? '🔊' : '▶️'}
-              </motion.button>
-
-              <p className="font-nunito text-xs text-gray-500 mt-3">
-                Tap the big button to hear the clip
-              </p>
-
-              {clipIdx < CLIP_LENGTHS.length - 1 && !feedback && (
-                <button
-                  onClick={giveHint}
-                  className="mt-3 px-4 py-2 rounded-full bg-amber-100 text-amber-700 font-fredoka text-sm border-2 border-amber-300 hover:bg-amber-200"
-                >
-                  💡 Need a hint? Make the clip longer (less XP)
-                </button>
-              )}
+      {status === 'over' && correct === total && total > 0 && <ConfettiBurst count={90} durationMs={3000} />}
+      {round && (
+        <div className="absolute inset-0 overflow-y-auto">
+          <div className="max-w-xl mx-auto px-4 py-4 flex flex-col items-center gap-4">
+            <div className="flex w-full justify-between font-fredoka text-xl">
+              <span>🎵 Song {n + 1} / {total}</span>
+              <span className="text-yellow-300">✅ {correct}</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-              {options.map((opt) => {
-                const isCorrect = feedback && opt.file === target.file;
-                const isWrongPick = feedback && !feedback.ok && opt.file !== target.file;
+            <motion.button whileTap={{ scale: 0.94 }}
+              onClick={() => { playClick(); playClip(round.file, lv.clip); }}
+              disabled={listening}
+              aria-label="Play the clip"
+              className={`w-40 h-40 rounded-full text-7xl shadow-2xl border-4 border-white/30 ${listening
+                ? 'bg-gradient-to-br from-pink-500 to-rose-600 animate-pulse'
+                : 'bg-gradient-to-br from-violet-500 to-fuchsia-600'}`}>
+              {listening ? '🔊' : '▶️'}
+            </motion.button>
+            <p className="font-nunito text-lg text-violet-200 -mt-1">
+              {listening ? 'Listen…' : `Tap to hear it again (${lv.clip} s)`}
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+              {(options[n] ?? []).map(opt => {
+                const right = !!feedback && opt.key === round.song.key;
+                const wrongPick = !!feedback && !feedback.ok && opt.key === feedback.picked;
                 return (
-                  <motion.button
-                    key={opt.file}
-                    whileHover={{ scale: feedback ? 1 : 1.03 }}
-                    whileTap={{ scale: feedback ? 1 : 0.97 }}
-                    onClick={() => answer(opt)}
-                    disabled={!!feedback}
-                    className={`p-4 rounded-2xl border-3 font-fredoka text-base text-left shadow-md transition-colors ${
-                      isCorrect
-                        ? 'bg-green-100 border-green-500 text-green-800'
-                        : isWrongPick
-                        ? 'bg-white border-gray-300 text-gray-500 opacity-60'
-                        : 'bg-white border-purple-300 hover:border-purple-500 text-purple-800'
-                    }`}
-                  >
-                    {opt.title}
+                  <motion.button key={opt.key} whileTap={{ scale: feedback ? 1 : 0.96 }}
+                    onClick={() => answer(opt)} disabled={!!feedback}
+                    className={`min-h-[72px] px-4 rounded-2xl font-fredoka text-xl border-2 shadow-md transition-colors ${right
+                      ? 'bg-green-500 border-green-200'
+                      : wrongPick
+                        ? 'bg-rose-500/70 border-rose-200'
+                        : feedback ? 'bg-white/10 border-white/10 opacity-60' : 'bg-white/15 border-white/25'}`}>
+                    {right && '✅ '}{opt.title}
                   </motion.button>
                 );
               })}
@@ -239,56 +218,20 @@ export default function GuessTheIntro() {
 
             <AnimatePresence>
               {feedback && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className={`card-kid text-center mb-4 ${
-                    feedback.ok ? 'bg-green-50 border-green-300' : 'bg-rose-50 border-rose-300'
-                  }`}
-                >
-                  <div className="text-5xl mb-2">{feedback.ok ? '🎉' : '🙈'}</div>
-                  <p className="font-fredoka text-xl mb-1">
-                    {feedback.ok ? "That's it!" : 'Almost!'}
-                  </p>
-                  <p className="font-nunito text-gray-700">
-                    The song was <span className="font-bold text-purple-700">{feedback.answer}</span>
-                  </p>
-                  <button
-                    onClick={next}
-                    className="btn-kid mt-3 font-fredoka"
-                  >
-                    {round >= 4 ? 'See Final Score 🏆' : 'Next Song →'}
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  className="w-full rounded-3xl bg-white/10 p-4 text-center">
+                  <p className="font-fredoka text-2xl mb-1">{feedback.ok ? '🎉 That’s it!' : '🙈 So close!'}</p>
+                  {!feedback.ok && <p className="font-nunito text-lg text-violet-100">It was <b className="text-yellow-300">{round.song.title}</b></p>}
+                  <button onClick={() => { playClick(); next(); }}
+                    className="mt-3 w-full min-h-[56px] rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-400 font-fredoka text-2xl">
+                    {n + 1 >= total ? 'See my score 🏆' : 'Next song →'}
                   </button>
                 </motion.div>
               )}
             </AnimatePresence>
-          </>
-        )}
-
-        {done && (
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="card-kid bg-gradient-to-br from-yellow-300 to-orange-400 text-center"
-          >
-            <div className="text-6xl mb-2">🏆</div>
-            <h2 className="font-fredoka text-3xl font-bold text-orange-900 mb-1">All Done!</h2>
-            <p className="font-nunito text-orange-800 mb-2">You scored</p>
-            <div className="font-fredoka text-5xl text-orange-900 mb-3">{score}</div>
-            <p className="font-nunito text-sm text-orange-800 mb-4">
-              {score >= 120 ? '🌟 Golden Ear! Pitch-perfect!' :
-               score >= 80 ? '🎵 Great listening!' :
-               score >= 40 ? '🎶 Nice try — play again!' :
-               '👂 Train those ears — give it another go!'}
-            </p>
-            <div className="flex gap-2 justify-center">
-              <button onClick={restart} className="btn-kid font-fredoka">Play Again 🔁</button>
-              <button onClick={() => setGameState('game_mode')} className="btn-kid-secondary font-fredoka">Done</button>
-            </div>
-          </motion.div>
-        )}
-      </div>
-    </motion.div>
+          </div>
+        </div>
+      )}
+    </GameShell>
   );
 }

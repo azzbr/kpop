@@ -20,7 +20,7 @@ interface Story {
 
 const STORIES: Story[] = [
   {
-    title: 'The Concert Disaster',
+    title: 'The School Concert Disaster',
     emoji: '🎤',
     blanks: [
       { type: 'person', label: 'Student A', hint: 'a classmate\'s name' },
@@ -31,10 +31,10 @@ const STORIES: Story[] = [
       { type: 'object', label: 'Random object', hint: 'something unexpected' },
     ],
     render: ([a, act, b, bp, react, obj]) =>
-      `During the biggest HUNTR/X concert of the year, ${a} accidentally ${act} on ${b}'s ${bp}, causing the entire crowd to ${react}. Security tried to restore order using only a ${obj}. Historians still debate whether it was the best or worst concert ever.`,
+      `During the biggest school concert of the year, ${a} accidentally ${act} on ${b}'s ${bp}, causing the entire crowd to ${react}. Security tried to restore order using only a ${obj}. Historians still debate whether it was the best or worst concert ever.`,
   },
   {
-    title: 'The Idol Audition',
+    title: 'The Talent Show Audition',
     emoji: '⭐',
     blanks: [
       { type: 'person', label: 'Auditionee', hint: 'a classmate\'s name' },
@@ -45,7 +45,7 @@ const STORIES: Story[] = [
       { type: 'number', label: 'A number', hint: 'any number' },
     ],
     render: ([aud, tal, adj, judge, food, num]) =>
-      `${aud} walked onto the HUNTR/X audition stage and immediately began ${tal}. The performance was so ${adj} that judge ${judge} dropped their ${food} in shock. The crowd gave a standing ovation of exactly ${num} seconds. The talent scouts signed them immediately.`,
+      `${aud} walked onto the talent show stage and immediately began ${tal}. The performance was so ${adj} that judge ${judge} dropped their ${food} in shock. The crowd gave a standing ovation of exactly ${num} seconds. The judges gave them a golden star on the spot.`,
   },
   {
     title: 'The Secret Rehearsal',
@@ -59,35 +59,35 @@ const STORIES: Story[] = [
       { type: 'emotion', label: 'Emotion', hint: 'how they felt, e.g. horrified, delighted' },
     ],
     render: ([dancer, loc, move, witness, animal, emo]) =>
-      `${dancer} was secretly rehearsing K-pop moves in ${loc} when they attempted the legendary ${move}. Suddenly, ${witness} walked in — along with a stray ${animal}. Everyone was ${emo}. The video somehow got 4 million views overnight.`,
+      `${dancer} was secretly rehearsing dance moves in ${loc} when they attempted the legendary ${move}. Suddenly, ${witness} walked in — along with a stray ${animal}. Everyone was ${emo}. By lunchtime the whole school was trying the same move.`,
   },
   {
-    title: 'The Album Release Party',
+    title: 'The Arcade Launch Party',
     emoji: '💿',
     blanks: [
       { type: 'person', label: 'Party host', hint: 'a classmate\'s name' },
-      { type: 'adjective', label: 'Album title word', hint: 'e.g. Glittery, Chaotic' },
+      { type: 'adjective', label: 'Game title word', hint: 'e.g. Glittery, Chaotic' },
       { type: 'person', label: 'Party crasher', hint: 'another classmate\'s name' },
       { type: 'item', label: 'Strange item brought', hint: 'something unexpected' },
-      { type: 'adj2', label: 'How the party ended', hint: 'e.g. upside down, on fire' },
+      { type: 'adj2', label: 'How the party ended', hint: 'e.g. upside down, sparkly' },
       { type: 'person', label: 'Person who fixed it', hint: 'the class hero' },
     ],
     render: ([host, adj, crasher, item, end, hero]) =>
-      `${host} threw the biggest album release party for HUNTR/X's new album "${adj} Nights". Everything was perfect until ${crasher} arrived carrying a ${item}. By midnight the party was completely ${end}. Only ${hero} knew how to save the evening — and they did it perfectly.`,
+      `${host} threw the biggest launch party for the new arcade game "${adj} Quest". Everything was perfect until ${crasher} arrived carrying a ${item}. By midnight the party was completely ${end}. Only ${hero} knew how to save the evening — and they did it perfectly.`,
   },
   {
-    title: 'The Fan Meet Chaos',
+    title: 'The Book Signing Chaos',
     emoji: '🌟',
     blanks: [
       { type: 'person', label: 'Fan 1', hint: 'a classmate\'s name' },
-      { type: 'idol', label: 'Idol name', hint: 'made-up idol name' },
+      { type: 'author', label: 'Author name', hint: 'made-up author name' },
       { type: 'gift', label: 'Gift given', hint: 'e.g. a sock, a drawing of a dog' },
       { type: 'person', label: 'Fan 2', hint: 'another classmate\'s name' },
       { type: 'quote', label: 'Dramatic quote', hint: 'something dramatic to say' },
       { type: 'escape', label: 'Escape method', hint: 'how they escaped, e.g. via helicopter' },
     ],
-    render: ([fan1, idol, gift, fan2, quote, escape]) =>
-      `At the HUNTR/X fan meet, ${fan1} handed idol ${idol} a ${gift}. The idol was so moved they whispered "${quote}". Pandemonium broke out. ${fan2} grabbed the microphone and announced something unrepeatable. Everyone escaped ${escape}. It was the fan meet of the century.`,
+    render: ([fan1, author, gift, fan2, quote, escape]) =>
+      `At the school book signing, ${fan1} handed famous author ${author} a ${gift}. The author was so moved they whispered "${quote}". Pandemonium broke out. ${fan2} grabbed the microphone and started singing the alphabet backwards. Everyone escaped ${escape}. It was the book signing of the century.`,
   },
 ];
 

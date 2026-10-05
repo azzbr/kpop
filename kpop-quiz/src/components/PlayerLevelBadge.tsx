@@ -30,7 +30,7 @@ const PlayerLevelBadge: React.FC = () => {
       <div className={`relative bg-gradient-to-r ${LEVEL_COLORS[level]} rounded-xl w-12 h-12 flex items-center justify-center text-white font-fredoka font-bold text-xl shadow-md flex-shrink-0`}>
         {level}
         {huntrxUnlocked && (
-          <span className="absolute -top-3 -right-2 text-xl drop-shadow" title="HUNTR/X Superstar">👑</span>
+          <span className="absolute -top-3 -right-2 text-xl drop-shadow" title="Superstar">👑</span>
         )}
       </div>
       <div className="flex-1 min-w-0">
