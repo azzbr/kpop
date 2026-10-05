@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PUZZLES, VALID_WORDS, differsBy1, ladderHint } from './wordLadder';
+import { PUZZLES, VALID_WORDS, differsBy1, ladderHint, shortestLadder as ladderPath, checkStep, ladderScore } from './wordLadder';
 
 /** Shortest number of one-letter changes from start to end using only dictionary words, or -1. */
 function shortestLadder(start: string, end: string): number {
@@ -38,5 +38,42 @@ describe('word ladder puzzles', () => {
     expect(p.steps).toBeGreaterThanOrEqual(best);
     // The hint shows one "?" per in-between word
     expect(ladderHint(p).split('?').length - 1).toBe(p.steps - 1);
+  });
+});
+
+describe('word ladder helpers', () => {
+  it('shortestLadder returns a real ladder of the listed length for every puzzle', () => {
+    for (const p of PUZZLES) {
+      const path = ladderPath(p.start, p.end)!;
+      expect(path[0]).toBe(p.start);
+      expect(path[path.length - 1]).toBe(p.end);
+      expect(path.length - 1).toBe(p.steps);
+      for (let i = 1; i < path.length; i++) {
+        expect(differsBy1(path[i - 1], path[i])).toBe(true);
+        expect(VALID_WORDS.has(path[i])).toBe(true);
+      }
+    }
+    expect(ladderPath('cat', 'zzz')).toBeNull();
+  });
+
+  it('checkStep explains what is wrong', () => {
+    const p = PUZZLES[0]; // cat → dog
+    expect(checkStep(['cat'], 'cats', p)).toBe('length');
+    expect(checkStep(['cat', 'cot'], 'cat', p)).toBe('used');
+    expect(checkStep(['cat'], 'dog', p)).toBe('notOneLetter');
+    expect(checkStep(['cat'], 'cax', p)).toBe('unknown');
+    expect(checkStep(['cat'], 'cot', p)).toBeNull();
+  });
+
+  it('score: 100 for the shortest ladder, less for extra steps and hints, never below 10', () => {
+    const p = PUZZLES[0];
+    expect(ladderScore(p, p.steps, 0)).toBe(100);
+    expect(ladderScore(p, p.steps + 2, 1)).toBe(65);
+    expect(ladderScore(p, 50, 5)).toBe(10);
+  });
+
+  it('has no K-Pop words', () => {
+    expect(VALID_WORDS.has('kpop')).toBe(false);
+    expect(VALID_WORDS.has('idol')).toBe(false);
   });
 });

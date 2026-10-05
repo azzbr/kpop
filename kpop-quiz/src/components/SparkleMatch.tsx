@@ -1,451 +1,268 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useGameStore } from '../store';
-import { playClick, playPop, playCoin, playWin, playWrong, playUnlock } from '../utils/sounds';
-import ConfettiBurst from './ConfettiBurst';
+import GameShell from '../games/engine/GameShell';
+import type { ShellStatus } from '../games/engine/GameShell';
+import { createRng } from '../games/engine/rng';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
+import { playClick, playPop, playCoin, playWrong, playUnlock, playTick } from '../utils/sounds';
+import {
+  SIZE, GAME_SECONDS, POWER_BADGE, freshGrid, shuffleGrid, findMatches, hasValidMove, clearMatches, swap, isAdjacent, swipeTarget,
+} from './games/gemMatchLogic';
+import type { Grid, Pos } from './games/gemMatchLogic';
 
-const SIZE = 7;
-const CHARMS = ['💖', '⭐', '🌸', '👑', '🎀', '💎'];
-const POWER_CHARM = '⚡';
-const TIME = 60;
+const GEM_BG: Record<string, string> = {
+  '💖': 'rgba(244,114,182,0.30)', '⭐': 'rgba(250,204,21,0.28)', '🌸': 'rgba(251,207,232,0.25)',
+  '👑': 'rgba(251,191,36,0.25)', '🎀': 'rgba(239,68,68,0.25)', '💎': 'rgba(56,189,248,0.30)',
+};
 
-type Cell = { id: number; charm: string; isPower: boolean };
-
-function makeCell(id: number, charm?: string, isPower = false): Cell {
-  return { id, charm: charm ?? CHARMS[Math.floor(Math.random() * CHARMS.length)], isPower };
-}
-
-function findMatches(grid: Cell[][]): Set<string> {
-  const m = new Set<string>();
-  // horizontal
-  for (let r = 0; r < SIZE; r++) {
-    let run = 1;
-    for (let c = 1; c < SIZE; c++) {
-      if (grid[r][c].charm === grid[r][c - 1].charm) run++;
-      else {
-        if (run >= 3) for (let k = 0; k < run; k++) m.add(`${r}-${c - 1 - k}`);
-        run = 1;
-      }
-    }
-    if (run >= 3) for (let k = 0; k < run; k++) m.add(`${r}-${SIZE - 1 - k}`);
-  }
-  // vertical
-  for (let c = 0; c < SIZE; c++) {
-    let run = 1;
-    for (let r = 1; r < SIZE; r++) {
-      if (grid[r][c].charm === grid[r - 1][c].charm) run++;
-      else {
-        if (run >= 3) for (let k = 0; k < run; k++) m.add(`${r - 1 - k}-${c}`);
-        run = 1;
-      }
-    }
-    if (run >= 3) for (let k = 0; k < run; k++) m.add(`${SIZE - 1 - k}-${c}`);
-  }
-  return m;
-}
-
-// True if at least one swap of neighbours would make a match
-function hasValidMove(grid: Cell[][]): boolean {
-  const g = grid.map(row => [...row]);
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      for (const [dr, dc] of [[0, 1], [1, 0]]) {
-        const r2 = r + dr, c2 = c + dc;
-        if (r2 >= SIZE || c2 >= SIZE) continue;
-        [g[r][c], g[r2][c2]] = [g[r2][c2], g[r][c]];
-        const ok = findMatches(g).size > 0;
-        [g[r][c], g[r2][c2]] = [g[r2][c2], g[r][c]];
-        if (ok) return true;
-      }
-    }
-  }
-  return false;
-}
-
-let idCounter = 0;
-function freshGrid(): Cell[][] {
-  let grid: Cell[][];
-  do {
-    grid = Array.from({ length: SIZE }, () =>
-      Array.from({ length: SIZE }, () => makeCell(++idCounter))
-    );
-  } while (findMatches(grid).size > 0 || !hasValidMove(grid));
-  return grid;
-}
-
-// Shuffle the same charms into a board with no ready-made matches but at least one move
-function shuffleGrid(grid: Cell[][]): Cell[][] {
-  const cells = grid.flat();
-  for (let attempt = 0; attempt < 200; attempt++) {
-    for (let i = cells.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [cells[i], cells[j]] = [cells[j], cells[i]];
-    }
-    const next = Array.from({ length: SIZE }, (_, r) => cells.slice(r * SIZE, (r + 1) * SIZE));
-    if (findMatches(next).size === 0 && hasValidMove(next)) return next;
-  }
-  return freshGrid(); // very unlikely: these charms can't make a playable board
-}
-
-const SparkleMatch: React.FC = () => {
-  const { setGameState } = useGameStore();
-  const [grid, setGrid] = useState<Cell[][]>(() => freshGrid());
-  const [selected, setSelected] = useState<[number, number] | null>(null);
+export default function SparkleMatch() {
+  const later = useSafeTimeout();
+  const rng = useRef(createRng((Date.now() ^ (Math.random() * 1e9)) >>> 0));
+  const [status, setStatus] = useState<ShellStatus>('ready');
+  const [round, setRound] = useState(0);
+  const [grid, setGrid] = useState<Grid>(() => freshGrid(rng.current));
+  const [selected, setSelected] = useState<Pos | null>(null);
   const [score, setScore] = useState(0);
   const [combo, setCombo] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(TIME);
-  const [running, setRunning] = useState(false);
-  const [done, setDone] = useState(false);
-  const [highScore, setHighScore] = useState(() => useGameStore.getState().highScores.sparkle_match ?? 0);
-  const [confetti, setConfetti] = useState(false);
+  const [bestCombo, setBestCombo] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(GAME_SECONDS);
   const [matchedKeys, setMatchedKeys] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [floats, setFloats] = useState<{ id: number; x: number; y: number; text: string }[]>([]);
   const floatId = useRef(0);
-  const timeoutsRef = useRef<number[]>([]);
+  const runRef = useRef(0); // bumped by Start over so an old cascade stops
+  const boardRef = useRef<HTMLDivElement>(null);
+  const gesture = useRef<{ from: Pos; x: number; y: number; used: boolean } | null>(null);
 
-  // Track every timeout so nothing fires after leaving the screen or restarting
-  const later = useCallback((fn: () => void, ms: number) => {
-    timeoutsRef.current.push(window.setTimeout(fn, ms));
-  }, []);
-  const clearTimeouts = () => {
-    timeoutsRef.current.forEach(clearTimeout);
-    timeoutsRef.current = [];
-  };
-  useEffect(() => () => { timeoutsRef.current.forEach(clearTimeout); }, []);
+  const playing = status === 'playing';
 
-  // Timer
+  // The clock only runs while you can move — it waits during cascades.
   useEffect(() => {
-    if (!running || done) return;
-    const t = setInterval(() => setTimeLeft(s => Math.max(0, s - 1)), 1000);
-    return () => clearInterval(t);
-  }, [running, done]);
+    if (!playing || busy || timeLeft <= 0) return;
+    const t = window.setTimeout(() => {
+      setTimeLeft(s => Math.max(0, s - 1));
+      if (timeLeft <= 6 && timeLeft > 1) playTick();
+    }, 1000);
+    return () => window.clearTimeout(t);
+  }, [playing, busy, timeLeft]);
 
-  // Wait for any cascade still running (busy) so its points count before saving the score
   useEffect(() => {
-    if (timeLeft <= 0 && running && !done && !busy) {
-      setRunning(false);
-      setDone(true);
-      const isHigh = useGameStore.getState().finishRound('sparkle_match', score, 8).isBest;
-      if (isHigh) {
-        setHighScore(score);
-        setConfetti(true);
-        later(() => setConfetti(false), 2500);
-        playWin();
-      } else playWrong();
-    }
-  }, [timeLeft, running, done, busy, score, later]);
+    if (playing && timeLeft <= 0 && !busy) { setSelected(null); setStatus('over'); }
+  }, [playing, timeLeft, busy]);
 
-  const addFloat = useCallback((r: number, c: number, text: string) => {
-    const id = ++floatId.current;
-    setFloats(f => [...f, { id, x: c * 100 / SIZE, y: r * 100 / SIZE, text }]);
-    later(() => setFloats(f => f.filter(fl => fl.id !== id)), 900);
-  }, [later]);
-
-  const adjacent = (a: [number, number], b: [number, number]) =>
-    (a[0] === b[0] && Math.abs(a[1] - b[1]) === 1) || (a[1] === b[1] && Math.abs(a[0] - b[0]) === 1);
-
-  const applyMatches = useCallback((g: Cell[][], chainDepth = 1) => {
-    const matches = findMatches(g);
-    if (matches.size === 0) return { grid: g, scored: 0, chain: chainDepth - 1 };
-
-    // Identify match groups for power charm creation
-    const runs: { r: number; c: number; len: number; dir: 'h' | 'v' }[] = [];
-    // horizontal runs
-    for (let r = 0; r < SIZE; r++) {
-      let run = 1, start = 0;
-      for (let c = 1; c < SIZE; c++) {
-        if (g[r][c].charm === g[r][c - 1].charm) run++;
-        else { if (run >= 3) runs.push({ r, c: start, len: run, dir: 'h' }); run = 1; start = c; }
-      }
-      if (run >= 3) runs.push({ r, c: start, len: run, dir: 'h' });
-    }
-    for (let c = 0; c < SIZE; c++) {
-      let run = 1, start = 0;
-      for (let r = 1; r < SIZE; r++) {
-        if (g[r][c].charm === g[r - 1][c].charm) run++;
-        else { if (run >= 3) runs.push({ r: start, c, len: run, dir: 'v' }); run = 1; start = r; }
-      }
-      if (run >= 3) runs.push({ r: start, c, len: run, dir: 'v' });
-    }
-
-    // Power charm spawn locations (where 4+ matches happened)
-    const powerSpawn = new Set<string>();
-    runs.forEach(rn => {
-      if (rn.len >= 4) {
-        const mid = rn.dir === 'h' ? `${rn.r}-${rn.c + Math.floor(rn.len / 2)}` : `${rn.r + Math.floor(rn.len / 2)}-${rn.c}`;
-        powerSpawn.add(mid);
-      }
-    });
-
-    // Expand power charm clears
-    const cleared = new Set<string>(matches);
-    matches.forEach(key => {
-      const [r, c] = key.split('-').map(Number);
-      if (g[r][c].isPower) {
-        // clear row and column
-        for (let i = 0; i < SIZE; i++) {
-          cleared.add(`${r}-${i}`);
-          cleared.add(`${i}-${c}`);
-        }
-      }
-    });
-
-    // Score
-    const matchScore = cleared.size * 10 * chainDepth;
-    const fourBonus = runs.filter(r => r.len === 4).length * 25;
-    const fiveBonus = runs.filter(r => r.len >= 5).length * 60;
-    const earned = matchScore + fourBonus + fiveBonus;
-
-    // Visual matched indicator (briefly)
-    setMatchedKeys(cleared);
-
-    // Apply removal + gravity
-    const next = g.map(row => row.map(c => ({ ...c })));
-    cleared.forEach(key => {
-      const [r, c] = key.split('-').map(Number);
-      next[r][c] = makeCell(++idCounter, '_', false);
-      next[r][c].charm = '_'; // placeholder
-    });
-
-    // power charms spawn
-    powerSpawn.forEach(k => {
-      if (cleared.has(k)) {
-        const [r, c] = k.split('-').map(Number);
-        next[r][c] = { id: ++idCounter, charm: POWER_CHARM, isPower: true };
-      }
-    });
-
-    // Drop: for each column, compact non-empty downward
-    for (let c = 0; c < SIZE; c++) {
-      const col: Cell[] = [];
-      for (let r = SIZE - 1; r >= 0; r--) {
-        if (next[r][c].charm !== '_') col.push(next[r][c]);
-      }
-      for (let r = SIZE - 1; r >= 0; r--) {
-        if (col.length > 0) next[r][c] = col.shift()!;
-        else next[r][c] = makeCell(++idCounter);
-      }
-    }
-
-    return { grid: next, scored: earned, chain: chainDepth };
+  useEffect(() => {
+    const h = () => { if (document.hidden) setStatus(s => (s === 'playing' ? 'paused' : s)); };
+    document.addEventListener('visibilitychange', h);
+    return () => document.removeEventListener('visibilitychange', h);
   }, []);
 
-  const handleTap = useCallback((r: number, c: number) => {
-    if (busy || done || timeLeft <= 0) return;
-    if (!running) { setRunning(true); }
-    playPop();
-
-    if (!selected) { setSelected([r, c]); return; }
-    if (selected[0] === r && selected[1] === c) { setSelected(null); return; }
-    if (!adjacent(selected, [r, c])) { setSelected([r, c]); return; }
-
-    // Swap
-    setBusy(true);
-    const sr = selected[0], sc = selected[1];
-    setSelected(null);
-
-    const swapped = grid.map(row => row.map(cell => ({ ...cell })));
-    [swapped[sr][sc], swapped[r][c]] = [swapped[r][c], swapped[sr][sc]];
-
-    // Check if swap creates a match
-    if (findMatches(swapped).size === 0) {
-      // Invalid swap → wiggle and revert
-      playWrong();
-      setGrid(swapped);
-      later(() => { setGrid(grid); setBusy(false); }, 300);
-      return;
-    }
-
-    // Cascade through matches
-    let cur = swapped;
-    let totalEarned = 0;
-    let depth = 0;
-    const cascade = (delay: number) => {
-      const result = applyMatches(cur, depth + 1);
-      if (result.scored === 0) {
-        if (hasValidMove(cur)) {
-          setGrid(cur);
-        } else {
-          // No moves left: reshuffle so the player is never stuck
-          setGrid(shuffleGrid(cur));
-          addFloat(Math.floor(SIZE / 2), 1, '🔀 Shuffle!');
-        }
-        setMatchedKeys(new Set());
-        setBusy(false);
-        if (totalEarned > 0) {
-          setScore(s => s + totalEarned);
-          setCombo(depth);
-          if (depth >= 2) addFloat(r, c, `COMBO x${depth}!`);
-          if (depth >= 3) playUnlock();
-          else playCoin();
-        }
-        return;
-      }
-      depth = result.chain;
-      totalEarned += result.scored;
-      cur = result.grid;
-      setGrid(cur);
-      later(() => cascade(delay + 30), 380);
-    };
-    later(() => cascade(0), 250);
-  }, [busy, done, running, selected, grid, applyMatches, timeLeft, later, addFloat]);
-
-  const startOver = () => {
-    playClick();
-    clearTimeouts();
-    setConfetti(false);
-    setFloats([]);
-    setGrid(freshGrid());
+  const start = () => {
+    runRef.current++;
+    setGrid(freshGrid(rng.current));
     setSelected(null);
     setScore(0);
     setCombo(0);
-    setTimeLeft(TIME);
-    setRunning(false);
-    setDone(false);
+    setBestCombo(0);
+    setTimeLeft(GAME_SECONDS);
     setMatchedKeys(new Set());
     setBusy(false);
+    setFloats([]);
+    setRound(r => r + 1);
+    setStatus('playing');
   };
 
-  const timePct = (timeLeft / TIME) * 100;
+  const addFloat = useCallback((r: number, c: number, text: string) => {
+    const id = ++floatId.current;
+    setFloats(f => [...f, { id, x: (c + 0.5) * 100 / SIZE, y: (r + 0.5) * 100 / SIZE, text }]);
+    later(() => setFloats(f => f.filter(fl => fl.id !== id)), 900);
+  }, [later]);
+
+  const trySwap = (a: Pos, b: Pos) => {
+    if (!playing || busy || timeLeft <= 0) return;
+    setSelected(null);
+    const swapped = swap(grid, a, b);
+    setBusy(true);
+    const run = runRef.current;
+    if (findMatches(swapped).size === 0) {
+      // no match: show the swap, then put it back
+      playWrong();
+      setGrid(swapped);
+      later(() => { if (runRef.current !== run) return; setGrid(grid); setBusy(false); }, 320);
+      return;
+    }
+    playPop();
+    setGrid(swapped);
+    let cur = swapped;
+    let depth = 0;
+    let earned = 0;
+    const step = () => {
+      if (runRef.current !== run) return;
+      const res = clearMatches(cur, depth + 1, rng.current);
+      if (!res) {
+        setMatchedKeys(new Set());
+        if (!hasValidMove(cur)) {
+          cur = shuffleGrid(cur, rng.current);
+          addFloat(Math.floor(SIZE / 2), Math.floor(SIZE / 2), '🔀 Shuffle!');
+        }
+        setGrid(cur);
+        setScore(s => s + earned);
+        setCombo(depth);
+        setBestCombo(c => Math.max(c, depth));
+        addFloat(b[0], b[1], `+${earned}`);
+        if (depth >= 2) addFloat(Math.max(0, b[0] - 1), b[1], `COMBO x${depth}!`);
+        if (depth >= 3) playUnlock(); else playCoin();
+        setBusy(false);
+        return;
+      }
+      depth++;
+      earned += res.scored;
+      setMatchedKeys(res.cleared);
+      // flash the matched gems, then let the new ones fall in
+      later(() => {
+        if (runRef.current !== run) return;
+        cur = res.grid;
+        setMatchedKeys(new Set());
+        setGrid(cur);
+        later(step, 260);
+      }, 220);
+    };
+    later(step, 200);
+  };
+
+  const tap = (pos: Pos) => {
+    if (!playing || busy) return;
+    if (!selected) { playClick(); setSelected(pos); return; }
+    if (selected[0] === pos[0] && selected[1] === pos[1]) { setSelected(null); return; }
+    if (!isAdjacent(selected, pos)) { playClick(); setSelected(pos); return; }
+    trySwap(selected, pos);
+  };
+
+  const cellFromEvent = (e: ReactPointerEvent): { pos: Pos; size: number } | null => {
+    const el = boardRef.current;
+    if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    const c = Math.floor(((e.clientX - rect.left) / rect.width) * SIZE);
+    const r = Math.floor(((e.clientY - rect.top) / rect.height) * SIZE);
+    if (r < 0 || c < 0 || r >= SIZE || c >= SIZE) return null;
+    return { pos: [r, c], size: rect.width / SIZE };
+  };
+
+  const onPointerDown = (e: ReactPointerEvent) => {
+    if (!playing) return;
+    e.preventDefault();
+    const hit = cellFromEvent(e);
+    if (!hit) return;
+    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* not supported */ }
+    gesture.current = { from: hit.pos, x: e.clientX, y: e.clientY, used: false };
+  };
+  const onPointerMove = (e: ReactPointerEvent) => {
+    const g = gesture.current;
+    if (!g || g.used || !playing || busy) return;
+    const cell = (boardRef.current?.getBoundingClientRect().width ?? 350) / SIZE;
+    const to = swipeTarget(g.from, e.clientX - g.x, e.clientY - g.y, cell * 0.4);
+    if (!to) return;
+    g.used = true;
+    trySwap(g.from, to);
+  };
+  const onPointerUp = (e: ReactPointerEvent) => {
+    const g = gesture.current;
+    gesture.current = null;
+    if (!g || g.used) return;
+    const hit = cellFromEvent(e);
+    tap(hit ? hit.pos : g.from);
+  };
+
+  const timePct = (timeLeft / GAME_SECONDS) * 100;
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="min-h-screen flex flex-col items-center p-4"
-      style={{ background: 'linear-gradient(135deg, #fae8ff 0%, #f3e8ff 100%)' }}
+    <GameShell
+      gameId="sparkle_match"
+      title="Gem Match"
+      icon="💎"
+      xpScale={8}
+      status={status}
+      score={score}
+      round={round}
+      overTitle="Time's up! ✨"
+      overStats={[
+        { label: '🔥 Best combo', value: bestCombo >= 2 ? `x${bestCombo}` : '—' },
+        { label: '⏱️ Time', value: `${GAME_SECONDS}s` },
+      ]}
+      onStart={start}
+      onPause={() => { gesture.current = null; setStatus('paused'); }}
+      onResume={() => setStatus('playing')}
+      readyContent={
+        <ul className="font-nunito text-lg text-violet-100 text-left space-y-1 list-none">
+          <li>👉 <b>Swipe</b> a gem into its neighbour — or tap one, then tap the one next to it.</li>
+          <li>✨ Make lines of 3 or more of the same gem to score.</li>
+          <li>⚡ A line of 4 makes a power gem that clears a whole row and column!</li>
+          <li>⏱️ {GAME_SECONDS} seconds — the clock waits while gems are falling.</li>
+        </ul>
+      }
     >
-      {confetti && <ConfettiBurst count={70} durationMs={2500} />}
-
-      <div className="max-w-md w-full mx-auto">
-        <button onClick={() => { playClick(); setGameState('game_mode'); }}
-          className="mb-3 px-4 py-2 bg-white/70 hover:bg-white text-purple-700 rounded-full font-fredoka text-sm border-2 border-purple-200">
-          ← Back
-        </button>
-
-        <div className="text-center mb-3">
-          <h1 className="text-3xl font-fredoka font-bold text-purple-700">💎 Sparkle Match</h1>
-          <p className="font-nunito text-purple-500 text-sm">Match 3+ charms to make them sparkle!</p>
+      <div className="absolute inset-0 flex flex-col items-center gap-3 px-3 py-3">
+        <div className="w-full flex items-center gap-2 font-fredoka text-lg" style={{ maxWidth: 'min(94vw, calc(100dvh - 230px), 620px)' }}>
+          <span className="rounded-full bg-white/10 px-4 py-1 text-yellow-300 tabular-nums">⭐ {score}</span>
+          <span className={`rounded-full px-4 py-1 tabular-nums ${timeLeft <= 10 ? 'bg-rose-500/70' : 'bg-white/10'}`}>⏱️ {timeLeft}s{busy && playing ? ' ⏸' : ''}</span>
+          <span className="flex-1" />
+          <button type="button" onClick={() => { playClick(); start(); }} disabled={!playing}
+            className="min-h-[48px] px-4 rounded-2xl bg-white/15 font-fredoka text-lg disabled:opacity-40">🔄 Start over</button>
         </div>
-
-        {/* Stats */}
-        <div className="flex justify-between bg-white/80 border-2 border-purple-200 rounded-2xl px-4 py-2 mb-2 shadow-sm">
-          <span className="font-fredoka font-bold text-purple-700">⭐ {score}</span>
-          <span className={`font-fredoka font-bold ${timeLeft <= 10 ? 'text-red-500' : 'text-purple-700'}`}>⏱️ {timeLeft}s</span>
-          <span className="font-fredoka text-pink-500">🏆 {Math.max(highScore, score)}</span>
+        <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden" style={{ maxWidth: 'min(94vw, calc(100dvh - 230px), 620px)' }}>
+          <div className={`h-2 transition-all duration-1000 ${timeLeft > 30 ? 'bg-green-400' : timeLeft > 10 ? 'bg-yellow-400' : 'bg-rose-400'}`} style={{ width: `${timePct}%` }} />
         </div>
-        <div className="bg-purple-100 rounded-full h-2 mb-3 overflow-hidden border border-purple-200">
-          <motion.div
-            className={`h-2 rounded-full ${timeLeft > 30 ? 'bg-green-400' : timeLeft > 10 ? 'bg-yellow-400' : 'bg-red-400'}`}
-            animate={{ width: `${timePct}%` }}
-            transition={{ duration: 0.8 }}
-          />
-        </div>
-
-        {/* Combo flash */}
-        <AnimatePresence>
-          {combo >= 2 && (
-            <motion.p
-              key={combo}
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1.1 }}
-              exit={{ opacity: 0 }}
-              className="text-center font-fredoka font-bold text-pink-500 text-xl mb-2"
-            >
-              🔥 COMBO x{combo}!
-            </motion.p>
-          )}
-        </AnimatePresence>
-
-        {/* Grid */}
-        <div className="relative bg-white/80 rounded-3xl p-2 shadow-xl border-2 border-purple-200 mb-3">
-          <div
-            className="grid gap-1"
-            style={{ gridTemplateColumns: `repeat(${SIZE}, 1fr)` }}
-          >
-            {grid.map((row, r) =>
-              row.map((cell, c) => {
-                const key = `${r}-${c}`;
-                const isSelected = selected?.[0] === r && selected?.[1] === c;
-                const isMatched = matchedKeys.has(key);
-                return (
-                  <motion.button
-                    key={cell.id}
-                    layout
-                    onClick={() => handleTap(r, c)}
-                    initial={{ scale: 1 }}
-                    animate={{
-                      scale: isMatched ? [1, 1.3, 0.8] : isSelected ? 1.15 : 1,
-                      rotate: isMatched ? [0, 20, -20, 0] : 0,
-                    }}
-                    transition={{ duration: isMatched ? 0.3 : 0.15 }}
-                    className={`aspect-square rounded-xl text-3xl flex items-center justify-center transition-colors
-                      ${isSelected ? 'bg-yellow-200 ring-4 ring-yellow-400' :
-                        cell.isPower ? 'bg-gradient-to-br from-yellow-200 to-orange-300 shadow-md' :
-                        'bg-white hover:bg-purple-50'}
-                      ${isMatched ? 'opacity-50' : ''}
-                    `}
-                  >
-                    {cell.charm === '_' ? '' : cell.charm}
-                  </motion.button>
-                );
-              })
-            )}
-          </div>
-
-          {/* Float texts */}
+        <div className="h-8 font-fredoka text-2xl text-fuchsia-300">
           <AnimatePresence>
-            {floats.map(f => (
-              <motion.div
-                key={f.id}
-                initial={{ opacity: 1, y: 0, scale: 1 }}
-                animate={{ opacity: 0, y: -40, scale: 1.4 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.9 }}
-                className="absolute pointer-events-none font-fredoka font-bold text-pink-500 text-lg"
-                style={{ left: `${f.x}%`, top: `${f.y}%` }}
-              >
-                {f.text}
-              </motion.div>
-            ))}
+            {combo >= 2 && <motion.div key={`${combo}-${score}`} initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1.1 }} exit={{ opacity: 0 }}>🔥 COMBO x{combo}!</motion.div>}
           </AnimatePresence>
         </div>
 
-        {!running && !done && (
-          <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-3 text-center mb-3">
-            <p className="font-nunito text-blue-700 text-sm">
-              💡 Tap a charm, then tap an <strong>adjacent</strong> one to swap. Make 3+ in a row to score!
-            </p>
-            <p className="font-nunito text-blue-600 text-xs mt-1">Match 4+ = create a ⚡ POWER charm that clears a row & column!</p>
+        <div className="rounded-3xl bg-indigo-900/80 border-2 border-fuchsia-400/40 p-2 shadow-2xl">
+          <div
+            ref={boardRef}
+            className="relative game-surface"
+            style={{ width: 'min(94vw, calc(100dvh - 250px), 600px)', aspectRatio: '1 / 1' }}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={() => { gesture.current = null; }}
+          >
+            <div className="absolute inset-0 grid gap-1" style={{ gridTemplateColumns: `repeat(${SIZE}, minmax(0, 1fr))` }}>
+              {grid.map((row, r) => row.map((cell, c) => {
+                const key = `${r}-${c}`;
+                const isSel = selected?.[0] === r && selected?.[1] === c;
+                const isMatched = matchedKeys.has(key);
+                return (
+                  <motion.div
+                    key={cell.id}
+                    layout
+                    initial={{ y: -30, opacity: 0 }}
+                    animate={{ y: 0, opacity: isMatched ? 0.3 : 1, scale: isMatched ? 1.25 : isSel ? 1.12 : 1 }}
+                    transition={{ duration: isMatched ? 0.2 : 0.22 }}
+                    className={`relative rounded-xl flex items-center justify-center ${isSel ? 'ring-4 ring-yellow-300' : ''} ${cell.isPower ? 'ring-2 ring-yellow-300 shadow-[0_0_16px_rgba(250,204,21,0.7)]' : ''}`}
+                    style={{ background: GEM_BG[cell.charm] ?? 'rgba(255,255,255,0.1)', fontSize: 'min(8vw, calc((100dvh - 250px) / 9), 3.2rem)' }}
+                  >
+                    <span className="leading-none select-none">{cell.charm}</span>
+                    {cell.isPower && <span className="absolute -top-1 -right-1 text-base leading-none">{POWER_BADGE}</span>}
+                  </motion.div>
+                );
+              }))}
+            </div>
+            <AnimatePresence>
+              {floats.map(f => (
+                <motion.div key={f.id}
+                  initial={{ opacity: 1, y: 0, scale: 1 }} animate={{ opacity: 0, y: -40, scale: 1.3 }} exit={{ opacity: 0 }}
+                  transition={{ duration: 0.9 }}
+                  className="absolute pointer-events-none font-fredoka text-2xl text-yellow-200 drop-shadow -translate-x-1/2 -translate-y-1/2 whitespace-nowrap"
+                  style={{ left: `${f.x}%`, top: `${f.y}%` }}>
+                  {f.text}
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
-        )}
-
-        <button onClick={startOver} className="w-full py-2 bg-purple-200 text-purple-700 rounded-full font-fredoka text-sm">
-          🔄 Restart
-        </button>
-
-        {/* Done */}
-        <AnimatePresence>
-          {done && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-white/95 rounded-3xl p-6 shadow-2xl border-4 border-purple-300 text-center mt-4"
-            >
-              <div className="text-5xl mb-2">{score > highScore - 1 && score >= highScore ? '🏆' : '✨'}</div>
-              <h2 className="text-3xl font-fredoka font-bold text-purple-700 mb-1">
-                {score >= highScore && score > 0 ? 'NEW BEST!' : 'Time\'s Up!'}
-              </h2>
-              <p className="font-fredoka text-2xl text-pink-500 mb-1">⭐ {score}</p>
-              <p className="font-nunito text-purple-500 mb-3">+{Math.floor(score / 8)} XP earned!</p>
-              <button onClick={startOver} className="btn-kid mr-2">🔄 Again</button>
-              <button onClick={() => setGameState('game_mode')} className="btn-kid-secondary">← Zone</button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        </div>
       </div>
-    </motion.div>
+    </GameShell>
   );
-};
-
-export default SparkleMatch;
+}

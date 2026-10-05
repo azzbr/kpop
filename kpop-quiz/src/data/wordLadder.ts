@@ -35,7 +35,7 @@ export const VALID_WORDS: ReadonlySet<string> = new Set([
   'wow','yak','yam','yap','yaw','yes','yet','yew','yip','you','yow','zag','zap','zen',
   'zig','zip','zoo','due','hue','sue',
   // 4-letter words
-  'star','kpop','idol','song','band','beat','love','dare','pink','blue','gold','bold','cool','fire',
+  'star','song','band','beat','love','dare','pink','blue','gold','bold','cool','fire',
   'jump','kick','wild','glow','sing','spin','show','fame','wave','fans','care','fare','hare','mare',
   'pare','rare','bare','ware','barn','born','burn','corn','earn','fern','firm','form','fork','harm',
   'horn','lore','more','norm','port','sort','torn','wore','yarn','cake','fake','lake','make','rake',
@@ -63,6 +63,14 @@ export const PUZZLES: LadderPuzzle[] = [
   { start: 'star', end: 'scan', steps: 2 }, // star → scar → scan
   { start: 'love', end: 'line', steps: 2 }, // love → live → line
   { start: 'cold', end: 'warm', steps: 4 }, // cold → cord → word → ward → warm
+  { start: 'pig', end: 'hen', steps: 3 },   // pig → peg → pen → hen
+  { start: 'cow', end: 'pig', steps: 4 },   // cow → cog → fog → fig → pig
+  { start: 'rose', end: 'pine', steps: 4 }, // rose → lose → lone → line → pine
+  { start: 'gold', end: 'coin', steps: 4 }, // gold → cold → cord → corn → coin
+  { start: 'note', end: 'song', steps: 4 }, // note → none → lone → long → song
+  { start: 'cup', end: 'tea', steps: 5 },   // cup → cap → tap → tan → ten → tea
+  { start: 'mud', end: 'pie', steps: 5 },   // mud → bud → bun → pun → pin → pie
+  { start: 'lake', end: 'pond', steps: 5 }, // lake → lane → lone → bone → bond → pond
 ];
 
 /** "cat → ? → ? → dog": one "?" for every in-between word in the shortest ladder. */
@@ -78,4 +86,50 @@ export function differsBy1(a: string, b: string): boolean {
     if (diffs > 1) return false;
   }
   return diffs === 1;
+}
+
+/** One shortest ladder from `start` to `end` (start and end included), or null when there's none. */
+export function shortestLadder(start: string, end: string): string[] | null {
+  const words = [...VALID_WORDS].filter(w => w.length === start.length);
+  const prev = new Map<string, string | null>([[start, null]]);
+  const queue = [start];
+  while (queue.length) {
+    const w = queue.shift()!;
+    if (w === end) break;
+    for (const next of words) {
+      if (!prev.has(next) && differsBy1(w, next)) {
+        prev.set(next, w);
+        queue.push(next);
+      }
+    }
+  }
+  if (!prev.has(end)) return null;
+  const path: string[] = [];
+  for (let w: string | null = end; w; w = prev.get(w) ?? null) path.unshift(w);
+  return path;
+}
+
+export type StepProblem = 'length' | 'used' | 'notOneLetter' | 'unknown';
+
+/** Why `word` can't be the next rung (or null when it can). */
+export function checkStep(chain: string[], word: string, p: LadderPuzzle): StepProblem | null {
+  if (word.length !== p.start.length) return 'length';
+  if (chain.includes(word)) return 'used';
+  if (!differsBy1(chain[chain.length - 1], word)) return 'notOneLetter';
+  if (!VALID_WORDS.has(word)) return 'unknown';
+  return null;
+}
+
+/** Kind messages for each problem. */
+export const STEP_MESSAGES: Record<StepProblem, (p: LadderPuzzle) => string> = {
+  length: p => `Use ${p.start.length} letters 🙂`,
+  used: () => 'You already used that word — try a new one!',
+  notOneLetter: () => 'Change exactly one letter 🔁',
+  unknown: () => "Hmm, that word isn't in our list — try another!",
+};
+
+export const HINT_COST = 15;
+/** 100 for the shortest ladder, 10 off for every extra step and 15 per hint — never below 10. */
+export function ladderScore(p: LadderPuzzle, stepsUsed: number, hints: number): number {
+  return Math.max(10, 100 - 10 * Math.max(0, stepsUsed - p.steps) - HINT_COST * hints);
 }

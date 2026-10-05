@@ -24,7 +24,7 @@ export const CROSSWORD_SIZE = 5;
 
 export const PUZZLES: CrosswordPuzzle[] = [
   {
-    name: 'K-Pop Stage! 🌟',
+    name: 'Show Time! 🌟',
     rows: [
       'STARS',
       'I###H',
@@ -33,9 +33,9 @@ export const PUZZLES: CrosswordPuzzle[] = [
       'STAGE',
     ],
     clues: [
-      { id: 1, dir: 'across', clue: '⭐ Twinkly lights in the night sky — idols are pop ones too! (5)', answer: 'STARS', row: 0, col: 0 },
-      { id: 3, dir: 'across', clue: '🎤 The raised floor where idols perform (5)', answer: 'STAGE', row: 4, col: 0 },
-      { id: 1, dir: 'down', clue: '🎵 An idol ___ songs (5)', answer: 'SINGS', row: 0, col: 0 },
+      { id: 1, dir: 'across', clue: '⭐ Twinkly lights in the night sky (5)', answer: 'STARS', row: 0, col: 0 },
+      { id: 3, dir: 'across', clue: '🎤 The raised floor where actors and singers perform (5)', answer: 'STAGE', row: 4, col: 0 },
+      { id: 1, dir: 'down', clue: '🎵 A choir ___ songs together (5)', answer: 'SINGS', row: 0, col: 0 },
       { id: 2, dir: 'down', clue: '✨ To glow brightly, like a spotlight (5)', answer: 'SHINE', row: 0, col: 4 },
     ],
   },
@@ -101,6 +101,86 @@ export const PUZZLES: CrosswordPuzzle[] = [
       { id: 3, dir: 'across', clue: '🦴 Your skeleton is made of these (5)', answer: 'BONES', row: 4, col: 0 },
       { id: 1, dir: 'down', clue: '👍 The short finger you hold up to say "good job!" (5)', answer: 'THUMB', row: 0, col: 0 },
       { id: 2, dir: 'down', clue: '👏 You clap with these (5)', answer: 'HANDS', row: 0, col: 4 },
+    ],
+  },
+  {
+    name: 'Sports Day ⚽',
+    rows: [
+      'SKATE',
+      'W###V',
+      'I###E',
+      'M###N',
+      'SPORT',
+    ],
+    clues: [
+      { id: 1, dir: 'across', clue: '⛸️ Glide across the ice on blades (5)', answer: 'SKATE', row: 0, col: 0 },
+      { id: 3, dir: 'across', clue: '⚽ Football, tennis and swimming are each one of these (5)', answer: 'SPORT', row: 4, col: 0 },
+      { id: 1, dir: 'down', clue: '🐟 A fish ___ through the water (5)', answer: 'SWIMS', row: 0, col: 0 },
+      { id: 2, dir: 'down', clue: '🏅 One race or contest on sports day (5)', answer: 'EVENT', row: 0, col: 4 },
+    ],
+  },
+  {
+    name: 'Weather Watch ⛅',
+    rows: [
+      'STORM',
+      'N###E',
+      'O###L',
+      'W###T',
+      'SKIES',
+    ],
+    clues: [
+      { id: 1, dir: 'across', clue: '⛈️ Wild weather with wind, rain and thunder (5)', answer: 'STORM', row: 0, col: 0 },
+      { id: 3, dir: 'across', clue: '🌤️ Look up! Clouds drift across the blue ___ (5)', answer: 'SKIES', row: 4, col: 0 },
+      { id: 1, dir: 'down', clue: '❄️ When it ___, you can build a snowman (5)', answer: 'SNOWS', row: 0, col: 0 },
+      { id: 2, dir: 'down', clue: '🍦 What an ice cream does on a hot sunny day (5)', answer: 'MELTS', row: 0, col: 4 },
+    ],
+  },
+  {
+    name: 'Music Time 🎵',
+    rows: [
+      'BEATS',
+      'A###I',
+      'N###N',
+      'D###G',
+      'SONGS',
+    ],
+    clues: [
+      { id: 1, dir: 'across', clue: '🥁 Drum ___ keep the rhythm of a song (5)', answer: 'BEATS', row: 0, col: 0 },
+      { id: 3, dir: 'across', clue: '🎶 Tunes with words you can sing along to (5)', answer: 'SONGS', row: 4, col: 0 },
+      { id: 1, dir: 'down', clue: '🎸 Groups of musicians who play together (5)', answer: 'BANDS', row: 0, col: 0 },
+      { id: 2, dir: 'down', clue: '🐦 A bird ___ a happy tune in the morning (5)', answer: 'SINGS', row: 0, col: 4 },
+    ],
+  },
+  {
+    name: 'School Day ✏️',
+    rows: [
+      'BOOKS',
+      'O###T',
+      'A###U',
+      'R###D',
+      'DIARY',
+    ],
+    clues: [
+      { id: 1, dir: 'across', clue: '📚 You borrow these from the library (5)', answer: 'BOOKS', row: 0, col: 0 },
+      { id: 3, dir: 'across', clue: '📔 A notebook where you write about your day (5)', answer: 'DIARY', row: 4, col: 0 },
+      { id: 1, dir: 'down', clue: '🧑‍🏫 The teacher writes on the big white ___ (5)', answer: 'BOARD', row: 0, col: 0 },
+      { id: 2, dir: 'down', clue: '🧠 To learn and practise before a test (5)', answer: 'STUDY', row: 0, col: 4 },
+    ],
+  },
+  {
+    name: 'Fruit Bowl 🍐',
+    rows: [
+      'PLUMS',
+      'E###E',
+      'A###E',
+      'R###D',
+      'STEWS',
+    ],
+    clues: [
+      { id: 1, dir: 'across', clue: '🟣 Juicy purple or red fruits with a stone in the middle (5)', answer: 'PLUMS', row: 0, col: 0 },
+      { id: 3, dir: 'across', clue: '🍲 Hot dishes cooked slowly in a pot with chunky veggies (5)', answer: 'STEWS', row: 4, col: 0 },
+      { id: 1, dir: 'down', clue: '🍐 Fruits that are thin at the top and round at the bottom (5)', answer: 'PEARS', row: 0, col: 0 },
+      { id: 2, dir: 'down', clue: '🌱 Plant these in soil and they grow into new plants (5)', answer: 'SEEDS', row: 0, col: 4 },
     ],
   },
 ];

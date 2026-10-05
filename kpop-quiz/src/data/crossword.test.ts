@@ -30,8 +30,13 @@ function gridWords(p: CrosswordPuzzle) {
 }
 
 describe('crossword puzzles', () => {
-  it('has 5 puzzles', () => {
-    expect(PUZZLES.length).toBe(5);
+  it('has at least 10 puzzles with different names', () => {
+    expect(PUZZLES.length).toBeGreaterThanOrEqual(10);
+    expect(new Set(PUZZLES.map(p => p.name)).size).toBe(PUZZLES.length);
+  });
+
+  it('has no K-Pop wording', () => {
+    for (const p of PUZZLES) expect(JSON.stringify(p)).not.toMatch(/k-?pop|idol/i);
   });
 
   describe.each(PUZZLES.map(p => [p.name, p] as const))('%s', (_, p) => {

@@ -1,286 +1,221 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useGameStore } from '../store';
+import GameShell from '../games/engine/GameShell';
+import type { ShellStatus } from '../games/engine/GameShell';
+import { createRng } from '../games/engine/rng';
 import { useSafeTimeout } from '../utils/useSafeTimeout';
-import { playCorrect, playWrong, playWin, playClick, playTick, playTimeOut } from '../utils/sounds';
-import ConfettiBurst from './ConfettiBurst';
+import { playCorrect, playWrong, playClick, playPop, playTick, playTimeOut } from '../utils/sounds';
+import { SCRAMBLE_WORDS, WORDS_PER_ROUND, TIME_PER_WORD, shuffled, scramble, wordPoints, rating } from './games/wordScrambleLogic';
+import type { ScrambleWord } from './games/wordScrambleLogic';
 
-interface WordItem {
-  word: string;
-  hint: string;
-  emoji: string;
-}
+type Feedback = 'correct' | 'wrong' | 'timeout' | 'skip' | null;
 
-const WORDS: WordItem[] = [
-  { word: 'PLANET', hint: 'Earth is one', emoji: '🪐' },
-  { word: 'VOLCANO', hint: 'A mountain that can erupt', emoji: '🌋' },
-  { word: 'DOLPHIN', hint: 'A very clever sea mammal', emoji: '🐬' },
-  { word: 'PYRAMID', hint: 'Ancient Egyptian tomb', emoji: '🔺' },
-  { word: 'GALAXY', hint: 'A huge group of stars', emoji: '🌌' },
-  { word: 'JUNGLE', hint: 'Thick tropical forest', emoji: '🌴' },
-  { word: 'PENGUIN', hint: "A bird that can't fly but swims", emoji: '🐧' },
-  { word: 'MYSTERY', hint: 'Something unexplained', emoji: '🕵️' },
-  { word: 'TREASURE', hint: 'Pirates bury it', emoji: '💰' },
-  { word: 'DRAGON', hint: 'A fire-breathing legend', emoji: '🐉' },
-  { word: 'ROCKET', hint: 'It blasts off into space', emoji: '🚀' },
-  { word: 'CASTLE', hint: 'A king or queen might live here', emoji: '🏰' },
-  { word: 'THUNDER', hint: 'The boom after lightning', emoji: '⛈️' },
-  { word: 'PUZZLE', hint: 'You are solving one right now', emoji: '🧩' },
-  { word: 'CHAMPION', hint: 'The winner of a competition', emoji: '🏆' },
-  { word: 'SKATEBOARD', hint: 'A board with four wheels', emoji: '🛹' },
-  { word: 'CHOCOLATE', hint: 'A sweet treat made from cocoa', emoji: '🍫' },
-  { word: 'ADVENTURE', hint: 'An exciting journey', emoji: '🗺️' },
-  { word: 'GRAVITY', hint: 'What keeps your feet on the ground', emoji: '🍎' },
-  { word: 'TORNADO', hint: 'A spinning windstorm', emoji: '🌪️' },
-  { word: 'MELODY', hint: 'A musical tune', emoji: '🎶' },
-  { word: 'RAINBOW', hint: 'Seven colours after rain', emoji: '🌈' },
-  { word: 'INVENTOR', hint: 'Someone who creates new things', emoji: '💡' },
-  { word: 'ASTRONAUT', hint: 'A person who travels to space', emoji: '👩‍🚀' },
-  { word: 'KANGAROO', hint: 'An animal that hops, with a pouch', emoji: '🦘' },
-  { word: 'BLIZZARD', hint: 'A huge snowstorm', emoji: '❄️' },
-  { word: 'NINJA', hint: 'A sneaky Japanese warrior', emoji: '🥷' },
-  { word: 'ORCHESTRA', hint: 'A big group of musicians', emoji: '🎻' },
-  { word: 'SUPERHERO', hint: 'Saves the day with powers', emoji: '🦸' },
-  { word: 'ELECTRIC', hint: 'Powered by electricity', emoji: '⚡' },
-]
-
-const TIME_PER_WORD = 20;
-
-function scramble(word: string): string[] {
-  const arr = word.split('');
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  // Ensure it's actually scrambled
-  if (arr.join('') === word && arr.length > 1) {
-    [arr[0], arr[arr.length - 1]] = [arr[arr.length - 1], arr[0]];
-  }
-  return arr;
-}
-
-// "Play again" remounts the game with a new key instead of reloading the whole page.
-export default function WordScrambleScreen() {
-  const [game, setGame] = useState(0);
-  return <WordScramble key={game} onRestart={() => setGame(g => g + 1)} />;
-}
-
-function WordScramble({ onRestart }: { onRestart: () => void }) {
-  const { setGameState } = useGameStore();
+export default function WordScramble() {
   const later = useSafeTimeout();
-
-  const [pool] = useState(() => [...WORDS].sort(() => Math.random() - 0.5));
+  const rng = useRef(createRng((Date.now() ^ (Math.random() * 1e9)) >>> 0));
+  const [status, setStatus] = useState<ShellStatus>('ready');
+  const [round, setRound] = useState(0);
+  // Pause when she switches apps
+  useEffect(() => {
+    const h = () => { if (document.hidden) setStatus(s => (s === 'playing' ? 'paused' : s)); };
+    document.addEventListener('visibilitychange', h);
+    return () => document.removeEventListener('visibilitychange', h);
+  }, []);
+  const [pool, setPool] = useState<ScrambleWord[]>([]);
   const [wordIndex, setWordIndex] = useState(0);
-  const [scrambled, setScrambled] = useState<string[]>([]);
-  const [selected, setSelected] = useState<number[]>([]); // indices into scrambled
+  const [letters, setLetters] = useState<string[]>([]);
+  const [selected, setSelected] = useState<number[]>([]);
   const [timeLeft, setTimeLeft] = useState(TIME_PER_WORD);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
-  const [feedback, setFeedback] = useState<'correct' | 'wrong' | 'timeout' | null>(null);
-  const [gameOver, setGameOver] = useState(false);
-  const [confetti, setConfetti] = useState(false);
-  const [totalWords] = useState(10);
+  const [solved, setSolved] = useState(0);
+  const [lastPoints, setLastPoints] = useState(0);
+  const [feedback, setFeedback] = useState<Feedback>(null);
 
-  const currentItem = pool[wordIndex];
+  const item = pool[wordIndex];
+  const active = status === 'playing' && !!item && (feedback === null || feedback === 'wrong');
 
-  const loadWord = useCallback((idx: number) => {
-    setScrambled(scramble(pool[idx].word));
+  const loadWord = (list: ScrambleWord[], idx: number) => {
+    setWordIndex(idx);
+    setLetters(scramble(list[idx].word, rng.current));
     setSelected([]);
     setTimeLeft(TIME_PER_WORD);
     setFeedback(null);
-  }, [pool]);
+  };
 
-  useEffect(() => { loadWord(0); }, [loadWord]);
+  const start = () => {
+    const list = shuffled(SCRAMBLE_WORDS, rng.current).slice(0, WORDS_PER_ROUND);
+    setPool(list);
+    loadWord(list, 0);
+    setScore(0);
+    setStreak(0);
+    setSolved(0);
+    setRound(r => r + 1);
+    setStatus('playing');
+  };
 
-  // Timer
+  const advance = () => {
+    const next = wordIndex + 1;
+    if (next >= pool.length) setStatus('over');
+    else loadWord(pool, next);
+  };
+
+  // Per-word countdown (stops while paused or while a result is showing)
   useEffect(() => {
-    if (feedback || gameOver) return;
+    if (status !== 'playing' || !item || (feedback && feedback !== 'wrong')) return;
     if (timeLeft <= 0) {
       playTimeOut();
       setFeedback('timeout');
       setStreak(0);
-      later(() => advance(false), 1500);
+      later(advance, 1600);
       return;
     }
     if (timeLeft <= 4) playTick();
-    const id = setTimeout(() => setTimeLeft(t => t - 1), 1000);
-    return () => clearTimeout(id);
+    const id = window.setTimeout(() => setTimeLeft(t => t - 1), 1000);
+    return () => window.clearTimeout(id);
     // advance is recreated every render; adding it would restart the tick on every render
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeLeft, feedback, gameOver, later]);
+  }, [timeLeft, feedback, status, item, later]);
 
-  const guessedWord = selected.map(i => scrambled[i]).join('');
-
-  // Auto-check when all letters selected
-  useEffect(() => {
-    if (selected.length !== currentItem?.word.length || feedback) return;
-    if (guessedWord === currentItem.word) {
+  const pick = (idx: number) => {
+    if (!active || selected.includes(idx)) return;
+    playPop();
+    const next = [...selected, idx];
+    setSelected(next);
+    if (feedback === 'wrong') setFeedback(null);
+    if (next.length !== item.word.length) return;
+    const guess = next.map(i => letters[i]).join('');
+    if (guess === item.word) {
+      const pts = wordPoints(timeLeft, streak);
       playCorrect();
-      const bonus = Math.max(0, timeLeft - 5);
-      const pts = 100 + streak * 20 + bonus * 5;
+      setLastPoints(pts);
       setScore(s => s + pts);
       setStreak(s => s + 1);
+      setSolved(s => s + 1);
       setFeedback('correct');
-      later(() => advance(true), 1200);
+      later(advance, 1200);
     } else {
       playWrong();
       setStreak(0);
       setFeedback('wrong');
       later(() => setSelected([]), 600);
-      later(() => setFeedback(null), 600);
     }
-    // Only check when the selection changes — not when the timer/streak/feedback change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, later]);
-
-  function advance(wasCorrect: boolean) {
-    const next = wordIndex + 1;
-    if (next >= totalWords) {
-      if (wasCorrect || score > 0) { setConfetti(true); playWin(); }
-      setGameOver(true);
-    } else {
-      setWordIndex(next);
-      loadWord(next);
-    }
-  }
-
-  const handleLetterClick = (idx: number) => {
-    if (feedback === 'correct' || feedback === 'timeout') return;
-    if (selected.includes(idx)) return;
-    playClick();
-    setSelected(prev => [...prev, idx]);
   };
 
-  const handleRemove = (pos: number) => {
-    if (feedback === 'correct' || feedback === 'timeout') return;
+  const unpick = (pos: number) => {
+    if (!active) return;
     playClick();
     setSelected(prev => prev.filter((_, i) => i !== pos));
   };
 
-  const timerColor = timeLeft > 8 ? 'text-green-600' : timeLeft > 4 ? 'text-orange-500' : 'text-red-500';
+  const skip = () => {
+    if (!active) return;
+    playClick();
+    setStreak(0);
+    setFeedback('skip');
+    later(advance, 1400);
+  };
 
-  if (gameOver) {
-    const pct = Math.round((score / (totalWords * 100)) * 100);
-    const rating =
-      pct >= 90 ? '🏆 Word Wizard!'
-      : pct >= 60 ? '⭐ K-Pop Scholar!'
-      : '🎵 Keep Rocking!';
-    return (
-      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-        className="min-h-screen bg-kid-pattern flex items-center justify-center p-4">
-        {confetti && <ConfettiBurst count={60} durationMs={3500} />}
-        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
-          <div className="text-6xl mb-3">🎊</div>
-          <h2 className="text-3xl font-fredoka font-bold text-purple-600 mb-2">Game Over!</h2>
-          <div className="text-xl font-fredoka text-pink-500 mb-4">{rating}</div>
-          <div className="text-4xl font-fredoka font-bold text-purple-700 mb-2">{score} pts</div>
-          <div className="text-gray-500 mb-6">out of {totalWords} words</div>
-          <div className="flex gap-3">
-            <button onClick={onRestart}
-              className="btn-kid flex-1">🔄 Play Again</button>
-            <button onClick={() => setGameState('game_mode')} className="btn-kid-secondary flex-1">🏠 Home</button>
-          </div>
-        </div>
-      </motion.div>
-    );
-  }
+  const timerColor = timeLeft > 8 ? 'text-green-300' : timeLeft > 4 ? 'text-orange-300' : 'text-rose-400';
+  const showAnswer = feedback === 'timeout' || feedback === 'skip';
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-      className="min-h-screen bg-kid-pattern flex flex-col items-center p-4">
+    <GameShell
+      gameId="word_scramble"
+      title="Word Scramble"
+      icon="🔤"
+      xpScale={40}
+      status={status}
+      score={score}
+      round={round}
+      overTitle={rating(solved, pool.length || WORDS_PER_ROUND)}
+      overStats={[
+        { label: '✅ Words solved', value: `${solved}/${pool.length || WORDS_PER_ROUND}` },
+        { label: '🎯 Rating', value: rating(solved, pool.length || WORDS_PER_ROUND).split(' ')[0] },
+      ]}
+      onStart={start}
+      onPause={() => setStatus('paused')}
+      onResume={() => setStatus('playing')}
+      readyContent={
+        <p className="font-nunito text-lg text-violet-100">
+          {WORDS_PER_ROUND} jumbled words, {TIME_PER_WORD} seconds each. Tap the letters in the right order. Faster answers and streaks score more!
+        </p>
+      }
+    >
+      <div className="absolute inset-0 overflow-y-auto overflow-x-hidden px-3 py-3" style={{ touchAction: 'pan-y' }}>
+        {item && (
+          <div className="max-w-2xl mx-auto flex flex-col items-center gap-4">
+            <div className="w-full flex items-center justify-between font-fredoka text-lg">
+              <span className="rounded-full bg-white/10 px-4 py-1">Word {wordIndex + 1}/{pool.length}</span>
+              <span className="rounded-full bg-white/10 px-4 py-1 text-yellow-300 tabular-nums">⭐ {score}</span>
+              <span className="rounded-full bg-white/10 px-4 py-1">{streak >= 2 ? `🔥 ${streak} streak` : '🔥 —'}</span>
+            </div>
+            <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+              <div className="h-2 bg-gradient-to-r from-fuchsia-500 to-orange-400 transition-all duration-500"
+                style={{ width: `${(wordIndex / pool.length) * 100}%` }} />
+            </div>
 
-      {/* Header */}
-      <div className="w-full max-w-lg flex items-center justify-between mb-4">
-        <button onClick={() => setGameState('game_mode')} className="btn-kid-secondary text-sm">← Back</button>
-        <div className="text-center">
-          <div className="text-lg font-fredoka font-bold text-purple-600">Word Scramble 🔤</div>
-          <div className="text-sm text-gray-500">{wordIndex + 1} / {totalWords}</div>
-        </div>
-        <div className="text-right">
-          <div className="text-lg font-bold text-pink-600">{score} pts</div>
-          {streak >= 2 && <div className="text-sm text-orange-500">🔥 {streak}x streak</div>}
-        </div>
+            <motion.div key={wordIndex} initial={{ x: 40, opacity: 0 }} animate={{ x: 0, opacity: 1 }}
+              className={`w-full rounded-3xl p-5 text-center border-2 ${
+                feedback === 'correct' ? 'bg-green-600/30 border-green-400'
+                : showAnswer ? 'bg-orange-500/20 border-orange-300'
+                : 'bg-indigo-900/80 border-fuchsia-400/40'}`}>
+              <div className="text-6xl mb-1">{item.emoji}</div>
+              <p className="font-nunito text-xl text-violet-100">Hint: {item.hint}</p>
+              <div className={`font-fredoka text-4xl mt-2 tabular-nums ${timerColor}`}>⏱ {timeLeft}s</div>
+              <div className="min-h-[40px] mt-1">
+                <AnimatePresence>
+                  {feedback && (
+                    <motion.div key={feedback} initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }}
+                      className="font-fredoka text-2xl">
+                      {feedback === 'correct' ? <span className="text-green-300">✅ {item.word}! +{lastPoints}</span>
+                        : feedback === 'wrong' ? <span className="text-orange-200">Not quite — try again! 💪</span>
+                        : <span className="text-orange-200">The word was {item.word} 🙂</span>}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+
+            {/* Answer slots */}
+            <div className="flex justify-center gap-2 flex-wrap">
+              {Array.from({ length: item.word.length }, (_, pos) => {
+                const letter = showAnswer ? item.word[pos] : selected[pos] !== undefined ? letters[selected[pos]] : '';
+                return (
+                  <button key={pos} type="button" onClick={() => letter && !showAnswer && unpick(pos)}
+                    aria-label={letter ? `Remove ${letter}` : 'Empty'}
+                    className={`w-12 h-14 md:w-14 md:h-16 rounded-xl font-fredoka text-3xl flex items-center justify-center border-2 ${
+                      letter ? 'bg-fuchsia-500 border-fuchsia-300' : 'bg-white/5 border-dashed border-white/30'}`}>
+                    {letter}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Letters to pick */}
+            <div className="flex justify-center gap-2 flex-wrap">
+              {letters.map((letter, idx) => {
+                const used = selected.includes(idx);
+                return (
+                  <motion.button key={`${wordIndex}-${idx}`} type="button" whileTap={!used ? { scale: 0.9 } : undefined}
+                    onClick={() => pick(idx)} disabled={used || !active}
+                    className={`w-14 h-14 md:w-16 md:h-16 rounded-2xl font-fredoka text-3xl shadow-lg ${
+                      used ? 'bg-white/5 text-white/20' : 'bg-yellow-400 text-slate-900'}`}>
+                    {letter}
+                  </motion.button>
+                );
+              })}
+            </div>
+
+            <div className="flex gap-3">
+              <button type="button" onClick={() => { if (active) { playClick(); setSelected([]); } }} disabled={!active || !selected.length}
+                className="min-h-[48px] px-5 rounded-2xl bg-white/15 font-fredoka text-lg disabled:opacity-40">✕ Clear</button>
+              <button type="button" onClick={skip} disabled={!active}
+                className="min-h-[48px] px-5 rounded-2xl bg-white/15 font-fredoka text-lg disabled:opacity-40">⏭️ Skip</button>
+            </div>
+          </div>
+        )}
       </div>
-
-      {/* Progress bar */}
-      <div className="w-full max-w-lg bg-gray-200 rounded-full h-2 mb-6">
-        <div className="bg-gradient-to-r from-purple-400 to-pink-500 h-2 rounded-full transition-all duration-500"
-          style={{ width: `${((wordIndex) / totalWords) * 100}%` }} />
-      </div>
-
-      <div className="w-full max-w-lg">
-        {/* Word card */}
-        <motion.div key={wordIndex} initial={{ x: 60, opacity: 0 }} animate={{ x: 0, opacity: 1 }}
-          className={`card-kid p-6 mb-6 text-center border-4 ${
-            feedback === 'correct' ? 'border-green-400 bg-green-50'
-            : feedback === 'timeout' ? 'border-red-400 bg-red-50'
-            : 'border-purple-200'
-          }`}>
-          <div className="text-5xl mb-2">{currentItem.emoji}</div>
-          <p className="text-gray-600 font-nunito text-lg mb-1">Unscramble this word!</p>
-          <p className="text-purple-500 font-fredoka text-base">Hint: {currentItem.hint}</p>
-
-          {/* Timer */}
-          <div className={`text-4xl font-fredoka font-bold mt-3 ${timerColor}`}>⏱ {timeLeft}s</div>
-
-          {/* Feedback */}
-          <AnimatePresence>
-            {feedback && (
-              <motion.div key={feedback} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className={`text-2xl font-fredoka font-bold mt-2 ${
-                  feedback === 'correct' ? 'text-green-600' : 'text-red-500'
-                }`}>
-                {feedback === 'correct' ? `✅ ${currentItem.word}! +${100 + streak * 20}` : feedback === 'timeout' ? '⏰ Time\'s up!' : '❌ Try again!'}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-
-        {/* Answer slots */}
-        <div className="flex justify-center gap-2 mb-6 flex-wrap">
-          {Array.from({ length: currentItem.word.length }).map((_, pos) => {
-            const letter = selected[pos] !== undefined ? scrambled[selected[pos]] : '';
-            return (
-              <motion.button key={pos} whileTap={{ scale: 0.9 }}
-                onClick={() => letter && handleRemove(pos)}
-                className={`w-12 h-12 rounded-xl border-3 text-xl font-fredoka font-bold flex items-center justify-center transition-all ${
-                  letter
-                    ? 'bg-purple-500 text-white border-purple-600 cursor-pointer hover:bg-red-400'
-                    : 'bg-white border-dashed border-purple-300 text-transparent'
-                }`}>
-                {letter}
-              </motion.button>
-            );
-          })}
-        </div>
-
-        {/* Scrambled letters */}
-        <div className="flex justify-center gap-2 flex-wrap mb-4">
-          {scrambled.map((letter, idx) => {
-            const used = selected.includes(idx);
-            return (
-              <motion.button key={idx} whileHover={!used ? { scale: 1.15 } : {}} whileTap={!used ? { scale: 0.9 } : {}}
-                onClick={() => !used && handleLetterClick(idx)}
-                className={`w-12 h-12 rounded-xl border-3 text-xl font-fredoka font-bold transition-all ${
-                  used
-                    ? 'bg-gray-100 text-gray-300 border-gray-200 cursor-not-allowed'
-                    : 'bg-yellow-400 text-gray-800 border-yellow-500 cursor-pointer hover:bg-yellow-300 shadow-md'
-                }`}>
-                {letter}
-              </motion.button>
-            );
-          })}
-        </div>
-
-        {/* Clear button */}
-        <div className="text-center">
-          <button onClick={() => { playClick(); setSelected([]); }}
-            className="text-sm text-purple-500 hover:text-purple-700 underline">
-            Clear ✕
-          </button>
-        </div>
-      </div>
-    </motion.div>
+    </GameShell>
   );
 }

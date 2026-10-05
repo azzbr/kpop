@@ -1,9 +1,18 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useGameStore } from '../store';
-import { playClick, playWrong, playWin } from '../utils/sounds';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
+import GameShell from '../games/engine/GameShell';
+import type { ShellStatus } from '../games/engine/GameShell';
+import OnScreenKeyboard from './ui/OnScreenKeyboard';
 import ConfettiBurst from './ConfettiBurst';
-import { PUZZLES, CROSSWORD_SIZE, clueNumbers } from '../data/crossword';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
+import { playClick, playCorrect, playPop, playWrong } from '../utils/sounds';
+import { PUZZLES, clueNumbers, isBlackCell } from '../data/crossword';
+import type { Dir } from '../data/crossword';
+import {
+  emptyEntries, tapCell, typeLetter, backspace, clueAt, cellsOf, nextClue, orderedClues, selectClue,
+  isSolved, isFilled, checkCells, hintCell, crosswordScore, HINT_COST,
+} from './games/crosswordLogic';
+import type { Entries, Pos } from './games/crosswordLogic';
 
 const randomPuzzleIdx = (exclude = -1) => {
   if (PUZZLES.length < 2) return 0;
@@ -12,275 +21,267 @@ const randomPuzzleIdx = (exclude = -1) => {
   return i;
 };
 
+const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-interface CellState {
-  value: string;
-  correct: boolean | null;
-}
-
-const CrosswordMini: React.FC = () => {
-  const { setGameState, addXP } = useGameStore();
+export default function CrosswordMini() {
+  const later = useSafeTimeout();
+  const [status, setStatus] = useState<ShellStatus>('ready');
+  const [round, setRound] = useState(0);
+  // Pause when she switches apps
+  useEffect(() => {
+    const h = () => { if (document.hidden) setStatus(s => (s === 'playing' ? 'paused' : s)); };
+    document.addEventListener('visibilitychange', h);
+    return () => document.removeEventListener('visibilitychange', h);
+  }, []);
   const [puzzleIdx, setPuzzleIdx] = useState(() => randomPuzzleIdx());
   const p = PUZZLES[puzzleIdx];
-  const SIZE = CROSSWORD_SIZE;
-  const grid = p.rows.map(row => row.split('').map(ch => (ch === '#' ? null : ch)));
-  const numbers = clueNumbers(p);
-  const clueLen = (cl: { answer: string }) => cl.answer.length;
-
-  const initCells = (): CellState[][] =>
-    Array.from({ length: SIZE }, () => Array.from({ length: SIZE }, () => ({ value: '', correct: null })));
-
-  const [cells, setCells] = useState<CellState[][]>(initCells);
-  const [selected, setSelected] = useState<{ row: number; col: number } | null>(null);
-  const [dir, setDir] = useState<'across' | 'down'>('across');
+  const [entries, setEntries] = useState<Entries>(() => emptyEntries(p));
+  const [sel, setSel] = useState<Pos | null>(null);
+  const [dir, setDir] = useState<Dir>('across');
+  const [checked, setChecked] = useState<Map<string, boolean> | null>(null);
+  const [seconds, setSeconds] = useState(0);
+  const [hints, setHints] = useState(0);
   const [won, setWon] = useState(false);
-  const [checked, setChecked] = useState(false);
-  const [revealed, setRevealed] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const confettiTimer = useRef<number | null>(null);
+  const [gaveUp, setGaveUp] = useState(false);
+  const [locked, setLocked] = useState(false);
 
-  useEffect(() => () => { if (confettiTimer.current) clearTimeout(confettiTimer.current); }, []);
+  const numbers = useMemo(() => clueNumbers(p), [p]);
+  const clue = sel ? clueAt(p, sel, dir) : undefined;
+  const clueCells = useMemo(() => new Set(clue ? cellsOf(clue).map(x => `${x.r}-${x.c}`) : []), [clue]);
 
-  const isBlack = (r: number, c: number) => grid[r][c] === null;
+  useEffect(() => {
+    if (status !== 'playing' || locked) return;
+    const t = window.setInterval(() => setSeconds(s => s + 1), 1000);
+    return () => window.clearInterval(t);
+  }, [status, locked]);
 
-  // Standard crossword numbering, so every clue number (even shared start cells) is shown
-  const getCellClueNumber = (r: number, c: number): number | undefined => numbers.get(`${r}-${c}`);
-
-  const handleCellClick = (r: number, c: number) => {
-    if (isBlack(r, c)) return;
-    if (selected?.row === r && selected?.col === c) {
-      setDir(d => d === 'across' ? 'down' : 'across');
-    } else {
-      setSelected({ row: r, col: c });
-    }
-    inputRef.current?.focus();
-    playClick();
+  const start = () => {
+    const idx = round === 0 ? puzzleIdx : randomPuzzleIdx(puzzleIdx);
+    const puz = PUZZLES[idx];
+    setPuzzleIdx(idx);
+    setEntries(emptyEntries(puz));
+    const first = selectClue(orderedClues(puz)[0], emptyEntries(puz));
+    setSel(first.sel);
+    setDir(first.dir);
+    setChecked(null);
+    setSeconds(0);
+    setHints(0);
+    setWon(false);
+    setGaveUp(false);
+    setLocked(false);
+    setRound(r => r + 1);
+    setStatus('playing');
   };
 
-  const handleKey = (e: React.KeyboardEvent) => {
-    if (!selected) return;
-    const { row, col } = selected;
-    const key = e.key.toUpperCase();
+  const finishWin = useCallback(() => {
+    setLocked(true);
+    setWon(true);
+    playCorrect();
+    later(() => setStatus('over'), 1800);
+  }, [later]);
 
-    if (key === 'BACKSPACE') {
-      setCells(c => {
-        const n = c.map(r => r.map(cell => ({ ...cell })));
-        if (n[row][col].value) {
-          n[row][col] = { value: '', correct: null };
-        } else {
-          const pr = dir === 'across' ? row : row - 1;
-          const pc = dir === 'across' ? col - 1 : col;
-          if (pr >= 0 && pc >= 0 && !isBlack(pr, pc)) {
-            n[pr][pc] = { value: '', correct: null };
-            setSelected({ row: pr, col: pc });
-          }
-        }
-        return n;
-      });
-      return;
-    }
-
-    if (key === 'ARROWLEFT') { if (col > 0 && !isBlack(row, col - 1)) setSelected({ row, col: col - 1 }); return; }
-    if (key === 'ARROWRIGHT') { if (col < SIZE - 1 && !isBlack(row, col + 1)) setSelected({ row, col: col + 1 }); return; }
-    if (key === 'ARROWUP') { if (row > 0 && !isBlack(row - 1, col)) setSelected({ row: row - 1, col }); return; }
-    if (key === 'ARROWDOWN') { if (row < SIZE - 1 && !isBlack(row + 1, col)) setSelected({ row: row + 1, col }); return; }
-
-    if (/^[A-Z]$/.test(key)) {
-      setCells(c => {
-        const n = c.map(r => r.map(cell => ({ ...cell })));
-        n[row][col] = { value: key, correct: null };
-        return n;
-      });
-      const nr = dir === 'across' ? row : row + 1;
-      const nc = dir === 'across' ? col + 1 : col;
-      if (nr < SIZE && nc < SIZE && !isBlack(nr, nc)) setSelected({ row: nr, col: nc });
-    }
-  };
-
-  const checkAnswers = () => {
-    playClick();
-    let allCorrect = true;
-    const newCells = cells.map((row, r) => row.map((cell, c) => {
-      if (isBlack(r, c)) return cell;
-      const answer = grid[r][c] as string;
-      const correct = cell.value === answer;
-      if (!correct) allCorrect = false;
-      return { ...cell, correct };
-    }));
-    setCells(newCells);
-    setChecked(true);
-    if (allCorrect) {
-      playWin();
-      setWon(true);
-      setShowConfetti(true);
-      if (confettiTimer.current) clearTimeout(confettiTimer.current);
-      confettiTimer.current = window.setTimeout(() => setShowConfetti(false), 2500);
-      if (!revealed) addXP(40);
-    } else {
+  const update = (next: Entries) => {
+    setEntries(next);
+    setChecked(null);
+    if (isSolved(p, next)) finishWin();
+    else if (isFilled(p, next)) {
+      // Everything's filled but something's off: show which letters to fix.
+      setChecked(checkCells(p, next));
       playWrong();
     }
   };
 
-  const reveal = () => {
+  const canType = status === 'playing' && !locked;
+
+  const onKey = useCallback((l: string) => {
+    if (!canType || !sel || !/^[A-Z]$/.test(l)) return;
+    playPop();
+    const res = typeLetter(p, entries, sel, dir, l);
+    setSel(res.sel);
+    update(res.entries);
+    // update is recreated every render; the values it reads are listed here
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canType, sel, p, entries, dir]);
+
+  const onBackspace = useCallback(() => {
+    if (!canType || !sel) return;
     playClick();
-    setCells(grid.map(row => row.map(cell => ({
-      value: cell ?? '',
-      correct: cell !== null ? true : null,
-    }))));
-    setChecked(true);
-    setRevealed(true);
-  };
+    const res = backspace(p, entries, sel, dir);
+    setSel(res.sel);
+    setEntries(res.entries);
+    setChecked(null);
+  }, [canType, sel, p, entries, dir]);
 
-  const resetPuzzle = () => {
+  const onNextClue = useCallback(() => {
+    if (!canType) return;
     playClick();
-    setCells(initCells());
-    setSelected(null);
-    setWon(false);
-    setChecked(false);
-    setRevealed(false);
+    const next = selectClue(nextClue(p, clue), entries);
+    setSel(next.sel);
+    setDir(next.dir);
+  }, [canType, p, clue, entries]);
+
+  const onCell = (r: number, c: number) => {
+    if (!canType || isBlackCell(p, r, c)) return;
+    playClick();
+    const res = tapCell(p, sel, dir, { r, c });
+    setSel(res.sel);
+    setDir(res.dir);
   };
 
-  const nextPuzzle = () => {
-    resetPuzzle();
-    setShowConfetti(false);
-    setDir('across');
-    setPuzzleIdx(i => randomPuzzleIdx(i));
+  const check = () => {
+    if (!canType) return;
+    const m = checkCells(p, entries);
+    setChecked(m);
+    const wrong = [...m.values()].filter(v => !v).length;
+    if (wrong) playWrong(); else playCorrect();
   };
 
-  const getHighlight = (r: number, c: number) => {
-    if (!selected || isBlack(r, c)) return '';
-    if (r === selected.row && c === selected.col) return 'bg-yellow-200 border-yellow-500';
-    const clue = p.clues.find(cl =>
-      cl.dir === dir &&
-      ((dir === 'across' && cl.row === selected.row && r === cl.row && c >= cl.col && c < cl.col + clueLen(cl)) ||
-       (dir === 'down' && cl.col === selected.col && c === cl.col && r >= cl.row && r < cl.row + clueLen(cl)))
-    );
-    if (clue) return 'bg-blue-100 border-blue-300';
-    return '';
+  const hint = () => {
+    if (!canType) return;
+    const cell = hintCell(p, entries, sel);
+    if (!cell) return;
+    playPop();
+    setHints(h => h + 1);
+    const next = entries.map(row => [...row]);
+    next[cell.r][cell.c] = p.rows[cell.r][cell.c];
+    setSel(cell);
+    if (!clueAt(p, cell, dir)) setDir(dir === 'across' ? 'down' : 'across');
+    update(next);
   };
 
-  const filledCount = cells.flat().filter((c, i) => {
-    const r = Math.floor(i / SIZE), col = i % SIZE;
-    return !isBlack(r, col) && c.value !== '';
-  }).length;
-  const totalWhite = grid.flat().filter(c => c !== null).length;
+  const showAnswers = () => {
+    if (!canType) return;
+    playClick();
+    setEntries(p.rows.map(row => row.split('').map(ch => (ch === '#' ? '' : ch))));
+    setChecked(null);
+    setGaveUp(true);
+    setLocked(true);
+    later(() => setStatus('over'), 2500);
+  };
+
+  const score = won ? crosswordScore(seconds, hints) : 0;
+  const filled = entries.flat().filter(Boolean).length;
+  const totalWhite = p.rows.join('').replace(/#/g, '').length;
+  const SIZE = p.rows.length;
+
+  const actionBtn = 'min-h-[48px] rounded-2xl px-4 font-fredoka text-lg disabled:opacity-40';
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="min-h-screen bg-kid-pattern flex flex-col items-center p-4"
+    <GameShell
+      gameId="crossword_mini"
+      title="Crossword Mini"
+      icon="📰"
+      xpScale={18}
+      status={status}
+      score={score}
+      round={round}
+      overTitle={gaveUp ? 'Answers shown — try the next one! 💪' : `${p.name} solved!`}
+      overStats={[
+        { label: '⏱️ Time', value: fmtTime(seconds) },
+        { label: '💡 Hints', value: String(hints) },
+      ]}
+      onStart={start}
+      onPause={() => setStatus('paused')}
+      onResume={() => setStatus('playing')}
+      startLabel={round === 0 ? '▶ Play' : '▶ Next puzzle'}
+      readyContent={
+        <ul className="font-nunito text-lg text-violet-100 text-left space-y-1 list-none">
+          <li>👆 Tap a square or a clue, then type with the letter keys.</li>
+          <li>🔁 Tap the same square again to switch → Across / ↓ Down.</li>
+          <li>⏱️ Be quick for more points. Each 💡 hint costs {HINT_COST}.</li>
+        </ul>
+      }
     >
-      {showConfetti && <ConfettiBurst count={60} durationMs={2500} />}
-
-      <div className="max-w-md w-full mx-auto">
-        <button onClick={() => { playClick(); setGameState('game_mode'); }} className="btn-kid-secondary mb-4">← Back</button>
-
-        <div className="text-center mb-4">
-          <div className="text-5xl mb-1">📰</div>
-          <h1 className="text-4xl font-fredoka font-bold text-indigo-600 text-kid-glow">Crossword!</h1>
-          <p className="font-nunito text-gray-500 text-sm">Quick mini crossword</p>
-          <p className="font-fredoka text-indigo-500 text-lg mt-1">{p.name}</p>
-        </div>
-
-        <div className="bg-gray-100 rounded-xl p-2 text-center font-nunito text-xs text-gray-500 mb-2">
-          Tap a cell to select · Tap again to switch Across/Down · Type to fill in letters
-        </div>
-
-        {/* Progress */}
-        <div className="flex justify-between bg-white rounded-xl px-4 py-2 shadow border-2 border-indigo-100 mb-3">
-          <span className="font-fredoka text-indigo-600">{filledCount}/{totalWhite} letters</span>
-          <span className="font-fredoka text-gray-500">{checked ? '' : dir === 'across' ? '→ Across' : '↓ Down'}</span>
-        </div>
-
-        {/* Grid */}
-        <div className="bg-white rounded-2xl p-3 shadow-xl border-2 border-indigo-200 mb-4 flex justify-center">
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${SIZE}, 1fr)`, gap: 3 }}>
-            {Array.from({ length: SIZE }, (_, r) =>
-              Array.from({ length: SIZE }, (_, c) => {
-                if (isBlack(r, c)) return (
-                  <div key={`${r}-${c}`} className="w-12 h-12 rounded bg-gray-800" />
-                );
-                const num = getCellClueNumber(r, c);
-                const cell = cells[r][c];
-                const hl = getHighlight(r, c);
-                const correct = checked ? cell.correct : null;
-                return (
-                  <button
-                    key={`${r}-${c}`}
-                    onClick={() => handleCellClick(r, c)}
-                    onKeyDown={handleKey}
-                    className={`w-12 h-12 rounded border-2 flex items-center justify-center relative select-none outline-none
-                      ${correct === true ? 'bg-green-100 border-green-400' :
-                        correct === false ? 'bg-red-100 border-red-400' :
-                        hl || 'bg-white border-gray-300'}
-                    `}
-                  >
-                    {num && <span className="absolute top-0.5 left-1 text-[9px] font-bold text-indigo-500">{num}</span>}
-                    <span className="font-fredoka font-bold text-gray-800 text-lg">{cell.value}</span>
-                  </button>
-                );
-              })
-            )}
+      <div className="absolute inset-0 overflow-y-auto overflow-x-hidden px-3 py-3" style={{ touchAction: 'pan-y' }}>
+        {won && <ConfettiBurst count={70} durationMs={2500} />}
+        <div className="max-w-3xl mx-auto flex flex-col gap-3 min-h-full">
+          {/* Status row */}
+          <div className="flex flex-wrap items-center justify-center gap-2 font-fredoka text-lg">
+            <span className="rounded-full bg-white/10 px-4 py-1">{p.name}</span>
+            <span className="rounded-full bg-white/10 px-4 py-1 tabular-nums">⏱️ {fmtTime(seconds)}</span>
+            <span className="rounded-full bg-white/10 px-4 py-1">{filled}/{totalWhite} letters</span>
+            <span className="rounded-full bg-white/10 px-4 py-1 text-yellow-300 tabular-nums">⭐ {crosswordScore(seconds, hints)}</span>
           </div>
-        </div>
 
-        {/* Hidden input for mobile keyboard */}
-        <input
-          ref={inputRef}
-          className="opacity-0 h-0 w-0 absolute"
-          onKeyDown={handleKey}
-          readOnly
-        />
-
-        {/* Clues */}
-        <div className="bg-white rounded-2xl p-4 shadow border-2 border-indigo-100 mb-3">
-          <div className="grid grid-cols-2 gap-3">
-            {(['across', 'down'] as const).map(d => (
-              <div key={d}>
-                <h3 className="font-fredoka font-bold text-indigo-600 mb-2">{d === 'across' ? '→ Across' : '↓ Down'}</h3>
-                {p.clues.filter(cl => cl.dir === d).map(cl => (
-                  <p key={`${cl.id}-${cl.dir}`} className="font-nunito text-sm text-gray-600 mb-1">
-                    <span className="font-bold text-indigo-500">{cl.id}.</span> {cl.clue}
-                  </p>
-                ))}
+          <div className="flex flex-col md:flex-row gap-3 items-center md:items-start justify-center">
+            {/* Grid */}
+            <div className="shrink-0 rounded-3xl bg-indigo-900/80 border-2 border-fuchsia-400/40 p-2 shadow-2xl">
+              <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${SIZE}, minmax(0, 1fr))`, width: 'min(84vw, max(300px, calc(100dvh - 560px)), 440px)' }}>
+                {p.rows.map((row, r) => row.split('').map((ch, c) => {
+                  const key = `${r}-${c}`;
+                  if (ch === '#') return <div key={key} className="aspect-square rounded-lg bg-black/40" />;
+                  const num = numbers.get(key);
+                  const isSel = sel?.r === r && sel?.c === c;
+                  const inWord = clueCells.has(key);
+                  const mark = checked?.get(key);
+                  const bg = mark === true ? 'bg-green-500 text-white'
+                    : mark === false ? 'bg-rose-500 text-white'
+                    : won || gaveUp ? 'bg-green-500 text-white'
+                    : isSel ? 'bg-yellow-300 text-slate-900'
+                    : inWord ? 'bg-sky-200 text-slate-900'
+                    : 'bg-white text-slate-900';
+                  return (
+                    <motion.button
+                      key={key}
+                      type="button"
+                      onPointerDown={e => { e.preventDefault(); onCell(r, c); }}
+                      animate={won ? { scale: [1, 1.15, 1] } : { scale: 1 }}
+                      transition={{ delay: won ? (r + c) * 0.05 : 0, duration: 0.3 }}
+                      aria-label={`Row ${r + 1} column ${c + 1}${entries[r][c] ? `, ${entries[r][c]}` : ''}`}
+                      className={`relative aspect-square rounded-lg flex items-center justify-center select-none ${bg} ${isSel ? 'ring-4 ring-fuchsia-400' : ''}`}
+                    >
+                      {num && <span className="absolute top-0.5 left-1 text-xs font-bold leading-none opacity-80">{num}</span>}
+                      <span className="font-fredoka text-3xl leading-none">{entries[r][c]}</span>
+                    </motion.button>
+                  );
+                }))}
               </div>
-            ))}
+            </div>
+
+            {/* Clues */}
+            <div className="w-full md:max-w-sm grid grid-cols-2 md:grid-cols-1 gap-2">
+              {(['across', 'down'] as const).map(d => (
+                <div key={d} className="rounded-2xl bg-black/30 p-2">
+                  <h3 className="font-fredoka text-lg text-fuchsia-300 px-1">{d === 'across' ? '→ Across' : '↓ Down'}</h3>
+                  {orderedClues(p).filter(cl => cl.dir === d).map(cl => {
+                    const on = clue?.id === cl.id && clue.dir === cl.dir;
+                    return (
+                      <button
+                        key={`${cl.id}-${cl.dir}`}
+                        type="button"
+                        onClick={() => { if (!canType) return; playClick(); const s = selectClue(cl, entries); setSel(s.sel); setDir(s.dir); }}
+                        className={`w-full min-h-[44px] text-left rounded-xl px-2 py-1 font-nunito text-base ${on ? 'bg-fuchsia-500/80' : ''}`}
+                      >
+                        <b>{cl.id}.</b> {cl.clue}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Controls */}
-        <div className="flex gap-2 justify-center mb-4">
-          <button onClick={checkAnswers} className="btn-kid px-4">✅ Check</button>
-          <button onClick={reveal} className="btn-kid-secondary px-4">💡 Reveal</button>
-          <button onClick={resetPuzzle} aria-label="Clear the grid" className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border-2 border-gray-300 rounded-full font-fredoka text-gray-600">🔄</button>
-        </div>
-        <div className="flex justify-center mb-4">
-          <button onClick={nextPuzzle} className="btn-kid-secondary px-4">➡️ Next puzzle</button>
-        </div>
+          {/* Current clue */}
+          <div className="rounded-2xl bg-fuchsia-600/30 border border-fuchsia-400/50 px-4 py-2 text-center font-nunito text-lg min-h-[52px] flex items-center justify-center">
+            {won ? '🎉 Solved! Brilliant!' : gaveUp ? '🙈 Here are the answers' : clue ? <span><b>{clue.id} {clue.dir === 'across' ? 'Across' : 'Down'}:</b> {clue.clue}</span> : 'Tap a square to start'}
+          </div>
 
-        <AnimatePresence>
-          {won && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-white rounded-3xl p-6 shadow-2xl border-4 border-yellow-400 text-center"
-            >
-              <div className="text-6xl mb-2">🏆</div>
-              <h2 className="text-3xl font-fredoka font-bold text-indigo-600 mb-1">Solved it!</h2>
-              <p className="font-nunito text-gray-600 mb-1">{revealed ? 'Now try a puzzle without peeking! 💪' : '+40 XP earned!'}</p>
-              <div className="flex gap-2 justify-center flex-wrap mt-2">
-                <button onClick={nextPuzzle} className="btn-kid">➡️ Next puzzle</button>
-                <button onClick={resetPuzzle} className="btn-kid-secondary">🔄 Play again</button>
-              </div>
-            </motion.div>
+          <div className="flex flex-wrap gap-2 justify-center">
+            <button onClick={check} disabled={!canType} className={`${actionBtn} bg-emerald-600`}>✅ Check</button>
+            <button onClick={hint} disabled={!canType} className={`${actionBtn} bg-sky-600`}>💡 Hint (−{HINT_COST})</button>
+            <button onClick={showAnswers} disabled={!canType} className={`${actionBtn} bg-white/15`}>🙈 Show answers</button>
+          </div>
+          {checked && !won && (
+            <p className="text-center font-nunito text-lg text-violet-100">
+              {[...checked.values()].some(v => !v) ? '🟥 Red letters need another go — you can do it!' : '🟩 Everything so far is right!'}
+            </p>
           )}
-        </AnimatePresence>
-      </div>
-    </motion.div>
-  );
-};
 
-export default CrosswordMini;
+          <div className="w-full mt-auto pb-1">
+            <OnScreenKeyboard onKey={onKey} onBackspace={onBackspace} onEnter={onNextClue} enterLabel="Next ➜" disabled={!canType} />
+          </div>
+        </div>
+      </div>
+    </GameShell>
+  );
+}

@@ -1,235 +1,228 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useEffect, Fragment, useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useGameStore } from '../store';
-import { playClick, playCorrect, playWrong, playWin } from '../utils/sounds';
+import GameShell from '../games/engine/GameShell';
+import type { ShellStatus } from '../games/engine/GameShell';
+import OnScreenKeyboard from './ui/OnScreenKeyboard';
 import ConfettiBurst from './ConfettiBurst';
-import { PUZZLES, VALID_WORDS, differsBy1, ladderHint } from '../data/wordLadder';
+import { useSafeTimeout } from '../utils/useSafeTimeout';
+import { playClick, playCorrect, playPop, playWrong } from '../utils/sounds';
+import { PUZZLES, ladderHint, shortestLadder, checkStep, STEP_MESSAGES, ladderScore, HINT_COST } from '../data/wordLadder';
 
-const WordLadder: React.FC = () => {
-  const { setGameState, addXP } = useGameStore();
-  const [puzzleIdx, setPuzzleIdx] = useState(0);
-  const [chain, setChain] = useState<string[]>(() => [PUZZLES[0].start]);
+const SOLVED_KEY = 'wordladder_solved';
+const readSolved = (): Set<number> => {
+  try { return new Set(JSON.parse(localStorage.getItem(SOLVED_KEY) || '[]') as number[]); } catch { return new Set(); }
+};
+
+export default function WordLadder() {
+  const later = useSafeTimeout();
+  const [status, setStatus] = useState<ShellStatus>('ready');
+  const [round, setRound] = useState(0);
+  // Pause when she switches apps
+  useEffect(() => {
+    const h = () => { if (document.hidden) setStatus(s => (s === 'playing' ? 'paused' : s)); };
+    document.addEventListener('visibilitychange', h);
+    return () => document.removeEventListener('visibilitychange', h);
+  }, []);
+  const [solved, setSolved] = useState<Set<number>>(readSolved);
+  const [puzzleIdx, setPuzzleIdx] = useState(() => {
+    const s = readSolved();
+    const i = PUZZLES.findIndex((_, k) => !s.has(k));
+    return i < 0 ? 0 : i;
+  });
+  const puzzle = PUZZLES[puzzleIdx];
+  const [chain, setChain] = useState<string[]>([puzzle.start]);
   const [input, setInput] = useState('');
   const [error, setError] = useState('');
+  const [shake, setShake] = useState(0);
+  const [hints, setHints] = useState(0);
   const [won, setWon] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
-  const [solved, setSolved] = useState<Set<number>>(() => {
-    try { return new Set(JSON.parse(localStorage.getItem('wordladder_solved') || '[]')); } catch { return new Set(); }
-  });
+  const [gaveUp, setGaveUp] = useState(false);
+  const [locked, setLocked] = useState(false);
+  const len = puzzle.start.length;
+  const last = chain[chain.length - 1];
+  const canType = status === 'playing' && !locked;
 
-  const confettiTimer = useRef<number | null>(null);
-  useEffect(() => () => { if (confettiTimer.current) clearTimeout(confettiTimer.current); }, []);
-
-  const puzzle = PUZZLES[puzzleIdx];
-
-  const resetPuzzle = (idx: number) => {
+  const start = (idx = puzzleIdx) => {
     setPuzzleIdx(idx);
     setChain([PUZZLES[idx].start]);
     setInput('');
     setError('');
+    setHints(0);
     setWon(false);
+    setGaveUp(false);
+    setLocked(false);
+    setRound(r => r + 1);
+    setStatus('playing');
   };
 
-  const last = chain[chain.length - 1];
-
-  const submitWord = () => {
-    const word = input.toLowerCase().trim();
-    if (!word) return;
-
-    if (word.length !== puzzle.start.length) {
-      setError(`Must be ${puzzle.start.length} letters!`);
-      playWrong();
-      return;
-    }
-    if (chain.includes(word)) {
-      setError('Already used that word!');
-      playWrong();
-      return;
-    }
-    if (!differsBy1(last, word)) {
-      setError('Change exactly 1 letter!');
-      playWrong();
-      return;
-    }
-    if (!VALID_WORDS.has(word)) {
-      setError('Not a valid word!');
-      playWrong();
-      return;
-    }
-
-    setError('');
+  const finish = () => {
+    setLocked(true);
+    setWon(true);
     playCorrect();
-    const newChain = [...chain, word];
-    setChain(newChain);
-    setInput('');
-
-    if (word === puzzle.end) {
-      playWin();
-      setWon(true);
-      setShowConfetti(true);
-      if (confettiTimer.current) clearTimeout(confettiTimer.current);
-      confettiTimer.current = window.setTimeout(() => setShowConfetti(false), 2500);
-      addXP(25 + Math.max(0, (puzzle.steps + 2 - newChain.length) * 5));
-      const newSolved = new Set([...solved, puzzleIdx]);
-      setSolved(newSolved);
-      localStorage.setItem('wordladder_solved', JSON.stringify([...newSolved]));
-    }
+    const s = new Set(solved).add(puzzleIdx);
+    setSolved(s);
+    try { localStorage.setItem(SOLVED_KEY, JSON.stringify([...s])); } catch { /* private mode */ }
+    later(() => setStatus('over'), 1800);
   };
 
-  const handleUndo = () => {
-    if (chain.length <= 1) return;
+  const addWord = (word: string, viaHint: boolean) => {
+    const problem = checkStep(chain, word, puzzle);
+    if (problem) {
+      setError(STEP_MESSAGES[problem](puzzle));
+      setShake(s => s + 1);
+      playWrong();
+      return;
+    }
+    setError('');
+    const next = [...chain, word];
+    setChain(next);
+    setInput('');
+    if (word === puzzle.end) finish();
+    else if (!viaHint) playPop();
+    else playClick();
+  };
+
+  const onKey = useCallback((l: string) => {
+    if (!canType) return;
+    setError('');
+    setInput(c => (c.length < len ? c + l.toLowerCase() : c));
+  }, [canType, len]);
+  const onBackspace = useCallback(() => { if (canType) setInput(c => c.slice(0, -1)); }, [canType]);
+  const onEnter = () => {
+    if (!canType) return;
+    if (input.length < len) { setError(STEP_MESSAGES.length(puzzle)); setShake(s => s + 1); playWrong(); return; }
+    addWord(input, false);
+  };
+
+  const undo = () => {
+    if (!canType || chain.length <= 1) return;
     playClick();
     setChain(c => c.slice(0, -1));
     setError('');
   };
 
+  const hint = () => {
+    if (!canType) return;
+    const path = shortestLadder(last, puzzle.end);
+    if (!path || path.length < 2) return;
+    setHints(h => h + 1);
+    addWord(path[1], true);
+  };
+
+  const showMe = () => {
+    if (!canType) return;
+    playClick();
+    const path = shortestLadder(puzzle.start, puzzle.end) ?? [puzzle.start, puzzle.end];
+    setChain(path);
+    setInput('');
+    setError('');
+    setGaveUp(true);
+    setLocked(true);
+    later(() => setStatus('over'), 2600);
+  };
+
+  const steps = chain.length - 1;
+  const score = won ? ladderScore(puzzle, steps, hints) : 0;
+  const nextIdx = (puzzleIdx + 1) % PUZZLES.length;
+
+  const pickChip = (on: boolean) =>
+    `relative min-h-[48px] rounded-2xl px-2 font-fredoka text-lg uppercase ${on ? 'bg-fuchsia-500' : 'bg-white/10'}`;
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="min-h-screen bg-kid-pattern flex flex-col items-center p-4"
-    >
-      {showConfetti && <ConfettiBurst count={60} durationMs={2500} />}
-
-      <div className="max-w-md w-full mx-auto">
-        <button onClick={() => { playClick(); setGameState('game_mode'); }} className="btn-kid-secondary mb-4">← Back</button>
-
-        <div className="text-center mb-4">
-          <div className="text-5xl mb-1">🔤</div>
-          <h1 className="text-4xl font-fredoka font-bold text-blue-600 text-kid-glow">Word Ladder</h1>
-          <p className="font-nunito text-gray-500 text-sm">Change one letter at a time to reach the goal!</p>
-        </div>
-
-        {/* Puzzle selector */}
-        <div className="flex gap-1.5 flex-wrap justify-center mb-4">
-          {PUZZLES.map((p, i) => (
-            <button
-              key={i}
-              onClick={() => { playClick(); resetPuzzle(i); }}
-              className={`px-3 py-1.5 rounded-full font-fredoka text-sm border-2 transition-colors relative ${
-                i === puzzleIdx
-                  ? 'bg-blue-500 border-blue-600 text-white'
-                  : 'bg-white border-blue-200 text-blue-600 hover:bg-blue-50'
-              }`}
-            >
-              {p.start}→{p.end}
-              {solved.has(i) && <span className="absolute -top-1 -right-1 text-xs">✅</span>}
-            </button>
-          ))}
-        </div>
-
-        {/* Goal display */}
-        <div className="bg-white rounded-2xl px-4 py-3 shadow border-2 border-blue-200 mb-4 flex items-center justify-between">
-          <div className="text-center">
-            <p className="font-nunito text-xs text-gray-400">Start</p>
-            <p className="font-fredoka font-bold text-2xl text-blue-600 uppercase">{puzzle.start}</p>
-          </div>
-          <div className="text-2xl">→</div>
-          <div className="text-center">
-            <p className="font-nunito text-xs text-gray-400">Goal</p>
-            <p className="font-fredoka font-bold text-2xl text-green-600 uppercase">{puzzle.end}</p>
-          </div>
-          <div className="text-center">
-            <p className="font-nunito text-xs text-gray-400">Steps</p>
-            <p className="font-fredoka font-bold text-xl text-gray-600">{chain.length - 1}</p>
-          </div>
-        </div>
-
-        {/* Chain display */}
-        <div className="bg-white rounded-3xl p-4 shadow-xl border-2 border-blue-200 mb-4">
-          <div className="flex flex-wrap gap-2 justify-center">
-            {chain.map((word, i) => (
-              <React.Fragment key={i}>
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className={`px-4 py-2 rounded-xl font-fredoka font-bold text-xl uppercase shadow ${
-                    i === 0 ? 'bg-blue-100 text-blue-700 border-2 border-blue-300' :
-                    word === puzzle.end ? 'bg-green-100 text-green-700 border-2 border-green-400' :
-                    'bg-purple-100 text-purple-700 border-2 border-purple-200'
-                  }`}
-                >
-                  {word}
-                </motion.div>
-                {i < chain.length - 1 && <div className="self-center text-gray-300 font-bold">→</div>}
-              </React.Fragment>
+    <GameShell
+      gameId="word_ladder"
+      title="Word Ladder"
+      icon="🪜"
+      xpScale={2.5}
+      status={status}
+      score={score}
+      round={round}
+      overTitle={gaveUp ? 'Here’s one way up the ladder 💪' : `${puzzle.start.toUpperCase()} → ${puzzle.end.toUpperCase()} in ${steps} steps!`}
+      overStats={[
+        { label: '🪜 Your steps', value: gaveUp ? '—' : String(steps) },
+        { label: '🎯 Shortest', value: String(puzzle.steps) },
+      ]}
+      // after a solve, "Play again" moves on to the next ladder
+      onStart={() => start(status === 'over' && won ? nextIdx : puzzleIdx)}
+      onPause={() => setStatus('paused')}
+      onResume={() => setStatus('playing')}
+      startLabel="▶ Climb!"
+      readyContent={
+        <div className="space-y-3">
+          <p className="font-nunito text-lg text-violet-100">
+            Change <b>one letter</b> at a time to make a new word, until you reach the goal. Fewest steps = most points!
+          </p>
+          <div className="grid grid-cols-3 gap-2 max-h-[40dvh] overflow-y-auto p-1" style={{ touchAction: 'pan-y' }}>
+            {PUZZLES.map((p, i) => (
+              <button key={i} onClick={() => { playClick(); setPuzzleIdx(i); }} className={pickChip(i === puzzleIdx)}>
+                {p.start}→{p.end}
+                {solved.has(i) && <span className="absolute -top-1 -right-1 text-base">✅</span>}
+              </button>
             ))}
-            {!won && (
-              <div className="self-center text-gray-300 font-bold">→</div>
-            )}
-            {!won && (
-              <div className="px-4 py-2 rounded-xl font-fredoka font-bold text-xl uppercase bg-green-50 text-green-400 border-2 border-dashed border-green-200">
-                {puzzle.end}
-              </div>
-            )}
           </div>
         </div>
-
-        {/* Input */}
-        {!won && (
-          <div className="flex gap-2 mb-2">
-            <input
-              value={input}
-              onChange={e => { setInput(e.target.value.toLowerCase().replace(/[^a-z]/g, '')); setError(''); }}
-              onKeyDown={e => e.key === 'Enter' && submitWord()}
-              maxLength={puzzle.start.length}
-              placeholder={`${puzzle.start.length}-letter word...`}
-              className="flex-1 border-2 border-blue-200 rounded-xl px-4 py-3 font-fredoka text-lg uppercase focus:outline-none focus:border-blue-400 text-center tracking-widest"
-            />
-            <button onClick={submitWord} className="btn-kid px-4">Go!</button>
+      }
+    >
+      <div className="absolute inset-0 overflow-y-auto overflow-x-hidden px-3 py-3" style={{ touchAction: 'pan-y' }}>
+        {won && <ConfettiBurst count={70} durationMs={2500} />}
+        <div className="max-w-xl mx-auto flex flex-col items-center gap-3 min-h-full">
+          {/* Goal */}
+          <div className="w-full grid grid-cols-3 items-center rounded-2xl bg-black/30 px-4 py-2 text-center">
+            <div><div className="font-nunito text-base text-violet-200">Start</div><div className="font-fredoka text-3xl uppercase text-sky-300">{puzzle.start}</div></div>
+            <div><div className="font-nunito text-base text-violet-200">Steps</div><div className="font-fredoka text-3xl">{steps}<span className="text-lg text-violet-300"> / {puzzle.steps}</span></div></div>
+            <div><div className="font-nunito text-base text-violet-200">Goal</div><div className="font-fredoka text-3xl uppercase text-green-300">{puzzle.end}</div></div>
           </div>
-        )}
 
-        {error && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center font-nunito text-red-500 text-sm mb-2"
-          >
-            {error}
-          </motion.p>
-        )}
-
-        {chain.length > 1 && !won && (
-          <button onClick={handleUndo} className="w-full py-2 font-fredoka text-gray-500 hover:text-red-500 transition-colors">
-            ↩️ Undo last step
-          </button>
-        )}
-
-        {/* Hint */}
-        {!won && (
-          <div className="bg-yellow-50 border-2 border-yellow-200 rounded-2xl p-3 mt-3 text-center">
-            <p className="font-nunito text-yellow-700 text-sm">💡 Hint: {ladderHint(puzzle)}</p>
+          {/* Ladder so far */}
+          <div className="flex flex-wrap gap-2 justify-center items-center">
+            {chain.map((w, i) => (
+              <Fragment key={i}>
+                <motion.div initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                  className={`px-3 py-1 rounded-xl font-fredoka text-2xl uppercase ${i === 0 ? 'bg-sky-500/80' : w === puzzle.end ? 'bg-green-500' : 'bg-violet-500/80'}`}>
+                  {w.split('').map((ch, k) => (
+                    <span key={k} className={i > 0 && chain[i - 1][k] !== ch ? 'text-yellow-300' : ''}>{ch}</span>
+                  ))}
+                </motion.div>
+                {i < chain.length - 1 && <span className="text-violet-300 text-xl">→</span>}
+              </Fragment>
+            ))}
+            {!won && !gaveUp && <><span className="text-violet-300 text-xl">→ … →</span>
+              <div className="px-3 py-1 rounded-xl font-fredoka text-2xl uppercase border-2 border-dashed border-green-300/70 text-green-200">{puzzle.end}</div></>}
           </div>
-        )}
 
-        {/* Win banner */}
-        <AnimatePresence>
-          {won && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-white rounded-3xl p-6 shadow-2xl border-4 border-green-400 text-center"
-            >
-              <div className="text-6xl mb-2">🎉</div>
-              <h2 className="text-3xl font-fredoka font-bold text-green-600 mb-1">You did it!</h2>
-              <p className="font-nunito text-gray-600 mb-1">
-                {chain.join(' → ')} in {chain.length - 1} steps!
-              </p>
-              <p className="font-nunito text-purple-600 mb-3">+XP earned!</p>
-              <div className="flex gap-2 justify-center flex-wrap">
-                {puzzleIdx + 1 < PUZZLES.length && (
-                  <button onClick={() => { playClick(); resetPuzzle(puzzleIdx + 1); }} className="btn-kid">➡️ Next</button>
-                )}
-                <button onClick={() => { playClick(); resetPuzzle(puzzleIdx); }} className="btn-kid-secondary">🔄 Again</button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+          {/* Typing row */}
+          <motion.div key={shake} animate={shake ? { x: [0, -10, 10, -7, 7, 0] } : undefined} transition={{ duration: 0.35 }}
+            className="flex gap-2 justify-center">
+            {Array.from({ length: len }, (_, i) => {
+              const ch = input[i] ?? '';
+              const changed = ch && ch !== last[i];
+              return (
+                <div key={i}
+                  className={`flex items-center justify-center rounded-xl font-fredoka text-4xl uppercase w-16 h-16 border-2 ${ch ? (changed ? 'bg-yellow-400/30 border-yellow-300' : 'bg-white/15 border-white/50') : 'bg-white/5 border-white/20 text-white/30'}`}>
+                  {ch || last[i]}
+                </div>
+              );
+            })}
+          </motion.div>
+          <div className="min-h-[28px] text-center font-nunito text-lg">
+            <AnimatePresence>
+              {error && <motion.p key={error} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-rose-300">{error}</motion.p>}
+              {!error && won && <p className="text-green-300">🎉 You reached {puzzle.end.toUpperCase()}!</p>}
+              {!error && !won && !gaveUp && <p className="text-violet-200">💡 {ladderHint(puzzle)}</p>}
+            </AnimatePresence>
+          </div>
+
+          <div className="flex flex-wrap gap-2 justify-center">
+            <button onClick={undo} disabled={!canType || chain.length <= 1} className="min-h-[48px] px-4 rounded-2xl bg-white/15 font-fredoka text-lg disabled:opacity-40">↩️ Undo</button>
+            <button onClick={hint} disabled={!canType} className="min-h-[48px] px-4 rounded-2xl bg-sky-600 font-fredoka text-lg disabled:opacity-40">💡 Next word (−{HINT_COST})</button>
+            <button onClick={showMe} disabled={!canType} className="min-h-[48px] px-4 rounded-2xl bg-white/15 font-fredoka text-lg disabled:opacity-40">🙈 Show me</button>
+          </div>
+
+          <div className="w-full mt-auto pb-1">
+            <OnScreenKeyboard onKey={onKey} onBackspace={onBackspace} onEnter={onEnter} enterLabel="Go!" disabled={!canType} />
+          </div>
+        </div>
       </div>
-    </motion.div>
+    </GameShell>
   );
-};
-
-export default WordLadder;
+}
