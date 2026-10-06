@@ -32,7 +32,13 @@ export type GameId =
   | 'colour_clash'
   | 'sliding_puzzle'
   | 'quiz_party'
-  | 'imposter';
+  | 'imposter'
+  | 'bluff_buster'
+  | 'category_blitz'
+  | 'word_chain'
+  | 'star_grab'
+  | 'crowd_pleaser'
+  | 'rps_showdown';
 
 // Optional per-game setup chosen by the host in the lobby (difficulty, etc.),
 // broadcast to everyone in the `start` message.

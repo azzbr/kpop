@@ -17,6 +17,12 @@ const GAME_SCREENS: Partial<Record<GameId, React.LazyExoticComponent<GameComp>>>
   doodle_dash: lazy(() => import('./DoodleDash') as Promise<{ default: GameComp }>),
   penalty_duel: lazy(() => import('./PenaltyDuel') as Promise<{ default: GameComp }>),
   monopoly_deal: lazy(() => import('./PropertyDash') as Promise<{ default: GameComp }>),
+  bluff_buster: lazy(() => import('./BluffBuster') as Promise<{ default: GameComp }>),
+  category_blitz: lazy(() => import('./CategoryBlitz') as Promise<{ default: GameComp }>),
+  word_chain: lazy(() => import('./WordChain') as Promise<{ default: GameComp }>),
+  star_grab: lazy(() => import('./StarGrab') as Promise<{ default: GameComp }>),
+  crowd_pleaser: lazy(() => import('./CrowdPleaser') as Promise<{ default: GameComp }>),
+  rps_showdown: lazy(() => import('./RpsShowdown') as Promise<{ default: GameComp }>),
   emoji_detective: lazy(() => import('./EmojiDetective') as Promise<{ default: GameComp }>),
   word_scramble: lazy(() => import('./WordScramble') as Promise<{ default: GameComp }>),
   riddle_rush: lazy(() => import('./RiddleRush') as Promise<{ default: GameComp }>),
@@ -41,9 +47,15 @@ const GAME_SCREENS: Partial<Record<GameId, React.LazyExoticComponent<GameComp>>>
 
 const EMOJIS = ['🎤', '🎸', '🥁', '🎹', '🎧', '🌟', '💖', '🔥', '🦄', '🐯', '🐰', '🦊'];
 
-const GAMES: { id: GameId; icon: string; title: string; desc: string; min: number; max: number; tag: string }[] = [
+const GAMES: { id: GameId; icon: string; title: string; desc: string; min: number; max: number; tag: string; isNew?: boolean }[] = [
   { id: 'imposter', icon: '🤫', title: 'Imposter', desc: 'Everyone gets the secret word — except the imposter! Give clues, then vote out the bluffer.', min: 3, max: 12, tag: 'party!' },
   { id: 'quiz_party', icon: '🎉', title: 'Quiz Party', desc: 'Kahoot-style quiz on a big screen or everyone\'s iPad — Classic, Gold Quest, Racing & Cash Climb. Topics, school subjects or your own quiz!', min: 2, max: 40, tag: 'whole class!' },
+  { id: 'bluff_buster', icon: '🤥', title: 'Bluff Buster', desc: 'A weird true fact with a gap — everyone types a fake answer, then spot the real one. Fool your friends for points!', min: 3, max: 12, tag: 'new! party!', isNew: true },
+  { id: 'crowd_pleaser', icon: '🧑‍🤝‍🧑', title: 'Crowd Pleaser', desc: 'Would you rather…? Pick your side AND guess what most of the room picked!', min: 3, max: 30, tag: 'new! whole class!', isNew: true },
+  { id: 'star_grab', icon: '⭐', title: 'Star Grab', desc: 'Musical chairs on screen! When the music stops, grab a star — one too few every round.', min: 3, max: 20, tag: 'new! party!', isNew: true },
+  { id: 'category_blitz', icon: '🔠', title: 'Category Blitz', desc: 'One letter, five categories, 60 seconds. Answers nobody else thought of score double!', min: 2, max: 20, tag: 'new! brain game!', isNew: true },
+  { id: 'word_chain', icon: '⛓️', title: 'Word Chain', desc: 'Take turns: your word must start with the last letter of the one before. Don’t run out of time!', min: 2, max: 10, tag: 'new! brain game!', isNew: true },
+  { id: 'rps_showdown', icon: '✊', title: 'Rock Paper Scissors Showdown', desc: 'Everyone picks at once and plays everyone else. Best of 5 rounds — read the room!', min: 2, max: 30, tag: 'new! quick!', isNew: true },
   { id: 'doodle_dash', icon: '🎨', title: 'Doodle Dash', desc: 'One draws, everyone guesses — the doodle appears live on every screen!', min: 2, max: 30, tag: 'whole class!' },
   { id: 'tt_bingo', icon: '🎱', title: 'Times-Table Bingo', desc: 'Solve the call, find it on your card — first full line shouts BINGO!', min: 2, max: 30, tag: 'whole class!' },
   { id: 'copy_cat', icon: '🧠', title: 'Copy Cat', desc: 'Watch the pattern, repeat it perfectly. One slip = out. Last one standing wins!', min: 2, max: 30, tag: 'whole class!' },
@@ -540,14 +552,17 @@ const OnlineHub: React.FC = () => {
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1">
-                          <span className="font-fredoka font-bold text-lg">{g.icon} {g.title}</span>
-                          <span className={`text-xs font-nunito rounded-full px-2 py-0.5 ${ok ? 'bg-emerald-500/30 text-emerald-200' : 'bg-white/10 text-teal-300'}`}>
-                            {g.tag}
+                          <span className="font-fredoka font-bold text-lg">
+                            {g.icon} {g.title}
+                            {g.isNew && <span className="ml-2 align-middle rounded-full bg-fuchsia-500 px-2 py-0.5 font-fredoka text-xs text-white">NEW</span>}
+                          </span>
+                          <span className={`text-sm font-nunito rounded-full px-2 py-0.5 ${ok ? 'bg-emerald-500/30 text-emerald-200' : 'bg-white/10 text-teal-300'}`}>
+                            {g.tag.replace(/^new! /, '')}
                           </span>
                         </div>
-                        <div className="font-nunito text-sm text-teal-100">{g.desc}</div>
+                        <div className="font-nunito text-base text-teal-100">{g.desc}</div>
                         {!ok && (
-                          <div className="font-nunito text-xs text-amber-300 mt-1">
+                          <div className="font-nunito text-sm text-amber-300 mt-1">
                             Needs {g.min}–{g.max} players (you have {playerCount})
                           </div>
                         )}
