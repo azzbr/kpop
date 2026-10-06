@@ -192,3 +192,11 @@ export function startQuizMusic(urgent: () => boolean = () => false): () => void 
   tick();
   return () => { stopped = true; window.clearTimeout(timer); };
 }
+
+/**
+ * One synth note on the shared (already unlocked) audio context, scaled by the sound-effect
+ * volume. For small local loops such as Star Grab's dance tune.
+ */
+export function playNote(freq: number, durSec: number, type: OscillatorType = 'triangle', vol = 0.1): void {
+  schedule([{ freq, dur: durSec, type, vol }], 0);
+}
