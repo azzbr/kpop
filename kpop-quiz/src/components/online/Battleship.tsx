@@ -1,63 +1,34 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useGameStore } from '../../store';
 import type { RoomApi } from '../../online/useRoom';
-import { playClick, playWin } from '../../utils/sounds';
+import { finishArenaGame } from '../../online/arenaRewards';
+import { useHelloSync } from '../../online/boardSync';
+import { BS_N as N, BS_SHIPS as SHIPS, randomFleet, validFleet, fireAt, playerView } from '../../online/battleshipLogic';
+import type { Ship } from '../../online/battleshipLogic';
+import { playClick, playWin, playPop, playCorrect } from '../../utils/sounds';
 import ConfettiBurst from '../ConfettiBurst';
 
 // 1-vs-1 Battleship. Fleets are auto-placed (re-shuffle until you like it),
 // then players alternate firing on the opponent's grid. Host owns both fleets,
-// validates every shot and sends each player their own masked view.
-
-const N = 7;
-const SHIPS = [4, 3, 2, 2];
-const randInt = (lo: number, hi: number) => Math.floor(Math.random() * (hi - lo + 1)) + lo;
-
-function randomFleet(): number[][] {
-  const occupied = new Set<number>();
-  const ships: number[][] = [];
-  for (const size of SHIPS) {
-    let placed = false;
-    let guard = 0;
-    while (!placed && guard < 800) {
-      guard++;
-      const horiz = Math.random() < 0.5;
-      const r = randInt(0, N - 1);
-      const c = randInt(0, N - 1);
-      const cells: number[] = [];
-      for (let k = 0; k < size; k++) {
-        const rr = horiz ? r : r + k;
-        const cc = horiz ? c + k : c;
-        if (rr >= N || cc >= N) {
-          cells.length = 0;
-          break;
-        }
-        cells.push(rr * N + cc);
-      }
-      if (cells.length === size && cells.every((x) => !occupied.has(x))) {
-        cells.forEach((x) => occupied.add(x));
-        ships.push(cells);
-        placed = true;
-      }
-    }
-  }
-  return ships;
-}
+// validates every shot and sends each player their own masked view (an enemy
+// ship only shows once it's sunk).
 
 type Phase = 'place' | 'wait' | 'battle' | 'over';
 
-// Messages exchanged over the room channel
+// Messages exchanged over the room channel (all start with 'bs_')
 type BsMsg = { from?: string } & (
   | { t: 'bs_place'; ships: number[][] }
   | { t: 'bs_fire'; cell: number }
   | { t: 'bs_again' }
-  | { t: 'bs_reset' }
-  | { t: 'bs_state'; to: string; mine: number[]; enemy: number[]; turn: string; winner: string; meLeft: number; enemyLeft: number }
+  | { t: 'bs_setup'; p0: string; p1: string; round: number; placed: string[] }
+  | {
+      t: 'bs_state'; to: string; round: number; mine: number[]; enemy: number[]; turn: string; winner: string;
+      meLeft: number; enemyLeft: number; ranked: string[] | null; last: { by: string; cell: number; hit: boolean; sunk: boolean } | null;
+    }
 );
 
 const Battleship: React.FC<{ room: RoomApi }> = ({ room }) => {
   const { players, isHost, myId, send, onMessage } = room;
-  const { addXP } = useGameStore();
 
   const [phase, setPhase] = useState<Phase>('place');
   const [fleet, setFleet] = useState<number[][]>(() => randomFleet());
@@ -65,94 +36,96 @@ const Battleship: React.FC<{ room: RoomApi }> = ({ room }) => {
   const [enemy, setEnemy] = useState<number[]>(() => Array(N * N).fill(0));
   const [turn, setTurn] = useState('');
   const [winner, setWinner] = useState('');
+  const [seats, setSeats] = useState<{ p0: string; p1: string }>({ p0: '', p1: '' });
   const [shipsLeft, setShipsLeft] = useState<{ me: number; enemy: number }>({ me: SHIPS.length, enemy: SHIPS.length });
-  const xpGiven = useRef(false);
+  const [lastShot, setLastShot] = useState<string>('');
+  const [reward, setReward] = useState<{ xp: number; coins: number } | null>(null);
+  const roundRef = useRef(0);
+  const rewardedRound = useRef(-1);
+  const synced = useRef(false);
 
   const byId = (id: string) =>
     players.find((p) => p.id === id) || { id, name: '???', emoji: '👻', isHost: false, joinedAt: 0 };
 
-  const hd = useRef({
-    p0: '',
-    p1: '',
-    fleet: {} as Record<string, { cells: number[]; hits: number[] }[]>,
-    placed: {} as Record<string, boolean>,
-    shots: {} as Record<string, Map<number, boolean>>,
-    turn: '',
-    winner: '',
-    started: false,
+  const hostApi = useRef<{ start: () => void; hello: (from: string) => void } | null>(null);
+  useHelloSync(room, 'bs', {
+    onStart: () => hostApi.current?.start(),
+    onHello: (from) => hostApi.current?.hello(from),
+    synced: () => synced.current,
   });
 
   // ---- HOST ----
   useEffect(() => {
     if (!isHost) return;
-    const h = hd.current;
-    h.p0 = players[0]?.id || '';
-    h.p1 = players[1]?.id || '';
-    h.shots = { [h.p0]: new Map(), [h.p1]: new Map() };
-    h.placed = {};
-    h.fleet = {};
-    h.turn = h.p0;
-    h.winner = '';
-    h.started = false;
-
-    const views = (P: string) => {
-      const opp = P === h.p0 ? h.p1 : h.p0;
-      const m = Array(N * N).fill(0);
-      (h.fleet[P] || []).forEach((s) => s.cells.forEach((cell) => (m[cell] = 1)));
-      h.shots[P].forEach((hit, cell) => (m[cell] = hit ? 2 : 3));
-      const e = Array(N * N).fill(0);
-      h.shots[opp].forEach((hit, cell) => (e[cell] = hit ? 2 : 3));
-      (h.fleet[opp] || []).forEach((s) => {
-        if (s.hits.length === s.cells.length) s.cells.forEach((cell) => (e[cell] = 4));
-      });
-      const left = (pid: string) => (h.fleet[pid] || []).filter((s) => s.hits.length < s.cells.length).length;
-      return { m, e, meLeft: left(P), enemyLeft: left(opp) };
+    const h = {
+      p0: players[0]?.id || '',
+      p1: players[1]?.id || '',
+      fleet: {} as Record<string, Ship[]>,
+      shots: {} as Record<string, Map<number, boolean>>, // shots fired AT this player
+      turn: '',
+      winner: '',
+      started: false,
+      round: 0,
+      last: null as { by: string; cell: number; hit: boolean; sunk: boolean } | null,
     };
-    const sendViews = () => {
-      [h.p0, h.p1].forEach((P) => {
-        const v = views(P);
-        send({ t: 'bs_state', to: P, mine: v.m, enemy: v.e, turn: h.turn, winner: h.winner, meLeft: v.meLeft, enemyLeft: v.enemyLeft });
+    const reset = () => {
+      h.shots = { [h.p0]: new Map(), [h.p1]: new Map() };
+      h.fleet = {};
+      h.turn = h.p0;
+      h.winner = '';
+      h.started = false;
+      h.last = null;
+    };
+    reset();
+    const other = (P: string) => (P === h.p0 ? h.p1 : h.p0);
+
+    const sendView = (P: string) => {
+      const opp = other(P);
+      const v = playerView(h.fleet[P] || [], h.shots[P], h.fleet[opp] || [], h.shots[opp]);
+      send({
+        t: 'bs_state', to: P, round: h.round, mine: v.mine, enemy: v.enemy, turn: h.turn, winner: h.winner,
+        meLeft: v.meLeft, enemyLeft: v.enemyLeft, ranked: h.winner ? [h.winner, other(h.winner)] : null, last: h.last,
       });
+    };
+    const sendViews = () => [h.p0, h.p1].forEach(sendView);
+    const sendSetup = () => send({ t: 'bs_setup', p0: h.p0, p1: h.p1, round: h.round, placed: Object.keys(h.fleet) });
+
+    hostApi.current = {
+      start: sendSetup,
+      hello: (from) => {
+        if (h.started && (from === h.p0 || from === h.p1)) sendView(from);
+        else sendSetup();
+      },
     };
 
     const offMsg = onMessage((raw) => {
       const msg = raw as unknown as BsMsg;
-      if (msg.t === 'bs_place' && msg.from && Array.isArray(msg.ships) && !h.started) {
-        h.fleet[msg.from] = (msg.ships as number[][]).map((cells) => ({ cells, hits: [] }));
-        h.placed[msg.from] = true;
-        if (h.placed[h.p0] && h.placed[h.p1]) {
+      if (msg.t === 'bs_place' && msg.from && (msg.from === h.p0 || msg.from === h.p1) && !h.started && validFleet(msg.ships)) {
+        h.fleet[msg.from] = msg.ships.map((cells) => ({ cells: [...cells], hits: [] }));
+        if (h.fleet[h.p0] && h.fleet[h.p1]) {
           h.started = true;
-          h.turn = h.p0;
+          h.turn = h.round % 2 === 0 ? h.p0 : h.p1;
           sendViews();
         }
       } else if (msg.t === 'bs_fire' && h.started && !h.winner && msg.from === h.turn && typeof msg.cell === 'number') {
-        const target = msg.from === h.p0 ? h.p1 : h.p0;
-        if (h.shots[target].has(msg.cell)) return;
-        let hit = false;
-        for (const s of h.fleet[target] || []) {
-          if (s.cells.includes(msg.cell)) {
-            hit = true;
-            s.hits.push(msg.cell);
-            break;
-          }
-        }
-        h.shots[target].set(msg.cell, hit);
-        const allSunk = (h.fleet[target] || []).every((s) => s.hits.length === s.cells.length);
-        if (allSunk) h.winner = msg.from;
-        else h.turn = target;
+        const target = other(msg.from);
+        const res = fireAt(h.fleet[target] || [], h.shots[target], msg.cell);
+        if (!res) return;
+        h.last = { by: msg.from, cell: msg.cell, hit: res.hit, sunk: res.sunk };
+        if (res.allSunk) h.winner = msg.from;
+        else h.turn = target; // classic rules: always take turns
         sendViews();
-      } else if (msg.t === 'bs_again' && h.winner) {
-        h.shots = { [h.p0]: new Map(), [h.p1]: new Map() };
-        h.placed = {};
-        h.fleet = {};
-        h.winner = '';
-        h.started = false;
-        h.turn = h.p0;
-        send({ t: 'bs_reset' });
+      } else if (msg.t === 'bs_again' && msg.from === myId && h.winner) {
+        h.round += 1;
+        reset();
+        sendSetup();
       }
     });
 
-    return () => offMsg();
+    return () => {
+      offMsg();
+      hostApi.current = null;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -160,31 +133,49 @@ const Battleship: React.FC<{ room: RoomApi }> = ({ room }) => {
   useEffect(() => {
     return onMessage((raw) => {
       const msg = raw as unknown as BsMsg;
-      if (msg.t === 'bs_state' && msg.to === myId) {
+      if (msg.t === 'bs_setup') {
+        synced.current = true;
+        setSeats({ p0: msg.p0, p1: msg.p1 });
+        if (msg.round !== roundRef.current) {
+          // Rematch: fresh fleet, back to placing
+          roundRef.current = msg.round;
+          setFleet(randomFleet());
+          setMine(Array(N * N).fill(0));
+          setEnemy(Array(N * N).fill(0));
+          setWinner('');
+          setLastShot('');
+          setReward(null);
+          setShipsLeft({ me: SHIPS.length, enemy: SHIPS.length });
+          setPhase(msg.placed.includes(myId) ? 'wait' : 'place');
+        }
+      } else if (msg.t === 'bs_state' && msg.to === myId) {
+        synced.current = true;
+        roundRef.current = msg.round;
         setMine(msg.mine);
         setEnemy(msg.enemy);
         setTurn(msg.turn);
         setWinner(msg.winner);
         setShipsLeft({ me: msg.meLeft, enemy: msg.enemyLeft });
+        if (msg.last) {
+          const mineShot = msg.last.by === myId;
+          setLastShot(
+            msg.last.sunk ? (mineShot ? '🎉 You sank a whole ship!' : '⚓ They sank one of your ships!')
+            : msg.last.hit ? (mineShot ? '💥 Hit!' : '💥 They hit your ship!')
+            : (mineShot ? '🌊 Splash — a miss.' : '🌊 They missed!')
+          );
+          if (mineShot) (msg.last.hit ? playCorrect : playPop)();
+        }
         if (msg.winner) {
           setPhase('over');
-          if (!xpGiven.current) {
-            xpGiven.current = true;
-            if (msg.winner === myId) {
-              addXP(40);
-              playWin();
-            } else addXP(15);
+          if (msg.ranked && rewardedRound.current !== msg.round) {
+            rewardedRound.current = msg.round;
+            const r = finishArenaGame(room, msg.ranked);
+            setReward({ xp: r.xp, coins: r.coins });
+            if (msg.winner === myId) playWin();
           }
         } else {
           setPhase('battle');
         }
-      } else if (msg.t === 'bs_reset') {
-        xpGiven.current = false;
-        setFleet(randomFleet());
-        setMine(Array(N * N).fill(0));
-        setEnemy(Array(N * N).fill(0));
-        setWinner('');
-        setPhase('place');
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -196,6 +187,8 @@ const Battleship: React.FC<{ room: RoomApi }> = ({ room }) => {
     fleet.forEach((ship) => ship.forEach((c) => (g[c] = 1)));
     return g;
   };
+
+  const inGame = !seats.p0 || seats.p0 === myId || seats.p1 === myId;
 
   const ready = () => {
     playClick();
@@ -211,34 +204,44 @@ const Battleship: React.FC<{ room: RoomApi }> = ({ room }) => {
   };
 
   const myTurn = phase === 'battle' && turn === myId && !winner;
-  const oppId = players.find((p) => p.id !== myId)?.id || '';
+  const oppId = seats.p0 === myId ? seats.p1 : seats.p0;
 
   const cellMine = (v: number) =>
     v === 1 ? 'bg-slate-400' : v === 2 ? 'bg-red-500' : v === 3 ? 'bg-sky-700' : 'bg-sky-900';
   const cellEnemy = (v: number) =>
-    v === 2 ? 'bg-red-500' : v === 3 ? 'bg-sky-700' : v === 4 ? 'bg-red-900' : 'bg-sky-800 hover:bg-sky-600';
-  const enemyMark = (v: number) => (v === 2 ? '💥' : v === 3 ? '·' : v === 4 ? '☠️' : '');
+    v === 2 ? 'bg-red-500' : v === 3 ? 'bg-sky-700' : v === 4 ? 'bg-red-900' : 'bg-sky-800 active:bg-sky-600';
+  const enemyMark = (v: number) => (v === 2 ? '💥' : v === 3 ? '·' : v === 4 ? '❌' : '');
   const mineMark = (v: number) => (v === 2 ? '💥' : v === 3 ? '·' : '');
 
+  // A board fills its column but never gets taller than the screen allows; on an iPad each
+  // cell is 48px or more.
+  const boardStyle = { width: 'min(100%, 30rem, calc(100dvh - 300px))', minWidth: 'min(100%, 22rem)' };
+  const gridCls = 'grid grid-cols-7 gap-1 mx-auto game-surface';
+  const cellCls = 'aspect-square rounded-md flex items-center justify-center text-xl md:text-2xl';
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-950 via-cyan-950 to-slate-950 text-white px-4 py-6">
-      <div className="max-w-md mx-auto pt-6">
-        <h1 className="text-center font-fredoka font-bold text-2xl md:text-4xl mb-1">🚢 Battleship</h1>
+    <div className="min-h-screen-d bg-gradient-to-br from-blue-950 via-cyan-950 to-slate-950 text-white px-4 py-6">
+      <div className="max-w-5xl mx-auto pt-8">
+        <h1 className="text-center font-fredoka font-bold text-3xl md:text-4xl mb-2">🚢 Battleship</h1>
+
+        {!inGame && (
+          <p className="text-center font-nunito text-lg text-cyan-200 mb-3">👀 {byId(seats.p0).name} vs {byId(seats.p1).name} — you're watching this one!</p>
+        )}
 
         {/* PLACEMENT */}
-        {phase === 'place' && (
+        {phase === 'place' && inGame && (
           <div>
-            <p className="text-center font-nunito text-cyan-200 text-sm mb-3">Here's your fleet — shuffle until you're happy, then lock it in!</p>
-            <div className="grid grid-cols-7 gap-1 mb-4 mx-auto" style={{ width: 'fit-content' }}>
+            <p className="text-center font-nunito text-cyan-200 text-lg mb-3">Here's your fleet — shuffle until you're happy, then lock it in!</p>
+            <div className={`${gridCls} mb-4`} style={boardStyle}>
               {placementGrid().map((v, i) => (
-                <span key={i} className={`w-10 h-10 rounded ${v === 1 ? 'bg-slate-400' : 'bg-sky-900'}`} />
+                <span key={i} className={`${cellCls} ${v === 1 ? 'bg-slate-400' : 'bg-sky-900'}`} />
               ))}
             </div>
-            <div className="flex gap-2 justify-center">
-              <button onClick={() => { playClick(); setFleet(randomFleet()); }} className="px-5 py-3 rounded-full font-fredoka font-bold bg-white/15 hover:bg-white/25">
+            <div className="flex gap-3 justify-center">
+              <button onClick={() => { playClick(); setFleet(randomFleet()); }} className="min-h-[48px] px-6 py-3 rounded-full font-fredoka font-bold text-lg bg-white/15 active:bg-white/25">
                 🔀 Shuffle
               </button>
-              <button onClick={ready} className="px-6 py-3 rounded-full font-fredoka font-bold bg-gradient-to-r from-amber-400 to-pink-500 shadow-xl">
+              <button onClick={ready} className="min-h-[48px] px-7 py-3 rounded-full font-fredoka font-bold text-lg bg-gradient-to-r from-amber-400 to-pink-500 shadow-xl">
                 ✓ Ready!
               </button>
             </div>
@@ -246,7 +249,7 @@ const Battleship: React.FC<{ room: RoomApi }> = ({ room }) => {
         )}
 
         {phase === 'wait' && (
-          <div className="text-center bg-white/10 rounded-3xl p-8 border border-white/15 mt-6">
+          <div className="text-center bg-white/10 rounded-3xl p-8 border border-white/15 mt-6 max-w-md mx-auto">
             <motion.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ duration: 1.2, repeat: Infinity }} className="text-6xl mb-3">⚓</motion.div>
             <div className="font-fredoka text-xl">Fleet ready! Waiting for your rival…</div>
           </div>
@@ -255,37 +258,44 @@ const Battleship: React.FC<{ room: RoomApi }> = ({ room }) => {
         {/* BATTLE */}
         {(phase === 'battle' || phase === 'over') && (
           <>
-            <p className="text-center font-nunito text-sm mb-3">
+            <p className="text-center font-nunito text-lg mb-1">
               {winner ? (
                 <span className="text-amber-300 font-bold">Battle over!</span>
               ) : myTurn ? (
-                <span className="text-emerald-300 font-bold">🎯 Your turn — fire at the enemy waters!</span>
+                <span className="text-emerald-300 font-bold">🎯 Your turn — tap the enemy waters to fire!</span>
               ) : (
-                <span className="text-white/60">Waiting for {byId(oppId).emoji} {byId(oppId).name} to fire…</span>
+                <span className="text-white/70">Waiting for {byId(oppId).emoji} {byId(oppId).name} to fire…</span>
               )}
             </p>
+            <p className="text-center font-fredoka text-lg text-amber-200 mb-3 min-h-[1.75rem]">{lastShot}</p>
 
-            <div className="font-fredoka text-sm text-cyan-200 mb-1">🎯 Enemy waters — ships left: {shipsLeft.enemy}</div>
-            <div className="grid grid-cols-7 gap-1 mb-4 mx-auto" style={{ width: 'fit-content' }}>
-              {enemy.map((v, i) => (
-                <button
-                  key={i}
-                  onClick={() => fire(i)}
-                  disabled={!myTurn || v !== 0}
-                  className={`w-10 h-10 rounded flex items-center justify-center text-lg ${cellEnemy(v)} ${myTurn && v === 0 ? 'cursor-pointer' : 'cursor-default'}`}
-                >
-                  {enemyMark(v)}
-                </button>
-              ))}
-            </div>
-
-            <div className="font-fredoka text-sm text-cyan-200 mb-1">🛡️ Your fleet — ships left: {shipsLeft.me}</div>
-            <div className="grid grid-cols-7 gap-1 mx-auto" style={{ width: 'fit-content' }}>
-              {mine.map((v, i) => (
-                <span key={i} className={`w-10 h-10 rounded flex items-center justify-center text-lg ${cellMine(v)}`}>
-                  {mineMark(v)}
-                </span>
-              ))}
+            <div className="grid md:grid-cols-2 gap-5 md:gap-6 items-start">
+              <div>
+                <div className="font-fredoka text-lg text-cyan-200 mb-1 text-center">🎯 Enemy waters — ships left: {shipsLeft.enemy}</div>
+                <div className={gridCls} style={boardStyle}>
+                  {enemy.map((v, i) => (
+                    <button
+                      key={i}
+                      onClick={() => fire(i)}
+                      disabled={!myTurn || v !== 0}
+                      aria-label={`Fire at row ${Math.floor(i / N) + 1}, column ${(i % N) + 1}`}
+                      className={`${cellCls} ${cellEnemy(v)} ${myTurn && v === 0 ? 'cursor-pointer ring-1 ring-cyan-300/40' : 'cursor-default'}`}
+                    >
+                      {enemyMark(v)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="font-fredoka text-lg text-cyan-200 mb-1 text-center">🛡️ Your fleet — ships left: {shipsLeft.me}</div>
+                <div className={gridCls} style={boardStyle}>
+                  {mine.map((v, i) => (
+                    <span key={i} className={`${cellCls} ${cellMine(v)}`}>
+                      {mineMark(v)}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
           </>
         )}
@@ -296,22 +306,23 @@ const Battleship: React.FC<{ room: RoomApi }> = ({ room }) => {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-30 flex items-center justify-center bg-black/80 px-4">
             {winner === myId && <ConfettiBurst count={90} durationMs={4500} />}
             <motion.div initial={{ scale: 0.6 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 220 }} className="bg-gradient-to-br from-slate-800 to-slate-900 border-4 border-amber-400 rounded-3xl p-8 text-center max-w-sm w-full">
-              <div className="text-7xl mb-3">{winner === myId ? '🏆' : '💥'}</div>
+              <div className="text-7xl mb-3">{winner === myId ? '🏆' : '⚓'}</div>
               <h2 className="font-fredoka font-bold text-3xl text-amber-300 mb-2">
                 {winner === myId ? 'Victory! 🎉' : `${byId(winner).name} wins!`}
               </h2>
-              <p className="font-fredoka text-green-300 mb-5">+{winner === myId ? 40 : 15} XP</p>
+              {winner !== myId && <p className="font-nunito text-lg text-slate-200 mb-2">Brave sailing, captain — rematch?</p>}
+              {reward && <p className="font-fredoka text-lg text-green-300 mb-5">+{reward.xp} XP · +{reward.coins} 🪙</p>}
               {isHost ? (
                 <div className="flex gap-2">
-                  <button onClick={() => { playClick(); send({ t: 'bs_again' }); }} className="flex-1 px-4 py-3 rounded-full font-fredoka font-bold bg-gradient-to-r from-emerald-400 to-teal-500 shadow-xl">
+                  <button onClick={() => { playClick(); send({ t: 'bs_again' }); }} className="flex-1 min-h-[48px] px-4 py-3 rounded-full font-fredoka font-bold text-lg bg-gradient-to-r from-emerald-400 to-teal-500 shadow-xl">
                     Rematch 🔄
                   </button>
-                  <button onClick={() => { playClick(); send({ t: 'to_lobby' }); }} className="flex-1 px-4 py-3 rounded-full font-fredoka font-bold bg-white/15">
+                  <button onClick={() => { playClick(); send({ t: 'to_lobby' }); }} className="flex-1 min-h-[48px] px-4 py-3 rounded-full font-fredoka font-bold text-lg bg-white/15">
                     Lobby 🏠
                   </button>
                 </div>
               ) : (
-                <div className="font-nunito text-slate-300">Waiting for the host…</div>
+                <div className="font-nunito text-lg text-slate-300">Waiting for the host…</div>
               )}
             </motion.div>
           </motion.div>
