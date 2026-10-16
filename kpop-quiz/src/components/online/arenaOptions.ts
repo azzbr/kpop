@@ -1,6 +1,8 @@
 // Host-chosen setup for Friends Arena games, shown in the lobby and sent in the `start`
 // message as GameConfig (key → value).
 import type { GameId } from '../../online/useRoom';
+import { DOODLE_CATEGORIES } from '../../online/doodleWords';
+import { FAKE_ARTIST_CATEGORIES } from '../../online/fakeArtistWords';
 import { HEADS_UP_CATEGORIES } from '../../data/headsUpCards';
 
 export interface OptionGroup {
@@ -27,6 +29,17 @@ export const GAME_OPTIONS: Partial<Record<GameId, OptionGroup[]>> = {
     { key: 'deck', label: 'Deck', choices: [{ value: 'mix', label: '🎲 Mixed' }, ...HEADS_UP_CATEGORIES.map(c => ({ value: c.id, label: `${c.emoji} ${c.name}` }))] },
     { key: 'teams', label: 'Play as', choices: [{ value: 'solo', label: '🙋 Solo turns' }, { value: '2', label: '🔴🔵 Two teams' }] },
     { key: 'turns', label: 'Turns', choices: [{ value: '5', label: '⏱️ 5 turns (~6 min)' }, { value: '3', label: '⚡ 3 turns' }, { value: '8', label: '🎉 8 turns' }, { value: 'all', label: '👥 Everyone guesses once' }] },
+    BOARD,
+  ],
+  doodle_dash: [
+    { key: 'category', label: 'Words', choices: [{ value: 'mixed', label: '🎲 Mixed' }, ...DOODLE_CATEGORIES.map(c => ({ value: c.category, label: c.category }))] },
+    { key: 'difficulty', label: 'Word choices', choices: [{ value: 'mixed', label: '🎯 Easy + medium + hard' }, { value: 'easy', label: '😀 Easy' }, { value: 'medium', label: '🙂 Medium' }, { value: 'hard', label: '🤓 Hard' }] },
+    { key: 'laps', label: 'Turns each', choices: [{ value: '1', label: '✏️ Draw once' }, { value: '2', label: '✏️✏️ Twice' }, { value: '3', label: '✏️✏️✏️ Three times' }] },
+    BOARD,
+  ],
+  fake_artist: [
+    { key: 'rounds', label: 'Rounds', choices: [{ value: '2', label: '🎨 2 rounds' }, { value: '3', label: '🎨 3 rounds' }] },
+    { key: 'category', label: 'Words', choices: [{ value: 'mixed', label: '🎲 Mixed' }, ...FAKE_ARTIST_CATEGORIES.map(c => ({ value: c.category, label: c.category }))] },
     BOARD,
   ],
   picture_phone: [

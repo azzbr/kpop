@@ -1,6 +1,7 @@
-// Big kid-drawable word bank for Doodle Dash + Word Scramble.
-// ~250 G-rated, picturable words across themed categories so kids can't
-// memorise the list any more. Shuffled fresh every game.
+// Big kid-drawable word bank for Doodle Dash + Word Scramble (also Hangman, Word Chain and
+// Picture Telephone). ~270 G-rated, picturable words across themed categories so kids can't
+// memorise the list. Every category has at least 20 words, no word appears twice, all lower
+// case (see doodleWords.test.ts).
 
 export interface WordCategory {
   category: string;
@@ -65,11 +66,12 @@ export const DOODLE_CATEGORIES: WordCategory[] = [
     ],
   },
   {
-    category: 'Music & K-pop',
+    category: 'Music & Instruments',
     words: [
       'guitar', 'drum', 'piano', 'microphone', 'headphones', 'music note', 'speaker',
-      'trumpet', 'violin', 'saxophone', 'stage', 'spotlight', 'idol', 'concert',
-      'album', 'radio', 'bell', 'maracas', 'tambourine', 'flute',
+      'trumpet', 'violin', 'saxophone', 'flute', 'harp', 'xylophone', 'maracas',
+      'tambourine', 'bell', 'radio', 'triangle', 'banjo', 'accordion', 'harmonica',
+      'cello', 'trombone', 'recorder', 'drumsticks', 'stage', 'cymbals',
     ],
   },
   {
@@ -85,7 +87,7 @@ export const DOODLE_CATEGORIES: WordCategory[] = [
     words: [
       'school', 'beach', 'park', 'zoo', 'farm', 'hospital', 'library', 'bridge',
       'lighthouse', 'tent', 'igloo', 'garden', 'playground', 'airport', 'barn',
-      'windmill', 'cave', 'market',
+      'windmill', 'cave', 'market', 'house', 'pyramid', 'treehouse',
     ],
   },
   {
@@ -93,7 +95,7 @@ export const DOODLE_CATEGORIES: WordCategory[] = [
     words: [
       'teacher', 'doctor', 'chef', 'pilot', 'firefighter', 'police', 'farmer',
       'astronaut', 'clown', 'artist', 'nurse', 'scientist', 'painter', 'baker',
-      'magician', 'superhero', 'ballerina', 'cowboy',
+      'magician', 'superhero', 'ballerina', 'cowboy', 'builder', 'dentist', 'lifeguard',
     ],
   },
   {
@@ -101,7 +103,8 @@ export const DOODLE_CATEGORIES: WordCategory[] = [
     words: [
       'present', 'candle', 'fireworks', 'pumpkin', 'party hat', 'christmas tree',
       'santa', 'snow globe', 'easter egg', 'birthday cake', 'confetti', 'ribbon',
-      'lantern', 'costume', 'mask', 'sparkler', 'balloon', 'bow',
+      'lantern', 'costume', 'mask', 'sparkler', 'balloon', 'bow', 'stocking', 'reindeer',
+      'heart',
     ],
   },
 ];
