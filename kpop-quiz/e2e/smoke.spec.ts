@@ -30,7 +30,7 @@ async function clickPastIntroOverlays(page: Page, target: Locator) {
 
 // One test per grid category, so each gets its own time budget (WebKit is slow to open 47
 // screens in one go) and a failure names the category.
-const CATEGORIES = ['Arcade', 'Puzzles & Brain', 'Quiz', 'Party', 'Create & Music', 'My Stuff', "Mr. Jarvis's Classroom"];
+const CATEGORIES = ['Arcade', 'Puzzles & Brain', 'Quiz', 'Party', 'Create & Music', 'My Stuff', 'Classroom'];
 
 test.describe.configure({ mode: 'parallel' });
 
