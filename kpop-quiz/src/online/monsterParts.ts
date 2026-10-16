@@ -71,7 +71,7 @@ export const MONSTER_THEMES: MonsterTheme[] = [
   { id: 'artist', text: 'a monster who loves painting', emoji: '🎨' },
   { id: 'balloons', text: 'a monster that floats with balloons', emoji: '🎈' },
   { id: 'treehouse', text: 'a monster who lives in a treehouse', emoji: '🌳' },
-  { id: 'flying', text: 'a monster learning to fly', emoji: '🎈' },
+  { id: 'flying', text: 'a monster learning to fly', emoji: '🦅' },
   { id: 'skater', text: 'a monster on a skateboard', emoji: '🛹' },
   { id: 'forest', text: 'a friendly forest monster', emoji: '🍄' },
 ];
