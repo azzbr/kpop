@@ -1,0 +1,36 @@
+// Doodle Decoy: secret silly things to draw. Each player gets one; everyone else then invents a
+// fake title for the drawing and tries to spot the real one. Short, drawable, G-rated and kind
+// (see decoyPrompts.test.ts: 120 prompts, no repeats, lower case, kid-safe).
+
+export const DECOY_PROMPTS: string[] = [
+  'a cat riding a skateboard', 'a cloud eating ice cream', 'a dog wearing sunglasses', 'a snowman at the beach',
+  'a pizza with a happy face', 'a fish riding a bicycle', 'a robot walking a dog', 'an elephant on a trampoline',
+  'a banana driving a car', 'a penguin eating spaghetti', 'a giraffe wearing a scarf', 'a cow jumping over the moon',
+  'a turtle in a race car', 'a pig flying a kite', 'a lion brushing its teeth', 'a duck in a bubble bath',
+  'a dinosaur baking a cake', 'a frog playing guitar', 'an owl reading a book', 'a monkey on roller skates',
+  'a bear having a picnic', 'a rabbit doing magic tricks', 'a sun wearing a hat', 'a tree growing ice cream cones',
+  'a shark at the dentist', 'a snail with a rocket', 'a horse in pyjamas', 'a cupcake on a skateboard',
+  'a mouse lifting weights', 'a whale blowing bubbles', 'a teapot taking a nap', 'a carrot going on holiday',
+  'a hamster driving a bus', 'an octopus juggling oranges', 'a crab playing drums', 'a chicken on a surfboard',
+  'a koala eating a sandwich', 'a unicorn at the supermarket', 'a cactus giving a hug', 'a hot dog in a sleeping bag',
+  'a strawberry wearing boots', 'a fox building a sandcastle', 'a llama in a bow tie', 'a sloth on a rollercoaster',
+  'a panda painting a picture', 'a robot watering flowers', 'an alien eating a donut', 'a bee riding a bicycle',
+  'a camel wearing headphones', 'a hedgehog with balloons', 'a goat playing football', 'a kangaroo with a backpack',
+  'a parrot talking on a phone', 'a ladybug sailing a leaf boat', 'a squirrel collecting cookies', 'a moon wearing pyjamas',
+  'a star doing a dance', 'a rainbow wearing trainers', 'a broccoli superhero', 'an egg skiing down a hill',
+  'a sandwich on a swing', 'a dog at a birthday party', 'a lemon wearing a crown', 'a pencil with a moustache',
+  'a cat in a space suit', 'a dog driving a tractor', 'a fish in a top hat', 'a worm reading a map',
+  'a zebra at the hairdresser', 'a polar bear eating a lolly', 'a flying toaster', 'a bird building a treehouse',
+  'a snake wearing socks', 'a pumpkin in a wheelbarrow', 'a seal balancing a pizza', 'a flamingo with an umbrella',
+  'a mermaid at a bus stop', 'a dragon toasting marshmallows', 'a cookie in a swimming pool', 'a castle made of jelly',
+  'a boat made of cheese', 'a car with legs', 'a house with a big smile', 'a train full of teddy bears',
+  'a parrot in a pirate hat', 'a mouse in a watermelon boat', 'a hippo doing ballet', 'a gorilla knitting a scarf',
+  'a cheetah on a scooter', 'a bunny in a raincoat', 'a puppy chasing bubbles', 'a kitten in a teacup',
+  'a dolphin playing a trumpet', 'a beaver making pancakes', 'a deer ice skating', 'an ant carrying a cake',
+  'a caterpillar wearing shoes', 'a tomato at the gym', 'a donut rolling down a hill', 'a cloud holding an umbrella',
+  'a volcano full of popcorn', 'a bath full of jelly', 'a phone with legs', 'a dog flying a plane',
+  'a cat fishing from a boat', 'a pig on a pogo stick', 'a sheep on a motorbike', 'a duck with a jetpack',
+  'a giraffe on a slide', 'a robot dancing at a disco', 'an ice cream with sunglasses', 'a teddy bear astronaut',
+  'a cake climbing a mountain', 'a monkey eating a giant banana', 'a lighthouse wearing a bow', 'a snowman drinking hot chocolate',
+  'a tortoise winning a race', 'a dog reading a newspaper', 'a bear with a giant lollipop', 'a cat playing the piano',
+];

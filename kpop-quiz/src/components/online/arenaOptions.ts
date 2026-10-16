@@ -29,6 +29,15 @@ export const GAME_OPTIONS: Partial<Record<GameId, OptionGroup[]>> = {
     { key: 'turns', label: 'Turns', choices: [{ value: '5', label: '⏱️ 5 turns (~6 min)' }, { value: '3', label: '⚡ 3 turns' }, { value: '8', label: '🎉 8 turns' }, { value: 'all', label: '👥 Everyone guesses once' }] },
     BOARD,
   ],
+  picture_phone: [
+    { key: 'start', label: 'Start with', choices: [{ value: 'cards', label: '🎲 Word cards' }, { value: 'write', label: '✍️ Write your own start' }] },
+    BOARD,
+  ],
+  doodle_decoy: [BOARD],
+  monster_mash: [
+    { key: 'rounds', label: 'Rounds', choices: [{ value: '3', label: '🧟 3 rounds' }, { value: '2', label: '🧟 2 rounds' }] },
+    BOARD,
+  ],
   team_tug: [{ key: 'mode', label: 'Mode', choices: [{ value: 'tug', label: '🪢 Team tug' }, { value: 'rocket', label: '🚀 Rocket race' }] }],
   math_sprint: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
   pattern_quest: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
