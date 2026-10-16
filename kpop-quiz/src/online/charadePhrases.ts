@@ -27,7 +27,7 @@ const P = (cat: CharadeCat, level: 1 | 2 | 3, text: string, ...alt: string[]): C
 
 export const CHARADE_PHRASES: CharadePhrase[] = [
   // Animals (20)
-  P('animals', 1, 'sleepy cat', 'tired cat'),
+  P('animals', 1, 'cool cat'),
   P('animals', 1, 'happy dog'),
   P('animals', 1, 'busy bee'),
   P('animals', 1, 'goldfish'),
@@ -42,9 +42,9 @@ export const CHARADE_PHRASES: CharadePhrase[] = [
   P('animals', 2, 'flying pig'),
   P('animals', 2, 'night owl', 'owl'),
   P('animals', 3, 'cat nap'),
-  P('animals', 3, 'puppy love'),
+  P('animals', 3, 'seahorse', 'sea horse'),
   P('animals', 3, 'early bird'),
-  P('animals', 3, 'mouse trap'),
+  P('animals', 3, 'catfish', 'cat fish'),
   P('animals', 3, 'jellyfish'),
   P('animals', 3, 'party animal'),
   // Food & drink (20)
@@ -96,7 +96,7 @@ export const CHARADE_PHRASES: CharadePhrase[] = [
   P('things', 2, 'crystal ball'),
   P('things', 2, 'paper airplane', 'paper plane', 'paper aeroplane'),
   P('things', 2, 'snow globe'),
-  P('things', 2, 'love letter'),
+  P('things', 2, 'postcard', 'post card'),
   P('things', 2, 'piggy bank'),
   P('things', 3, 'time machine'),
   P('things', 3, 'message in a bottle'),
@@ -118,7 +118,7 @@ export const CHARADE_PHRASES: CharadePhrase[] = [
   P('activities', 2, 'camping trip', 'camping'),
   P('activities', 2, 'walking the dog', 'dog walk'),
   P('activities', 2, 'going fishing', 'fishing'),
-  P('activities', 2, 'singing in the rain'),
+  P('activities', 2, 'splashing in puddles', 'puddle jumping', 'jumping in puddles'),
   P('activities', 3, 'sweet dreams'),
   P('activities', 3, 'jumping for joy'),
   P('activities', 3, 'thinking cap'),
@@ -128,7 +128,7 @@ export const CHARADE_PHRASES: CharadePhrase[] = [
   // Weather & nature (16)
   P('nature', 1, 'rainy day'),
   P('nature', 1, 'sunny day'),
-  P('nature', 1, 'snowman'),
+  P('nature', 1, 'snowflake'),
   P('nature', 1, 'rainbow'),
   P('nature', 2, 'thunderstorm', 'storm'),
   P('nature', 2, 'full moon'),
@@ -159,7 +159,7 @@ export const CHARADE_PHRASES: CharadePhrase[] = [
   P('jobs', 3, 'mail carrier', 'postman', 'postwoman'),
   // Special days (14)
   P('events', 1, 'birthday party'),
-  P('events', 1, 'wedding'),
+  P('events', 1, 'magic show'),
   P('events', 1, 'christmas tree'),
   P('events', 2, 'halloween costume', 'halloween'),
   P('events', 2, 'new year fireworks', 'fireworks', 'new year'),
@@ -191,13 +191,13 @@ export const CHARADE_PHRASES: CharadePhrase[] = [
 export const EMOJI_GROUPS: { name: string; icon: string; emoji: string[] }[] = [
   { name: 'Faces', icon: '😀', emoji: ['😀', '😂', '😍', '😎', '🤔', '😴', '😱', '🥶', '🥵', '🤢', '😋', '🥳', '😭', '😡', '🤫', '🤩', '😇', '🤯', '🙃', '😬', '🤠', '🥸', '🤖', '👽', '👻', '🎃', '🫠'] },
   { name: 'People', icon: '🧑', emoji: ['👶', '🧒', '👧', '👦', '🧑', '👩', '👨', '👵', '👴', '👮', '👩‍🚒', '👨‍🍳', '👩‍🏫', '👨‍⚕️', '👩‍🚀', '🧑‍🌾', '🧑‍🎨', '🕵️', '👸', '🤴', '🧙', '🧚', '🧜', '🦸', '🤡', '💃', '🕺', '🏃', '🚶', '🧍', '🙋', '🤷', '👪'] },
-  { name: 'Hands & body', icon: '👍', emoji: ['👍', '👎', '👏', '🙌', '👋', '✌️', '🤞', '👉', '👈', '👆', '👇', '✋', '💪', '🦵', '🦶', '👂', '👃', '👀', '👅', '🧠', '🦷', '❤️', '💔', '💤', '💦', '💨', '💥', '💫'] },
-  { name: 'Animals', icon: '🐶', emoji: ['🐶', '🐱', '🐭', '🐰', '🦊', '🐻', '🐼', '🐻‍❄️', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐣', '🐧', '🦉', '🦆', '🐝', '🐛', '🦋', '🐌', '🐞', '🐢', '🐍', '🦖', '🐙', '🦈', '🐟', '🐬', '🐳', '🦀', '🐘', '🦒', '🦓', '🐴', '🦄', '🐑', '🐾', '🪿'] },
-  { name: 'Food', icon: '🍕', emoji: ['🍎', '🍌', '🍓', '🍉', '🍇', '🍋', '🍒', '🥕', '🌽', '🥦', '🍅', '🥔', '🍞', '🧀', '🥚', '🍳', '🥞', '🧇', '🥪', '🍕', '🍔', '🌭', '🍟', '🍝', '🍜', '🍣', '🍿', '🍩', '🍪', '🎂', '🧁', '🍰', '🥧', '🍫', '🍬', '🍭', '🍦', '🍨', '🥛', '☕', '🍵', '🧃', '🥤', '🍯', '🫖'] },
-  { name: 'Nature', icon: '🌈', emoji: ['☀️', '🌤️', '☁️', '🌧️', '⛈️', '🌩️', '❄️', '☃️', '⛄', '🌈', '🌪️', '🌬️', '💧', '🌊', '🔥', '🌙', '🌕', '⭐', '🌟', '🌠', '🌍', '🌋', '🏔️', '🏝️', '🌲', '🌳', '🌴', '🌵', '🌷', '🌹', '🌻', '🌸', '🍀', '🍁', '🍂', '🌱', '🪨', '🧊'] },
-  { name: 'Places', icon: '🏰', emoji: ['🏠', '🏡', '🏫', '🏥', '🏰', '🏯', '🏟️', '🎡', '🎢', '🎪', '⛺', '🏕️', '🏖️', '🏜️', '🏙️', '🌃', '⛪', '🏪', '🏬', '🏦', '🏤', '🗼', '🗽', '⛲', '🛝', '🧱', '🚪', '🛏️', '🛁', '🪑'] },
+  { name: 'Hands & body', icon: '👍', emoji: ['👍', '👎', '👏', '🙌', '👋', '✌️', '🤞', '👉', '👈', '👆', '👇', '✋', '💪', '🦵', '🦶', '👂', '👃', '👀', '🦴', '🧠', '🦷', '❤️', '💔', '💤', '🤝', '💨', '💥', '💫'] },
+  { name: 'Animals', icon: '🐶', emoji: ['🐶', '🐱', '🐭', '🐰', '🦊', '🐻', '🐼', '🐻‍❄️', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐣', '🐧', '🦉', '🦆', '🐝', '🐛', '🦋', '🐌', '🐞', '🐢', '🐍', '🦖', '🐙', '🦈', '🐟', '🐬', '🐳', '🦀', '🐘', '🦒', '🦓', '🐴', '🦄', '🐑', '🐾', '🪿', '🦜', '🐠', '🪼', '🐦'] },
+  { name: 'Food', icon: '🍕', emoji: ['🍎', '🍌', '🍓', '🍉', '🍇', '🍋', '🍒', '🥕', '🌽', '🥦', '🍅', '🥔', '🍞', '🧀', '🥚', '🍳', '🥞', '🧇', '🥪', '🍕', '🍔', '🌭', '🍟', '🍝', '🍜', '🍣', '🍿', '🍩', '🍪', '🎂', '🧁', '🍰', '🥧', '🍫', '🍬', '🍭', '🍦', '🍨', '🥛', '☕', '🍵', '🧃', '🥤', '🍯', '🫖', '🥐'] },
+  { name: 'Nature', icon: '🌈', emoji: ['☀️', '🌤️', '☁️', '🌧️', '⛈️', '🌩️', '❄️', '☃️', '⛄', '🌈', '🌪️', '🌬️', '💧', '🌊', '🔥', '🌙', '🌕', '⭐', '🌟', '🌠', '🌍', '🌋', '🏔️', '🏝️', '🌲', '🌳', '🌴', '🌵', '🌷', '🌹', '🌻', '🌸', '🍀', '🍁', '🍂', '🌱', '🪨', '🧊', '🌅'] },
+  { name: 'Places', icon: '🏰', emoji: ['🏠', '🏡', '🏫', '🏥', '🏰', '🏯', '🏟️', '🎡', '🎢', '🎪', '⛺', '🏕️', '🏖️', '🏜️', '🏙️', '🌃', '🏛️', '🏪', '🏬', '🏦', '🏤', '🗼', '🗽', '⛲', '🛝', '🧱', '🚪', '🛏️', '🛁', '🪑'] },
   { name: 'Travel', icon: '🚀', emoji: ['🚗', '🚕', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚚', '🚜', '🚲', '🛴', '🛹', '🚂', '🚆', '🚇', '✈️', '🚁', '🚀', '🛸', '⛵', '🚤', '🚢', '🛶', '⚓', '🪂', '🚦', '🛣️', '⛽'] },
-  { name: 'Things', icon: '🎁', emoji: ['🎁', '🎈', '🎉', '🎊', '🎀', '🧸', '🪁', '🪄', '🔮', '🎩', '👑', '💎', '💰', '🪙', '🗝️', '🔑', '🗺️', '🧭', '⏰', '⌛', '📚', '📖', '✏️', '🖍️', '🎨', '✂️', '📮', '✉️', '💌', '📱', '💻', '📷', '📺', '💡', '🔦', '🕯️', '🧲', '🧪', '🔭', '🔬', '🧹', '🧽', '🪥', '🧼', '🫧', '☂️', '🌂', '🧦', '👕', '👗', '🩳', '🧥', '🧢', '👟', '👓', '🕶️', '🎒', '🧳', '🪣', '🫙', '🏺', '🎄', '🪺'] },
-  { name: 'Fun & sport', icon: '⚽', emoji: ['⚽', '🏀', '🏈', '⚾', '🎾', '🏐', '🏓', '🏸', '🥅', '⛳', '🎳', '🏹', '🎣', '🤿', '🥊', '🛷', '⛸️', '🎿', '🏂', '🏄', '🏊', '🚴', '🤸', '🧗', '🏆', '🥇', '🎮', '🎲', '🧩', '♟️', '🎯', '🎤', '🎧', '🎸', '🎹', '🥁', '🎺', '🎻', '🎬', '🎭', '🎆', '🎇', '🪅'] },
+  { name: 'Things', icon: '🎁', emoji: ['🎁', '🎈', '🎉', '🎊', '🎀', '🧸', '🪁', '🪄', '🔮', '🎩', '👑', '💎', '💰', '🪙', '🗝️', '🔑', '🗺️', '🧭', '⏰', '⌛', '📚', '📖', '✏️', '🖍️', '🎨', '✂️', '📮', '✉️', '💌', '📱', '💻', '📷', '📺', '💡', '🔦', '🕯️', '🧲', '🧪', '🔭', '🔬', '🧹', '🧽', '🪥', '🧼', '🫧', '☂️', '🌂', '🧦', '👕', '👗', '🩳', '🧥', '🧢', '👟', '👓', '🕶️', '🎒', '🧳', '🪣', '🫙', '🏺', '🎄', '🪺', '🔍', '🩺', '📄', '📅'] },
+  { name: 'Fun & sport', icon: '⚽', emoji: ['⚽', '🏀', '🏈', '⚾', '🎾', '🏐', '🏓', '🏸', '🥅', '⛳', '🎳', '🪀', '🎣', '🤿', '🛼', '🛷', '⛸️', '🎿', '🏂', '🏄', '🏊', '🚴', '🤸', '🧗', '🏆', '🥇', '🎮', '🎲', '🧩', '♟️', '🎯', '🎤', '🎧', '🎸', '🎹', '🥁', '🎺', '🎻', '🎬', '🎭', '🎆', '🎇', '🪅'] },
   { name: 'Symbols', icon: '❓', emoji: ['❓', '❗', '❌', '✅', '➕', '➖', '✖️', '➗', '🟰', '➡️', '⬅️', '⬆️', '⬇️', '🔄', '🔁', '⏩', '⏪', '🔊', '🔇', '🎵', '🎶', '💯', '💬', '💭', '🚫', '⚠️', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪', '🟤', '♥️', '⭕'] },
 ];
