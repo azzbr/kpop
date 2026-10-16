@@ -1,6 +1,7 @@
 // Host-chosen setup for Friends Arena games, shown in the lobby and sent in the `start`
 // message as GameConfig (key → value).
 import type { GameId } from '../../online/useRoom';
+import { HEADS_UP_CATEGORIES } from '../../data/headsUpCards';
 
 export interface OptionGroup {
   key: string;
@@ -15,6 +16,19 @@ export const BOARD: OptionGroup = { key: 'board', label: 'Host screen', choices:
 
 // The first choice of each group is the default.
 export const GAME_OPTIONS: Partial<Record<GameId, OptionGroup[]>> = {
+  quip_clash: [BOARD],
+  emoji_charades: [
+    { key: 'rounds', label: 'Tellers', choices: [{ value: '5', label: '⏱️ 5 tellers (~6 min)' }, { value: '3', label: '⚡ 3 tellers' }, { value: '8', label: '🎬 8 tellers' }, { value: 'all', label: '👥 Everyone tells once' }] },
+    { key: 'difficulty', label: 'Phrases', choices: [{ value: 'mixed', label: '🎲 Mixed' }, { value: 'easy', label: '😀 Easy' }, { value: 'tricky', label: '🤓 Tricky' }] },
+    BOARD,
+  ],
+  spy_station: [BOARD],
+  heads_up_party: [
+    { key: 'deck', label: 'Deck', choices: [{ value: 'mix', label: '🎲 Mixed' }, ...HEADS_UP_CATEGORIES.map(c => ({ value: c.id, label: `${c.emoji} ${c.name}` }))] },
+    { key: 'teams', label: 'Play as', choices: [{ value: 'solo', label: '🙋 Solo turns' }, { value: '2', label: '🔴🔵 Two teams' }] },
+    { key: 'turns', label: 'Turns', choices: [{ value: '5', label: '⏱️ 5 turns (~6 min)' }, { value: '3', label: '⚡ 3 turns' }, { value: '8', label: '🎉 8 turns' }, { value: 'all', label: '👥 Everyone guesses once' }] },
+    BOARD,
+  ],
   team_tug: [{ key: 'mode', label: 'Mode', choices: [{ value: 'tug', label: '🪢 Team tug' }, { value: 'rocket', label: '🚀 Rocket race' }] }],
   math_sprint: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
   pattern_quest: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
