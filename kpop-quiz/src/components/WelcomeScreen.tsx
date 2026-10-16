@@ -1,8 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
+// The live count loads separately (it brings the realtime client).
+const OnlineCount = lazy(() => import('./ui/OnlineCount'));
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
 import { useSafeTimeout } from '../utils/useSafeTimeout';
-import { playUnlock, playClick, playWin } from '../utils/sounds';
+import { playUnlock, playClick } from '../utils/sounds';
 import ConfettiBurst from './ConfettiBurst';
 import { SECRETS } from '../data/secrets';
 
@@ -23,12 +25,6 @@ const VISITS_KEY = 'funquest-welcome-visits';
 type Letter = 'F' | 'Q' | 'A';
 const LETTER_SECRET: Record<Letter, string> = { F: 'f_board', Q: 'q_fact', A: 'a_club' };
 
-// Teacher mode unlocks on any spelling of the teacher's name (John Jarvis):
-// "Jarvis", "Mr Jarvis", "Mr. Jarvis", "John Jarvis", "J-Jarvis", "Mr J", "John J"...
-const isJarvisName = (raw: string) => {
-  const letters = raw.toLowerCase().replace(/[^a-z]/g, '');
-  return letters.includes('jarvis') || letters === 'mrj' || letters === 'johnj';
-};
 /** "HUNTRX", "HUNTR/X", "huntr x"… */
 const isHuntrxName = (raw: string) => raw.toUpperCase().replace(/[^A-Z]/g, '') === 'HUNTRX';
 
@@ -38,8 +34,6 @@ const WelcomeScreen: React.FC = () => {
   const [factBubble, setFactBubble] = useState<string | null>(null);
   const [noteClicks, setNoteClicks] = useState(0);
   const [djMode, setDjMode] = useState(false);
-  const [jarvisSplash, setJarvisSplash] = useState(false);
-  const [jarvisCountdown, setJarvisCountdown] = useState(3);
   const [secretToast, setSecretToast] = useState<string | null>(null);
   const [hint, setHint] = useState<Letter | null>(null);
 
@@ -50,7 +44,6 @@ const WelcomeScreen: React.FC = () => {
 
   // The name box shows the mode live; the mode only switches on when the name is submitted.
   const huntrxMode = isHuntrxName(inputName);
-  const jarvisMode = !huntrxMode && isJarvisName(inputName);
 
   const found = (id: string) => {
     if (!findSecret(id)) return;
@@ -80,23 +73,9 @@ const WelcomeScreen: React.FC = () => {
     const name = inputName.trim();
     if (!name) return;
     setUserName(name);
-    try {
-      if (jarvisMode) localStorage.setItem('jarvis_mode', '1');
-      else localStorage.removeItem('jarvis_mode');
-    } catch { /* storage blocked */ }
     if (huntrxMode) {
       found('huntrx');
       setGameState('huntrx_splash');
-    } else if (jarvisMode) {
-      setJarvisSplash(true);
-      setJarvisCountdown(3);
-      playWin();
-      const tick = (n: number) => {
-        if (n <= 0) { setJarvisSplash(false); setGameState('game_mode'); return; }
-        setJarvisCountdown(n);
-        later(() => tick(n - 1), 1000);
-      };
-      later(() => tick(2), 1000);
     } else {
       setGameState('game_mode');
     }
@@ -179,56 +158,6 @@ const WelcomeScreen: React.FC = () => {
           <motion.div initial={{ y: -30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ opacity: 0 }} role="status"
             className="fixed top-4 left-1/2 -translate-x-1/2 z-50 rounded-full bg-yellow-300 text-violet-900 font-fredoka text-xl px-6 py-3 shadow-xl">
             {secretToast}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Jarvis teacher splash overlay */}
-      <AnimatePresence>
-        {jarvisSplash && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center"
-            style={{ background: 'rgba(0,0,0,0.85)' }}
-          >
-            <ConfettiBurst count={80} durationMs={3000} />
-            <motion.div
-              initial={{ scale: 0.5, rotate: -5 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: 'spring', stiffness: 300 }}
-              className="text-center p-8 rounded-3xl max-w-sm mx-4"
-              style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', border: '4px solid #f59e0b' }}
-            >
-              <motion.div
-                animate={{ rotate: [0, -10, 10, -10, 0] }}
-                transition={{ duration: 0.6, repeat: Infinity, repeatDelay: 0.8 }}
-                className="text-7xl mb-4"
-              >
-                👨‍🏫
-              </motion.div>
-              <h2 className="font-fredoka font-bold text-yellow-400 text-3xl mb-2">
-                MR. JARVIS<br />HAS ENTERED!
-              </h2>
-              <div className="bg-yellow-900/40 border border-yellow-500 rounded-2xl p-3 mb-4">
-                <p className="font-fredoka text-yellow-200 text-sm leading-relaxed">
-                  🍎 <span className="font-bold">OFFICIAL NOTICE:</span><br />
-                  Class is now Fun Quest. 📋<br />
-                  Students will be graded on how much fun they have.<br />
-                  Homework = Play more games. 🎮<br />
-                  <span className="text-yellow-400 text-xs">(Attendance taken by confetti cannon)</span>
-                </p>
-              </div>
-              <motion.div
-                key={jarvisCountdown}
-                initial={{ scale: 2, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="font-fredoka font-bold text-white text-2xl"
-              >
-                {jarvisCountdown > 0 ? `Class starts in ${jarvisCountdown}... 🔔` : 'Let\'s GO! 🚀'}
-              </motion.div>
-            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -318,9 +247,9 @@ const WelcomeScreen: React.FC = () => {
           <div className="max-w-md mx-auto">
             <label
               htmlFor="player-name"
-              className={`block text-lg font-bold mb-3 font-fredoka ${huntrxMode ? 'text-yellow-300' : jarvisMode ? 'text-amber-300' : 'text-violet-100'}`}
+              className={`block text-lg font-bold mb-3 font-fredoka ${huntrxMode ? 'text-yellow-300' : 'text-violet-100'}`}
             >
-              {huntrxMode ? '🌟 SUPERSTAR MODE UNLOCKED! 🌟' : jarvisMode ? '🍎 Good morning, Mr. Jarvis! 📋' : "What's your player name? 🎮"}
+              {huntrxMode ? '🌟 SUPERSTAR MODE UNLOCKED! 🌟' : "What's your player name? 🎮"}
             </label>
             <input
               id="player-name"
@@ -331,8 +260,6 @@ const WelcomeScreen: React.FC = () => {
               className={`w-full px-6 py-4 bg-white border-3 rounded-full text-gray-800 placeholder-purple-400 focus:outline-none focus:ring-4 transition-all duration-300 text-lg font-nunito shadow-lg ${
                 huntrxMode
                   ? 'border-yellow-400 focus:border-yellow-500 focus:ring-yellow-200 text-yellow-600 font-bold'
-                  : jarvisMode
-                  ? 'border-amber-400 focus:border-amber-500 focus:ring-amber-200 text-amber-700 font-bold'
                   : 'border-purple-300 focus:border-pink-400 focus:ring-pink-200'
               }`}
               required
@@ -342,12 +269,6 @@ const WelcomeScreen: React.FC = () => {
                 <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                   className="text-yellow-600 font-fredoka font-bold text-center mt-2">
                   ✨ Tap the button to unlock the HUNTR/X secret! ✨
-                </motion.p>
-              )}
-              {jarvisMode && (
-                <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                  className="text-amber-600 font-fredoka font-bold text-center mt-2">
-                  🎓 Teacher Mode Detected! Students beware! 😂
                 </motion.p>
               )}
             </AnimatePresence>
@@ -363,12 +284,10 @@ const WelcomeScreen: React.FC = () => {
                 ? 'opacity-50 cursor-not-allowed bg-gray-300 text-gray-500'
                 : huntrxMode
                 ? 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white ring-4 ring-yellow-300 hover:from-yellow-500 hover:to-orange-500'
-                : jarvisMode
-                ? 'bg-gradient-to-r from-amber-500 to-red-500 text-white ring-4 ring-amber-300 hover:from-amber-600 hover:to-red-600'
                 : 'btn-kid'
             }`}
           >
-            {huntrxMode ? '⭐ Enter Superstar Mode!' : jarvisMode ? '🍎 Begin Class! 📋' : 'Let\'s Play! 🚀'}
+            {huntrxMode ? '⭐ Enter Superstar Mode!' : 'Let\'s Play! 🚀'}
           </motion.button>
         </motion.form>
 
@@ -386,6 +305,7 @@ const WelcomeScreen: React.FC = () => {
             <span className="text-lg">🕵️‍♀️</span>
             <span>Secret HQ</span>
           </button>
+          <div className="mt-4"><Suspense fallback={null}><OnlineCount /></Suspense></div>
         </motion.div>
       </div>
     </motion.div>

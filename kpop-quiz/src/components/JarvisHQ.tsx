@@ -18,7 +18,7 @@ const POWER_CARDS: PowerCard[] = [
   { name: 'Steal!', emoji: '🦊', desc: 'Steal 2 points from the leading team.', rarity: 'rare' },
   { name: 'Comeback', emoji: '🚀', desc: 'Last-place team gets +3 free points!', rarity: 'common' },
   { name: 'Silent Round', emoji: '🤫', desc: 'Next question must be answered with no talking.', rarity: 'common' },
-  { name: 'Mr. Jarvis Joins', emoji: '👨‍🏫', desc: 'Teacher plays for the losing team next round!', rarity: 'legendary' },
+  { name: 'Teacher Joins', emoji: '👨‍🏫', desc: 'Teacher plays for the losing team next round!', rarity: 'legendary' },
   { name: 'Wildcard', emoji: '🃏', desc: 'Pick any other power card and use it now!', rarity: 'legendary' },
   { name: 'Triple Threat', emoji: '⚡', desc: 'Next 3 answers count as one combo. All right = +6!', rarity: 'rare' },
   { name: 'Sudden Death', emoji: '💥', desc: 'Next question: winner takes 5, loser loses 2.', rarity: 'legendary' },
@@ -51,7 +51,7 @@ const POP_QUIZ: QuizQ[] = [
   { q: "What is the longest river in the UK?", options: ['River Thames', 'River Trent', 'River Severn', 'River Clyde'], correct: 2, joke: "The Severn stretches 354 km — longer than the Thames! 🌊" },
   { q: "The Tower of London was originally built by which king?", options: ['King Henry VIII', 'King Richard I', 'King William I', 'King George III'], correct: 2, joke: "William the Conqueror built it in 1066 after a very busy year!" },
   { q: "Which underground railway system is the oldest in the world?", options: ['Paris Métro', 'New York Subway', 'London Underground', 'Tokyo Metro'], correct: 2, joke: "Opened in 1863 — passengers wore top hats! 🎩" },
-  { q: "What is the name of the Queen's official London residence?", options: ['Windsor Castle', 'Kensington Palace', 'Buckingham Palace', 'Hampton Court'], correct: 2, joke: "Over 775 rooms — still Mr. Jarvis couldn't find the TV remote. 📺" },
+  { q: "What is the name of the Queen's official London residence?", options: ['Windsor Castle', 'Kensington Palace', 'Buckingham Palace', 'Hampton Court'], correct: 2, joke: "Over 775 rooms — still your teacher couldn't find the TV remote. 📺" },
   { q: "In which English city was the Titanic built?", options: ['London', 'Liverpool', 'Southampton', 'Belfast'], correct: 3, joke: "Technically Belfast, which was in the UK at the time! Sneaky! 🚢" },
   { q: "Which famous clock is found at the Royal Observatory in London?", options: ['The Big Ben Clock', 'The Shepherd Gate Clock', 'The Waterloo Clock', 'The Meridian Clock'], correct: 1, joke: "It marks Greenwich Mean Time — the UK says it's OUR time zone! 🕐" },
   // Science
@@ -60,7 +60,7 @@ const POP_QUIZ: QuizQ[] = [
   { q: "How many bones are in the adult human body?", options: ['106', '206', '306', '406'], correct: 1, joke: "Babies have around 300 — they fuse over time! 🦴" },
   { q: "At what temperature does water boil (°C)?", options: ['90°C', '95°C', '100°C', '110°C'], correct: 2, joke: "The kettle in the staffroom knows this answer! ☕" },
   { q: "What does DNA stand for?", options: ['Digital Network Array', 'Deoxyribonucleic Acid', 'Dynamic Nucleic Agent', 'Direct Nerve Alignment'], correct: 1, joke: "Every cell in your body has 2 metres of it. Impossible but true! 🧬" },
-  { q: "Which force pulls objects toward the Earth?", options: ['Magnetism', 'Friction', 'Gravity', 'Tension'], correct: 2, joke: "Same one that keeps Mr. Jarvis's feet on the ground! 🌍" },
+  { q: "Which force pulls objects toward the Earth?", options: ['Magnetism', 'Friction', 'Gravity', 'Tension'], correct: 2, joke: "Same one that keeps your teacher's feet on the ground! 🌍" },
   { q: "What is H₂O more commonly known as?", options: ['Oxygen', 'Water', 'Carbon dioxide', 'Salt'], correct: 1, joke: "Two Hydrogens walk into a bar with Oxygen… 💧" },
   { q: "How many chambers does a human heart have?", options: ['2', '3', '4', '5'], correct: 2, joke: "Two atria, two ventricles. It works hard for you! ❤️" },
   { q: "What is the chemical symbol for gold?", options: ['Go', 'Gd', 'Gl', 'Au'], correct: 3, joke: "From the Latin 'Aurum' — Romans loved the stuff 🏅" },
@@ -71,7 +71,7 @@ const POP_QUIZ: QuizQ[] = [
   { q: "Which planet is closest to the Sun?", options: ['Venus', 'Earth', 'Mars', 'Mercury'], correct: 3, joke: "Mercury! Very hot, no atmosphere, 0/10 holiday destination 🌡️" },
   { q: "How many planets are in our Solar System?", options: ['7', '8', '9', '10'], correct: 1, joke: "Poor Pluto was downgraded in 2006. Heartbreaking. 💔" },
   { q: "What is the largest planet in our Solar System?", options: ['Saturn', 'Neptune', 'Jupiter', 'Uranus'], correct: 2, joke: "Jupiter is so big, 1,300 Earths fit inside it! 🌍×1300" },
-  { q: "Which country launched the first human into space?", options: ['USA', 'China', 'UK', 'Soviet Union'], correct: 3, joke: "Yuri Gagarin, 1961 — and no, Mr. Jarvis wasn't there yet." },
+  { q: "Which country launched the first human into space?", options: ['USA', 'China', 'UK', 'Soviet Union'], correct: 3, joke: "Yuri Gagarin, 1961 — and no, your teacher wasn't there yet." },
   { q: "What is the name of the first human to walk on the Moon?", options: ['Buzz Aldrin', 'Neil Armstrong', 'Yuri Gagarin', 'Tim Peake'], correct: 1, joke: "\"One small step for man\" — in 1969, on a live TV signal more people watched than anything EVER. 🚀" },
   { q: "Which British astronaut spent 6 months on the ISS in 2015?", options: ['Helen Sharman', 'Tim Peake', 'Piers Sellers', 'Michael Foale'], correct: 1, joke: "Tim Peake even ran the London Marathon — from SPACE! 🏃" },
   { q: "How long does light from the Sun take to reach Earth?", options: ['8 seconds', '8 minutes', '8 hours', '8 days'], correct: 1, joke: "8 minutes 20 seconds — so if the Sun vanished you'd enjoy 8 more minutes of sunshine. Cheery! ☀️" },
@@ -94,7 +94,7 @@ const POP_QUIZ: QuizQ[] = [
 const CHEER_LINES = [
   '🎉 ROUND OF APPLAUSE!', '⭐ GOLD STAR FOR THE CLASS!', '🎊 EVERYONE GETS PIZZA! (just kidding) 🍕',
   '🔥 ON FIRE! Keep going!', '🎓 You all just LEVELED UP!', '🌟 Class average: AWESOME%',
-  '👏 Mr. Jarvis is PROUD!', '🚀 To the moon! Whoosh!',
+  '👏 Your teacher is PROUD!', '🚀 To the moon! Whoosh!',
 ];
 
 interface Challenge { category: string; emoji: string; text: string; }
@@ -152,6 +152,7 @@ interface Student { name: string; stars: number; }
 
 const JarvisHQ: React.FC = () => {
   const { setGameState } = useGameStore();
+  const tname = useGameStore(s => s.teacher?.name) ?? 'Teacher';
   const later = useSafeTimeout();
   const [tab, setTab] = useState<Tab>('quiz');
 
@@ -424,7 +425,7 @@ const JarvisHQ: React.FC = () => {
               className="rounded-3xl border-4 border-amber-500 p-6 max-w-md w-full text-center"
               style={PANEL_BG}>
               <div className="text-6xl mb-2">👨‍🏫</div>
-              <h2 className="font-fredoka font-bold text-amber-300 text-2xl mb-2">Hello, Mr. Jarvis!</h2>
+              <h2 className="font-fredoka font-bold text-amber-300 text-2xl mb-2">Hello, {tname}!</h2>
               <p className="font-nunito text-amber-100 text-base mb-3 leading-relaxed">
                 This is <span className="font-bold text-amber-300">YOUR</span> teacher's secret menu. The class doesn't know it exists. 🤫
               </p>
@@ -433,7 +434,7 @@ const JarvisHQ: React.FC = () => {
                 <p>• If <span className="font-bold">YOU</span> get a Pop Quiz answer wrong, the class wins a <span className="font-bold">10-minute fun reward</span>.</p>
                 <p>• They choose: 🏃 PE · 💃 dance · ✏️ free draw · or anything else from the Reward Roulette.</p>
                 <p>• Roll 1v1 Battles · Spin Class Rewards · Big classroom Timer · Cheer Cannon.</p>
-                <p className="mt-2 text-sm italic text-stone-600">Sign here: <span className="font-bold">Mr. Jarvis ✍️</span></p>
+                <p className="mt-2 text-sm italic text-stone-600">Sign here: <span className="font-bold">{tname} ✍️</span></p>
               </div>
               <button onClick={closeIntro}
                 className="w-full min-h-[48px] py-3 rounded-full bg-amber-500 hover:bg-amber-400 text-stone-900 font-fredoka font-bold text-lg">
@@ -457,7 +458,7 @@ const JarvisHQ: React.FC = () => {
               className="bg-amber-400 text-stone-900 rounded-3xl p-6 max-w-sm w-full text-center border-8 border-red-500">
               <div className="text-5xl mb-2">🎉</div>
               <p className="font-fredoka font-bold text-2xl mb-2">CLASS WINS!</p>
-              <p className="font-nunito text-base mb-3">Mr. Jarvis got that one wrong! 😂<br/>Your reward:</p>
+              <p className="font-nunito text-base mb-3">{tname} got that one wrong! 😂<br/>Your reward:</p>
               <div className="bg-stone-900 text-amber-300 rounded-2xl p-4 font-fredoka text-xl mb-3">{classWins}</div>
               <button onClick={() => setClassWins(null)}
                 className="min-h-[48px] px-6 py-2 rounded-full bg-stone-900 text-amber-300 font-fredoka text-lg">Tap to claim 🎊</button>
@@ -490,7 +491,7 @@ const JarvisHQ: React.FC = () => {
         {/* Header */}
         <div className="text-center mb-4 p-5 rounded-3xl border-4 border-amber-700" style={PANEL_BG}>
           <div className="text-5xl mb-1">👨‍🏫</div>
-          <h1 className="text-3xl md:text-4xl font-fredoka font-bold text-amber-200">Mr. Jarvis's Lounge</h1>
+          <h1 className="text-3xl md:text-4xl font-fredoka font-bold text-amber-200">Teacher's Lounge</h1>
           <p className="font-nunito text-amber-100/80 text-base">Class is in session 🍎📋⭐</p>
         </div>
 
@@ -539,7 +540,7 @@ const JarvisHQ: React.FC = () => {
             {revealed && q.joke && (
               <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
                 className="bg-amber-100 text-stone-800 font-nunito text-base rounded-xl p-3 mb-3 text-center">
-                💬 Mr. Jarvis says: <span className="font-bold">{q.joke}</span>
+                💬 {tname} says: <span className="font-bold">{q.joke}</span>
               </motion.div>
             )}
             <div className="flex gap-2">
@@ -760,7 +761,7 @@ const JarvisHQ: React.FC = () => {
           <div className="rounded-3xl p-5 border-4 border-amber-700" style={PANEL_BG}>
             <h3 className="font-fredoka text-amber-200 text-xl mb-1 text-center">🃏 Power Cards</h3>
             <p className="font-nunito text-amber-100/80 text-base mb-4 text-center">
-              Flip a card mid-game to keep teams close. Mr. Jarvis decides when to play one!
+              Flip a card mid-game to keep teams close. {tname} decides when to play one!
             </p>
             <motion.button whileTap={{ scale: 0.95 }} onClick={drawPowerCard} disabled={drawing}
               className="w-full py-4 rounded-2xl bg-gradient-to-br from-purple-500 to-fuchsia-700 text-white font-fredoka text-2xl shadow-xl mb-4 disabled:opacity-60">

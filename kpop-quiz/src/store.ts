@@ -366,7 +366,8 @@ const LEGACY_SCORES: Record<string, string> = {
   simon_best: 'pattern_memory',
   sparkle_best: 'sparkle_match',
 };
-const LEGACY_KEYS = ['kpop_xp', 'kpop_theme', 'kpop_huntrx', 'kpop_dates_played', ...Object.keys(LEGACY_SCORES)];
+// jarvis_mode was last year's name-trick teacher mode (now Grown-ups corner → Teacher setup).
+const LEGACY_KEYS = ['kpop_xp', 'kpop_theme', 'kpop_huntrx', 'kpop_dates_played', 'jarvis_mode', ...Object.keys(LEGACY_SCORES)];
 
 function readLegacy() {
   const hasSave = (() => { try { return localStorage.getItem(SAVE_KEY) !== null; } catch { return true; } })();

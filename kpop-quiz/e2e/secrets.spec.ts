@@ -120,7 +120,7 @@ test('Secret Club rooms all work and return to the club', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-test('names: HUNTR/X opens Superstar mode; Jarvis mode only switches on when submitted', async ({ page }) => {
+test('names: HUNTR/X opens Superstar mode; a teacher name unlocks nothing', async ({ page }) => {
   await openApp(page, '/');
   const name = page.locator('#player-name');
   await name.fill('Huntr/x');
@@ -128,11 +128,12 @@ test('names: HUNTR/X opens Superstar mode; Jarvis mode only switches on when sub
   await expect(page.getByText(/Rumi/)).toBeVisible();
 
   await openApp(page, '/');
-  await page.evaluate(() => localStorage.removeItem('jarvis_mode'));
+  // Last year's trick (typing the teacher's name) no longer opens teacher mode, and old flags go.
+  await page.evaluate(() => localStorage.setItem('jarvis_mode', '1'));
   await page.reload();
-  await name.fill('Mr Jarvis');
-  await name.fill('Mia');
-  await enterName(page, 'Mia');
+  await enterName(page, 'Mr Jarvis');
   await expect(grid(page)).toBeVisible();
-  await expect(page.getByText("Mr. Jarvis's Lounge")).toHaveCount(0);
+  await expect(page.getByText("Teacher's Lounge")).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '🍎 Teacher' })).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem('jarvis_mode'))).toBeNull();
 });

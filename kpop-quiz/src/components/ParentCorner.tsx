@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { useGameStore } from '../store';
 import { localDateKey } from '../utils/dates';
 import { playClick } from '../utils/sounds';
+import ClubSetup from './grownups/ClubSetup';
+import TeacherSetup from './grownups/TeacherSetup';
 
 // Friendly names for the play log (fall back to the id).
 const NAMES: Record<string, string> = {
@@ -127,11 +129,15 @@ export default function ParentCorner() {
               <p className="font-nunito text-sm text-violet-300">On iPad the music volume follows the device buttons; the slider here works on computers.</p>
             </section>
 
+            <ClubSetup />
+
+            <TeacherSetup />
+
             <section className="rounded-3xl bg-white/10 p-5">
               <h2 className="font-fredoka text-2xl mb-2">Privacy &amp; saving</h2>
               <ul className="font-nunito text-base text-violet-100 space-y-1 list-disc pl-5">
                 <li>All progress is saved only on this device. There are no accounts and nothing is uploaded.</li>
-                <li>Friends Arena sends the chosen player name and game moves to the other devices in the same 4-letter room while playing. Nothing is stored online.</li>
+                <li>Friends Arena sends the chosen first name, avatar and game moves to the other devices in the same 4-letter room — and, if you join a club, the name, avatar and what they're playing to the other club members who are in Friends Arena. Nothing is stored online.</li>
                 <li>On iPad, add the site to the Home Screen (Share → Add to Home Screen) so Safari never clears the saved progress.</li>
               </ul>
             </section>

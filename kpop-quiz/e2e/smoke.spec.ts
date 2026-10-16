@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
-import { openApp, watchErrors, enterName, grid } from './helpers';
+import { openApp, watchErrors, enterName, grid, teacherSeed, teacherOn } from './helpers';
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -38,9 +38,10 @@ for (const category of CATEGORIES) {
   test(`${category}: every tile opens cleanly and Back returns to the grid`, async ({ page }) => {
     test.setTimeout(180_000);
     const errors = watchErrors(page);
-    // Teacher tiles only show in Jarvis mode (a Jarvis name, submitted), so play as the teacher.
-    await openApp(page, '/');
-    await enterName(page, 'Mr Jarvis');
+    // Teacher tiles only show in teacher mode (Teacher setup + PIN), so play as the teacher.
+    await openApp(page, '/', { seed: await teacherSeed() });
+    await enterName(page, 'Mia');
+    await teacherOn(page);
 
     const section = () => page.locator('section').filter({ has: page.locator('h2', { hasText: category }) }).first();
     const titles = (await section().locator('button h3').allTextContents()).map(t => t.trim());
@@ -69,7 +70,8 @@ for (const category of CATEGORIES) {
           // Back went somewhere other than the grid — record it and get home the long way.
           wentElsewhere.push(title);
           await page.reload();
-          await enterName(page, 'Mr Jarvis');
+          await enterName(page, 'Mia');
+          await teacherOn(page);
         }
         expect.soft(errors, `${title}: no page or console errors`).toEqual([]);
       });
@@ -79,11 +81,13 @@ for (const category of CATEGORIES) {
   });
 }
 
-test('the grid lists every category, including the teacher tiles in Jarvis mode', async ({ page }) => {
-  await openApp(page, '/');
-  await enterName(page, 'Mr Jarvis');
+test('the grid lists every category, including the teacher tiles in teacher mode', async ({ page }) => {
+  await openApp(page, '/', { seed: await teacherSeed() });
+  await enterName(page, 'Mia');
+  await expect(page.getByText("Teacher's Lounge")).toHaveCount(0);
+  await teacherOn(page);
   const titles = (await page.locator('section button h3').allTextContents()).map(t => t.trim());
   expect(titles.length).toBeGreaterThan(30);
-  expect(titles).toContain("Mr. Jarvis's Lounge");
+  expect(titles).toContain("Teacher's Lounge");
   for (const c of CATEGORIES) await expect(page.locator('h2', { hasText: c }).first()).toBeVisible();
 });

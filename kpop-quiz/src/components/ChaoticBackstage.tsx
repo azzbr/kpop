@@ -95,6 +95,7 @@ type Phase = 'setup' | 'filling' | 'reveal';
 
 export default function ChaoticBackstage() {
   const { setGameState } = useGameStore();
+  const tname = useGameStore(s => s.teacher?.name) ?? 'Teacher';
   const later = useSafeTimeout();
   const [roster, setRoster] = useState<string[]>([]);
   const [story, setStory] = useState<Story>(STORIES[0]);
@@ -185,7 +186,7 @@ export default function ChaoticBackstage() {
         <div className="card-kid bg-gradient-to-br from-rose-500 to-fuchsia-600 text-white text-center mb-4">
           <h1 className="font-fredoka text-4xl mb-1">🎭 Chaotic Backstage</h1>
           <p className="font-nunito text-rose-100 text-sm">
-            Each student fills one blank — then Mr. Jarvis reads the whole story aloud!
+            Each student fills one blank — then {tname} reads the whole story aloud!
           </p>
         </div>
 
@@ -194,7 +195,7 @@ export default function ChaoticBackstage() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
             {roster.length > 0 && (
               <div className="card-kid bg-white">
-                <h3 className="font-fredoka text-purple-700 mb-2">👥 Roster from Mr. Jarvis ({roster.length} students)</h3>
+                <h3 className="font-fredoka text-purple-700 mb-2">👥 Roster from {tname} ({roster.length} students)</h3>
                 <div className="flex flex-wrap gap-2">
                   {roster.map(n => (
                     <span key={n} className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full font-nunito text-sm">{n}</span>
@@ -209,7 +210,7 @@ export default function ChaoticBackstage() {
             {roster.length === 0 && (
               <div className="card-kid bg-amber-50 border-amber-300">
                 <p className="font-nunito text-amber-800 text-sm">
-                  💡 Add students in <strong>Mr. Jarvis's Lounge → Roll Call</strong> to auto-assign names to blanks. You can still play without them!
+                  💡 Add students in <strong>Teacher's Lounge → Roll Call</strong> to auto-assign names to blanks. You can still play without them!
                 </p>
               </div>
             )}
@@ -280,7 +281,7 @@ export default function ChaoticBackstage() {
                     📋 {assignedName}'s turn!
                   </div>
                   <p className="font-nunito text-fuchsia-600 text-sm mb-3">
-                    Mr. Jarvis, call out <strong>{assignedName}</strong> — they fill this blank.
+                    {tname}, call out <strong>{assignedName}</strong> — they fill this blank.
                   </p>
                 </>
               ) : (
@@ -330,7 +331,7 @@ export default function ChaoticBackstage() {
             <div className="card-kid bg-gradient-to-br from-yellow-300 to-orange-400 text-center">
               <div className="text-5xl mb-2">🎭</div>
               <h2 className="font-fredoka text-2xl text-orange-900 mb-1">{story.title}</h2>
-              <p className="font-nunito text-orange-800 text-sm">Mr. Jarvis, read this aloud to the class! 👇</p>
+              <p className="font-nunito text-orange-800 text-sm">{tname}, read this aloud to the class! 👇</p>
             </div>
 
             <div className="card-kid bg-white border-4 border-fuchsia-300">

@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
+// The live count loads separately (it brings the realtime client).
+const OnlineCount = lazy(() => import('./ui/OnlineCount'));
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
 import type { GameState } from '../store';
@@ -8,6 +10,9 @@ import ConfettiBurst from './ConfettiBurst';
 import { challengeFor, DAILY_REWARD } from '../utils/dailyChallenge';
 import { localDateKey } from '../utils/dates';
 import EventBanner from './events/EventBanner';
+import PinPad from './ui/PinPad';
+import TeacherSplash from './TeacherSplash';
+import { checkPin } from '../utils/pin';
 
 type Category = 'arcade' | 'puzzle' | 'quiz' | 'party' | 'create' | 'me' | 'teacher';
 
@@ -30,7 +35,7 @@ const CATEGORIES: { id: Category; title: string; subtitle: string }[] = [
   { id: 'party', title: '🎉 Party', subtitle: '2+ players — pass the iPad!' },
   { id: 'create', title: '🎨 Create & Music', subtitle: 'Make something awesome' },
   { id: 'me', title: '🏆 My Stuff', subtitle: 'Streaks and trophies' },
-  { id: 'teacher', title: "🍎 Mr. Jarvis's Classroom", subtitle: 'Teacher tools' },
+  { id: 'teacher', title: '🍎 Classroom', subtitle: 'Teacher tools' },
 ];
 
 const TILES: Tile[] = [
@@ -87,8 +92,8 @@ const TILES: Tile[] = [
   { id: 'locker', title: 'Locker', description: 'Spend coins on avatars, colours, trails and titles.', icon: '🎒', color: 'from-yellow-500 to-fuchsia-600', category: 'me', isNew: true },
   { id: 'achievement_showcase', title: 'Trophy Room', description: 'Your badges, best scores and daily streak.', icon: '🏆', color: 'from-yellow-500 to-amber-600', category: 'me' },
 
-  // Teacher (hidden unless Jarvis mode is unlocked)
-  { id: 'jarvis_hq', title: "Mr. Jarvis's Lounge", description: 'Pop Quiz, Roll Call, Boss Battle & more.', icon: '👨‍🏫', color: 'from-amber-500 to-red-600', category: 'teacher' },
+  // Teacher (shown in teacher mode: Grown-ups corner → Teacher setup, then 🍎 Teacher + PIN)
+  { id: 'jarvis_hq', title: "Teacher's Lounge", description: 'Pop Quiz, Roll Call, Boss Battle & more.', icon: '👨‍🏫', color: 'from-amber-500 to-red-600', category: 'teacher' },
   { id: 'freeze_dance', title: 'Freeze Dance', description: 'Dance, then freeze in a silly pose!', icon: '❄️', color: 'from-cyan-500 to-blue-600', category: 'teacher' },
   { id: 'chaotic_backstage', title: 'Chaotic Backstage', description: 'Each student fills a blank, then read it aloud.', icon: '📜', color: 'from-rose-500 to-fuchsia-600', category: 'teacher' },
 ];
@@ -99,7 +104,11 @@ const GameModeSelection: React.FC = () => {
   const dailyDone = dailyDoneDate === localDateKey();
   const [discoMode, setDiscoMode] = useState(false);
   const [discoTaps, setDiscoTaps] = useState(0);
-  const teacherMode = typeof window !== 'undefined' && localStorage.getItem('jarvis_mode') === '1';
+  const teacher = useGameStore(s => s.teacher);
+  const teacherMode = useGameStore(s => s.teacherOn);
+  const setTeacherOn = useGameStore(s => s.setTeacherOn);
+  const [askPin, setAskPin] = useState(false);
+  const [splash, setSplash] = useState(false);
   const tiles = TILES.filter(t => t.category !== 'teacher' || teacherMode);
 
   const handleTitleClick = () => {
@@ -167,6 +176,7 @@ const GameModeSelection: React.FC = () => {
           </h1>
           {equipped.title && <p className="font-fredoka text-lg text-yellow-300">{equipped.avatar} {equipped.title}</p>}
           <p className="text-lg md:text-xl font-nunito text-violet-200">Pick a game.</p>
+          <Suspense fallback={null}><OnlineCount className="mt-2" /></Suspense>
         </div>
 
         <PlayerLevelBadge />
@@ -256,7 +266,28 @@ const GameModeSelection: React.FC = () => {
           <button onClick={() => open('parent_corner')} className="min-h-[48px] px-5 rounded-full bg-white/10 font-fredoka text-base text-violet-200">
             👪 Grown-ups
           </button>
+          {teacher && (
+            <button onClick={() => { playClick(); if (teacherMode) setTeacherOn(false); else setAskPin(true); }}
+              className={`min-h-[48px] px-5 rounded-full font-fredoka text-base ${teacherMode ? 'bg-amber-400 text-stone-900' : 'bg-white/10 text-violet-200'}`}>
+              {teacherMode ? '🍎 End lesson' : '🍎 Teacher'}
+            </button>
+          )}
         </div>
+        <AnimatePresence>
+          {askPin && teacher && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4">
+              <div className="rounded-3xl bg-indigo-950 border-2 border-amber-400 p-6 w-full max-w-sm">
+                <PinPad label={`🍎 ${teacher.name}, enter your PIN`} onSubmit={async (pin) => {
+                  if (!(await checkPin(pin, teacher.pinHash))) return false;
+                  setAskPin(false); setTeacherOn(true); setSplash(true);
+                  return true;
+                }} />
+                <button onClick={() => { playClick(); setAskPin(false); }} className="mt-3 w-full min-h-[48px] rounded-full bg-white/10 font-fredoka text-lg">Cancel</button>
+              </div>
+            </motion.div>
+          )}
+          {splash && teacher && <TeacherSplash key="splash" name={teacher.name} onDone={() => setSplash(false)} />}
+        </AnimatePresence>
       </div>
     </motion.div>
   );

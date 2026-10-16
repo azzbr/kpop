@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { openApp, enterName, openTile, watchErrors } from './helpers';
+import { openApp, enterName, openTile, arenaCreate, arenaJoin, watchErrors } from './helpers';
 
 // Friends Arena must survive real life on iPads: a host whose tab refreshes (or that iPad
 // Safari reloads after sleep), a player refreshing, and a host leaving for good.
@@ -19,22 +19,14 @@ const nextBtn = (p: Page) => p.getByRole('button', { name: /Next ▶/ });
 test('rooms survive a host refresh, a player refresh and the host leaving', async ({ context, page: host }) => {
   const errors = watchErrors(host);
   await arena(host, 'Host', true);
-  await host.getByRole('button', { name: /Create a Room/ }).click();
-  await host.getByPlaceholder('Superstar name...').fill('Host');
-  await host.getByRole('button', { name: '👑 Create Room!' }).click();
-  const codeEl = host.locator('.tracking-\\[0\\.35em\\]');
-  await expect(codeEl).toHaveText(/^[A-Z]{4}$/);
-  const code = (await codeEl.innerText()).trim();
+  const code = await arenaCreate(host);
 
   const players: Page[] = [];
   for (const name of ['Mia', 'Leo']) {
     const p = await context.newPage();
     watchErrors(p);
     await arena(p, name, false);
-    await p.getByRole('button', { name: /Join a Room/ }).click();
-    await p.getByPlaceholder('ABCD').fill(code);
-    await p.getByPlaceholder('Superstar name...').fill(name);
-    await p.getByRole('button', { name: '🚀 Join Room!' }).click();
+    await arenaJoin(p, code);
     players.push(p);
   }
   await expect(host.getByText('Players in the room (3)')).toBeVisible();

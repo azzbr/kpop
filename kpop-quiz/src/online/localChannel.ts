@@ -3,7 +3,7 @@
 // (and offline play on one device) run Friends Arena rooms without the network.
 //
 // It implements only the small part of the RealtimeChannel API that useRoom.ts uses:
-// presence sync + track, broadcast send/receive (with self-delivery), subscribe.
+// presence sync + track/untrack, broadcast send/receive (with self-delivery), subscribe.
 
 type Meta = Record<string, unknown>;
 type PresenceCb = () => void;
@@ -58,6 +58,14 @@ export class LocalChannel {
     return 'ok';
   }
 
+  async untrack() {
+    this.myMeta = null;
+    this.members.delete(this.key);
+    this.post({ kind: 'leave', key: this.key });
+    this.emitPresence();
+    return 'ok';
+  }
+
   presenceState(): Record<string, Meta[]> {
     const out: Record<string, Meta[]> = {};
     for (const [k, v] of this.members) out[k] = [v.meta];
@@ -95,9 +103,10 @@ export class LocalChannel {
     if (w.kind === 'hello') {
       if (this.myMeta) this.post({ kind: 'presence', key: this.key, meta: this.myMeta });
     } else if (w.kind === 'presence' && w.meta) {
-      const isNew = !this.members.has(w.key);
+      const old = this.members.get(w.key);
       this.members.set(w.key, { meta: w.meta, seen: Date.now() });
-      if (isNew) this.emitPresence();
+      // New member, or a member changed what they track (e.g. their status in a club).
+      if (!old || JSON.stringify(old.meta) !== JSON.stringify(w.meta)) this.emitPresence();
     } else if (w.kind === 'leave') {
       if (this.members.delete(w.key)) this.emitPresence();
     } else if (w.kind === 'msg') {

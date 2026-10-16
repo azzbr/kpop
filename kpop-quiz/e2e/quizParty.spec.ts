@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { BrowserContext, Page } from '@playwright/test';
-import { openApp, enterName, openTile, readSave, typeOnScreen, watchErrors } from './helpers';
+import { openApp, enterName, openTile, arenaCreate, arenaJoin, readSave, typeOnScreen, watchErrors } from './helpers';
 import { quizSources } from '../src/online/quiz/sources';
 import { normaliseAnswer } from '../src/online/quiz/quizLogic';
 import type { QuizQuestion } from '../src/data/quiz/types';
@@ -29,21 +29,13 @@ async function setUpRoom(context: BrowserContext, hostPage: Page): Promise<Room>
 
   await openApp(hostPage, '/?localroom');
   await joinArena(hostPage, 'Host');
-  await hostPage.getByRole('button', { name: /Create a Room/ }).click();
-  await hostPage.getByPlaceholder('Superstar name...').fill('Teacher');
-  await hostPage.getByRole('button', { name: '👑 Create Room!' }).click();
-  const codeEl = hostPage.locator('.tracking-\\[0\\.35em\\]');
-  await expect(codeEl).toHaveText(/^[A-Z]{4}$/);
-  const code = (await codeEl.innerText()).trim();
+  const code = await arenaCreate(hostPage);
 
   for (const [i, p] of players.entries()) {
     // Same context = shared localStorage, so don't wipe the host's save.
     await openApp(p, '/?localroom', { clear: false });
     await joinArena(p, `Kid${i + 1}`);
-    await p.getByRole('button', { name: /Join a Room/ }).click();
-    await p.getByPlaceholder('ABCD').fill(code);
-    await p.getByPlaceholder('Superstar name...').fill(`Kid${i + 1}`);
-    await p.getByRole('button', { name: '🚀 Join Room!' }).click();
+    await arenaJoin(p, code);
     await expect(p.getByText('Waiting for the host to start a game…')).toBeVisible();
   }
 

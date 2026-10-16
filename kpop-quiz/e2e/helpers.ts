@@ -80,3 +80,35 @@ export async function typeOnScreen(page: Page, text: string) {
     await page.locator(`button[aria-label="${label}"]`).first().click();
   }
 }
+
+/** Friends Arena: creates a room (as the name entered on the Welcome screen) and returns its code. */
+export async function arenaCreate(page: Page): Promise<string> {
+  await page.getByRole('button', { name: /Create a Room/ }).click();
+  const codeEl = page.locator('.tracking-\\[0\\.35em\\]');
+  await expect(codeEl).toHaveText(/^[A-Z]{4}$/, { timeout: 15_000 });
+  return (await codeEl.innerText()).trim();
+}
+
+/** Friends Arena: joins a room by typing its code on the on-screen keyboard. */
+export async function arenaJoin(page: Page, code: string) {
+  await page.getByRole('button', { name: /Join with a code/ }).click();
+  await typeOnScreen(page, code);
+  await page.locator('button[aria-label="Enter"]').click();
+  await expect(page.locator('.tracking-\\[0\\.35em\\]')).toHaveText(code, { timeout: 15_000 });
+}
+
+export const TEACHER_PIN = '1234';
+/** A save with a teacher set up (Grown-ups corner → Teacher setup), PIN TEACHER_PIN. */
+export async function teacherSeed(name = 'Ms Patel'): Promise<Record<string, string>> {
+  const { hashPin } = await import('../src/utils/pin');
+  return { [SAVE_KEY]: JSON.stringify({ state: { teacher: { name, pinHash: await hashPin(TEACHER_PIN) } }, version: 5 }) };
+}
+
+/** On the game grid: 🍎 Teacher → PIN → teacher mode on (skips the splash). */
+export async function teacherOn(page: Page) {
+  await page.getByRole('button', { name: '🍎 Teacher' }).click();
+  for (const d of TEACHER_PIN) await page.getByRole('button', { name: `Digit ${d}` }).click();
+  await page.getByRole('button', { name: 'OK', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Teacher mode' }).click();
+  await expect(page.getByRole('button', { name: '🍎 End lesson' })).toBeVisible();
+}

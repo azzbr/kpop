@@ -1,9 +1,21 @@
-import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store';
 import { useRoom, SESSION_RESULT, savedRoom } from '../../online/useRoom';
-import type { GameId, GameConfig, RoomApi } from '../../online/useRoom';
-import { playClick, playUnlock, playWin } from '../../utils/sounds';
+import type { GameId, GameConfig, RoomApi, JoinResult } from '../../online/useRoom';
+import { useClub } from '../../online/useClub';
+import type { ClubMember } from '../../online/clubLogic';
+import { safeName } from '../../online/names';
+import { playClick, playUnlock, playWin, playNote, playPop } from '../../utils/sounds';
+import OnlineCount from '../ui/OnlineCount';
+import ClubPanel from './ClubPanel';
+import TypeBox from './TypeBox';
+import BalloonPop from './BalloonPop';
+import { ReactionLayer, ReactionBar } from './Reactions';
+import { useReactions } from '../../online/useReactions';
+import { useClassroom } from '../../online/useClassroom';
+import { GOLD_STAR_MAX } from '../../store';
+import { ClassOverlays, TeacherBar, TeacherPanel, TeamDot, CupBoard } from './Classroom';
 import { GAME_OPTIONS } from './arenaOptions';
 // Each game is its own download, fetched when the host starts it (the hub stays small).
 // They all take { room, config }.
@@ -97,17 +109,34 @@ const GAMES: { id: GameId; icon: string; title: string; desc: string; min: numbe
 // Games that can take late joiners and survive a host change (they sync from a snapshot).
 const LATE_JOIN_GAMES: GameId[] = ['quiz_party', 'imposter'];
 
-type HubScreen = 'menu' | 'create' | 'join' | 'lobby';
+type HubScreen = 'menu' | 'join' | 'lobby';
+
+const JOIN_ERRORS: Record<Exclude<JoinResult, 'ok'>, string> = {
+  not_found: 'Room not found — check the code! 🔍',
+  error: 'Could not connect — check your internet and try again!',
+  locked: 'This room is locked 🔒 — ask the host to let you in from your club!',
+  removed: 'The host has started a new group — find another room! 🙂',
+};
+
+const panel = 'bg-white/10 rounded-3xl p-5 border border-white/20';
 
 const OnlineHub: React.FC = () => {
-  const { setGameState } = useGameStore();
+  const setGameState = useGameStore(s => s.setGameState);
+  const storeName = useGameStore(s => s.userName);
+  const setUserName = useGameStore(s => s.setUserName);
+  const clubs = useGameStore(s => s.clubs);
+  const joinClub = useGameStore(s => s.joinClub);
+  const leaveClub = useGameStore(s => s.leaveClub);
+  const teacher = useGameStore(s => (s.teacherOn ? s.teacher : null));
   const room = useRoom();
   const [screen, setScreen] = useState<HubScreen>('menu');
-  const [name, setName] = useState('');
-  const [emoji, setEmoji] = useState(() => useGameStore.getState().equipped.avatar || '🎤');
-  const [joinCode, setJoinCode] = useState('');
+  const [name, setName] = useState(() => (teacher ? teacher.name : safeName(storeName)));
+  const [editingName, setEditingName] = useState(false);
+  const [emoji, setEmoji] = useState(() => (teacher ? '🍎' : useGameStore.getState().equipped.avatar || '🎤'));
   const [busy, setBusy] = useState(false);
   const [joinError, setJoinError] = useState('');
+  const role = teacher ? ('teacher' as const) : undefined;
+  const me = { name: name || 'Player', emoji, role };
   // After a refresh, start straight back in the game this tab was playing (read synchronously,
   // before the effect below would clear it).
   const [restored] = useState<{ game: GameId; config: GameConfig } | null>(() => {
@@ -124,6 +153,66 @@ const OnlineHub: React.FC = () => {
   const [gameConfig, setGameConfig] = useState<GameConfig>(restored?.config ?? {});
   // Session leaderboard across games played in this room: 3/2/1 points for 1st/2nd/3rd.
   const [session, setSession] = useState<Record<string, { pts: number; wins: number }>>({});
+  const [toast, setToast] = useState<string | null>(null);
+  const [picked, setPicked] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+
+  const showToast = (t: string) => {
+    setToast(t);
+    window.setTimeout(() => setToast(cur => (cur === t ? null : cur)), 4000);
+  };
+
+  // ---- Joining (by code, by a club knock being answered, or by an invite) ----
+  const joinCode = async (code: string): Promise<string | null> => {
+    if (busy) return null;
+    setBusy(true);
+    setJoinError('');
+    playClick();
+    if (room.status !== 'idle') room.leaveRoom();
+    const r = await room.joinRoom(code, me);
+    setBusy(false);
+    if (r === 'ok') {
+      playWin();
+      setScreen('lobby');
+      return null;
+    }
+    setScreen(s => (s === 'lobby' ? 'menu' : s));
+    return JOIN_ERRORS[r];
+  };
+
+  // ---- Club ----
+  const [activeClub, setActiveClub] = useState<string | null>(null);
+  const club = clubs.find(c => c.code === activeClub) ?? clubs[0] ?? null;
+  const inRoom = room.status === 'lobby';
+  const clubMe = useMemo(() => ({
+    name: me.name,
+    emoji,
+    status: (activeGame && inRoom ? 'playing' : inRoom ? 'lobby' : 'menu') as ClubMember['status'],
+    ...(inRoom && room.code ? { room: { code: room.code, game: activeGame ?? undefined, players: room.players.length, host: room.isHost, locked: room.meta.locked } } : {}),
+    ...(role ? { role } : {}),
+  }), [me.name, emoji, activeGame, inRoom, room.code, room.players.length, room.isHost, room.meta.locked, role]);
+  const clubApi = useClub(name ? club?.code ?? null : null, clubMe, {
+    onAdmit: (code) => { showToast('✅ You\'re in! Joining…'); joinCode(code).then(err => err && showToast(err)); },
+    onDeny: () => showToast('Not right now — try another room! 🙂'),
+  });
+  const [pending, setPending] = useState<Record<string, 'knock' | 'invite'>>({});
+  const markPending = (id: string, kind: 'knock' | 'invite') => {
+    setPending(p => ({ ...p, [id]: kind }));
+    window.setTimeout(() => setPending(p => { const n = { ...p }; delete n[id]; return n; }), 15000);
+  };
+  const knock = (m: ClubMember) => {
+    if (!clubApi.knock(m)) return false;
+    markPending(m.id, 'knock');
+    showToast(`🙋 Asked ${m.name} to let you in…`);
+    return true;
+  };
+  const invite = (m: ClubMember) => {
+    if (!room.code || !clubApi.invite(m, activeGame ?? undefined)) return false;
+    room.allowPlayer(m.id);
+    markPending(m.id, 'invite');
+    showToast(`✉️ Invited ${m.name}!`);
+    return true;
+  };
 
   // ---- Surviving refreshes / sleeping iPads ----
   // The running game is remembered per tab so a refresh drops you back into it.
@@ -142,9 +231,12 @@ const OnlineHub: React.FC = () => {
     rejoined.current = true;
     setScreen('lobby');
     setBusy(true);
-    room.rejoin().then((ok) => {
+    room.rejoin(role).then((r) => {
       setBusy(false);
-      if (!ok) { setScreen('menu'); setActiveGame(null); setWaitingFor(null); setJoinError('That room has closed — make a new one!'); }
+      if (r !== 'ok') {
+        setScreen('menu'); setActiveGame(null); setWaitingFor(null);
+        setJoinError(r === 'locked' || r === 'removed' ? JOIN_ERRORS[r] : 'That room has closed — make a new one!');
+      }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -158,22 +250,25 @@ const OnlineHub: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room.status, room.hostId, room.isHost, waitingFor]);
 
-  // A new host took over (the old one left for good). Games that can't move to a new host
-  // send everyone back to the lobby; Quiz Party ends itself with the latest standings.
+  // A new host took over (the old one left, or passed the crown). Games that can't move to a new
+  // host send everyone back to the lobby; Quiz Party ends itself with the latest standings.
   const prevHost = useRef<string | null>(null);
   const [hostChanged, setHostChanged] = useState(false);
   useEffect(() => {
     const before = prevHost.current;
     prevHost.current = room.hostId;
     if (!before || !room.hostId || before === room.hostId) return;
-    // Only a real hand-over counts: when presence arrives out of order a device can briefly
-    // think it's the host before the real (earlier-joined) host shows up. No toast for that.
-    if (room.players.some(p => p.id === before)) return;
+    // When presence arrives out of order a device can briefly think it's the host before the
+    // real (earlier-joined) host shows up. A crown passed on, or a teacher arriving, is real.
+    const newHost = room.players.find(p => p.id === room.hostId);
+    if (room.players.some(p => p.id === before) && !newHost?.role && !passed.current) return;
+    passed.current = false;
     setHostChanged(true);
     window.setTimeout(() => setHostChanged(false), 5000);
     if (room.isHost && activeGame && !LATE_JOIN_GAMES.includes(activeGame)) room.send({ t: 'to_lobby' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room.hostId]);
+  const passed = useRef(false);
 
   // Route lobby-level messages (game start / return to lobby)
   useEffect(() => {
@@ -188,6 +283,8 @@ const OnlineHub: React.FC = () => {
       } else if (m.t === 'to_lobby') {
         setActiveGame(null);
         setWaitingFor(null);
+      } else if (m.t === 'room_host') {
+        passed.current = true;
       } else if (m.t === SESSION_RESULT) {
         // Best first; an entry can be a rung of tied players, who share that place's points.
         const ranked = ((m.ranked as (string | string[])[]) || []).map(r => (Array.isArray(r) ? r : [r]));
@@ -217,6 +314,21 @@ const OnlineHub: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playerIds]);
 
+  // A friendly "ding" when someone arrives in the room.
+  const prevCount = useRef(0);
+  useEffect(() => {
+    const n = room.players.length;
+    if (inRoom && prevCount.current && n > prevCount.current) { playNote(660, 0.12); window.setTimeout(() => playNote(880, 0.18), 120); }
+    prevCount.current = n;
+  }, [room.players.length, inRoom]);
+
+  const reactions = useReactions({ myId: room.myId, players: room.players, send: room.send, onMessage: room.onMessage });
+  const cls = useClassroom({ isHost: room.isHost, myId: room.myId, code: room.code || '', players: room.players, send: room.send, onMessage: room.onMessage }, {
+    teacher: !!teacher,
+    onStar: (from, paid) => { playUnlock(); showToast(paid ? `⭐ ${from} gave you a gold star! +5 🪙` : `⭐ ${from} gave you a gold star!`); },
+  });
+  const teacherName = room.players.find(p => p.role === 'teacher')?.name ?? teacher?.name ?? 'your teacher';
+
   const selectGame = (g: GameId) => {
     playClick();
     setSelGame(g);
@@ -245,8 +357,9 @@ const OnlineHub: React.FC = () => {
   const handleCreate = async () => {
     if (busy) return;
     setBusy(true);
+    setJoinError('');
     playClick();
-    const c = await room.createRoom({ name: name.trim() || 'Host', emoji });
+    const c = await room.createRoom(me);
     setBusy(false);
     if (c) {
       playWin();
@@ -256,19 +369,14 @@ const OnlineHub: React.FC = () => {
     }
   };
 
-  const handleJoin = async () => {
-    if (busy || joinCode.trim().length !== 4) return;
-    setBusy(true);
-    setJoinError('');
-    playClick();
-    const ok = await room.joinRoom(joinCode, { name: name.trim() || 'Player', emoji });
-    setBusy(false);
-    if (ok) {
-      playWin();
-      setScreen('lobby');
-    } else {
-      setJoinError(room.status === 'not_found' ? "Room not found — check the code! 🔍" : 'Could not connect — try again!');
-    }
+  const saveName = (t: string) => {
+    const n = safeName(t);
+    if (!n) return "Let's pick a different name 🙂 (first names only)";
+    setName(n);
+    if (!teacher) setUserName(n);
+    setEditingName(false);
+    playPop();
+    return null;
   };
 
   const startGame = () => {
@@ -279,8 +387,11 @@ const OnlineHub: React.FC = () => {
   const playerCount = room.players.length;
   const canStart = (g: GameId) => {
     const def = GAMES.find((x) => x.id === g)!;
-    return playerCount >= def.min && playerCount <= def.max;
+    // On a big screen the host only watches.
+    const n = g === selGame && buildConfig(g).board === '1' ? playerCount - 1 : playerCount;
+    return n >= def.min && n <= def.max;
   };
+  const gameTitle = (id?: string) => GAMES.find(g => g.id === id)?.title;
 
   const api: RoomApi = {
     code: room.code || '',
@@ -292,27 +403,52 @@ const OnlineHub: React.FC = () => {
     reportResult: room.reportResult,
   };
 
-  // Active game takes over the whole screen
   const hostName = room.players.find(p => p.isHost)?.name ?? 'Someone';
+  const knocks = clubApi.knocks.filter(k => k.room === room.code);
+  const banner = (key: string, cls: string, text: string) => (
+    <motion.div key={key} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+      className="fixed inset-x-0 top-0 z-[60] flex justify-center p-3 pointer-events-none">
+      <div className={`rounded-full font-fredoka text-lg px-5 py-2 shadow-xl ${cls}`} role="status">{text}</div>
+    </motion.div>
+  );
+  // Banners and club requests, shown in the lobby and during games.
   const statusOverlay = (
-    <AnimatePresence>
-      {room.hostAway && (
-        <motion.div key="away" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-x-0 top-0 z-[60] flex justify-center p-3 pointer-events-none">
-          <div className="rounded-full bg-amber-500 text-stone-900 font-fredoka text-lg px-5 py-2 shadow-xl">⏳ The host is reconnecting… hang on!</div>
-        </motion.div>
-      )}
-      {hostChanged && !room.hostAway && (
-        <motion.div key="new" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-x-0 top-0 z-[60] flex justify-center p-3 pointer-events-none">
-          <div className="rounded-full bg-emerald-500 text-white font-fredoka text-lg px-5 py-2 shadow-xl">👑 {room.isHost ? "You're the host now!" : `${hostName} is the host now`}</div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <>
+      <ReactionLayer floaters={reactions.floaters} />
+      {inRoom && <ClassOverlays cls={cls} teacherName={teacherName} gameTitle={gameTitle} session={session} players={room.players} />}
+      <AnimatePresence>
+        {room.hostAway && banner('away', 'bg-amber-500 text-stone-900', '⏳ The host is reconnecting… hang on!')}
+        {hostChanged && !room.hostAway && banner('new', 'bg-emerald-500 text-white', room.isHost ? "👑 You're the host now!" : `👑 ${hostName} is the host now`)}
+        {toast && !hostChanged && !room.hostAway && banner('toast', 'bg-indigo-500 text-white', toast)}
+      </AnimatePresence>
+      <div className="fixed z-[65] inset-x-0 flex flex-col items-center gap-2 px-3 pointer-events-none" style={{ top: 'max(4.5rem, env(safe-area-inset-top))' }}>
+        {room.isHost && knocks.map(k => (
+          <motion.div key={k.from} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            className="pointer-events-auto flex flex-wrap items-center justify-center gap-2 rounded-3xl bg-white text-stone-900 shadow-2xl px-4 py-3" role="alertdialog" aria-label={`${k.name} wants to join`}>
+            <span className="font-fredoka text-xl">{k.emoji} {k.name} wants to join!</span>
+            <button type="button" className="min-h-[48px] px-4 rounded-full bg-emerald-500 text-white font-fredoka text-lg"
+              onClick={() => { playClick(); room.allowPlayer(k.from); clubApi.answerKnock(k, true); }}>✅ Let in</button>
+            <button type="button" className="min-h-[48px] px-4 rounded-full bg-stone-200 font-fredoka text-lg"
+              onClick={() => { playClick(); clubApi.answerKnock(k, false); }}>❌ Not now</button>
+          </motion.div>
+        ))}
+        {!inRoom && clubApi.invites.map(i => (
+          <motion.div key={i.from} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            className="pointer-events-auto flex flex-wrap items-center justify-center gap-2 rounded-3xl bg-white text-stone-900 shadow-2xl px-4 py-3" role="alertdialog" aria-label={`${i.name} invites you`}>
+            <span className="font-fredoka text-xl">{i.emoji} {i.name} invites you{i.game && gameTitle(i.game) ? ` to play ${gameTitle(i.game)}` : ''}!</span>
+            <button type="button" className="min-h-[48px] px-4 rounded-full bg-emerald-500 text-white font-fredoka text-lg"
+              onClick={() => { clubApi.dismissInvite(i); joinCode(i.room).then(err => err && showToast(err)); }}>🚀 Join</button>
+            <button type="button" className="min-h-[48px] px-4 rounded-full bg-stone-200 font-fredoka text-lg"
+              onClick={() => { playClick(); clubApi.dismissInvite(i); }}>No thanks</button>
+          </motion.div>
+        ))}
+      </div>
+    </>
   );
 
+  // Active game takes over the whole screen
   const GameScreen = activeGame ? GAME_SCREENS[activeGame] : undefined;
-  if (activeGame && room.status === 'lobby') {
+  if (activeGame && inRoom) {
     return (
       <div className="relative">
         {statusOverlay}
@@ -321,6 +457,8 @@ const OnlineHub: React.FC = () => {
             <GameScreen room={api} config={gameConfig} />
           </Suspense>
         )}
+        <ReactionBar react={reactions.react} compact />
+        <TeacherBar cls={cls} />
         <button
           onClick={() => {
             if (confirmLeave) { setConfirmLeave(false); leaveToMenu(); return; }
@@ -337,157 +475,175 @@ const OnlineHub: React.FC = () => {
     );
   }
 
+  const needName = !name || editingName;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="min-h-screen bg-gradient-to-br from-emerald-900 via-teal-900 to-cyan-950 text-white px-4 py-6"
+      className="min-h-screen-d bg-gradient-to-br from-emerald-900 via-teal-900 to-cyan-950 text-white px-4"
+      style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))', paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
     >
       <button
-        onClick={screen === 'menu' ? exitHub : leaveToMenu}
-        className="absolute top-4 left-4 bg-white/10 hover:bg-white/20 rounded-full px-4 py-2 font-fredoka text-sm z-20"
+        onClick={screen === 'lobby' ? leaveToMenu : screen === 'join' ? () => { playClick(); setScreen('menu'); } : exitHub}
+        className="absolute left-4 bg-white/10 hover:bg-white/20 rounded-full px-5 min-h-[48px] font-fredoka text-lg z-20"
+        style={{ top: 'max(1rem, env(safe-area-inset-top))' }}
       >
-        ← {screen === 'menu' ? 'Back' : 'Exit room'}
+        ← {screen === 'lobby' ? 'Exit room' : 'Back'}
       </button>
 
-      <div className="max-w-3xl mx-auto pt-10">
+      <div className="max-w-3xl mx-auto pt-14">
         <h1 className="text-center font-fredoka font-bold text-3xl md:text-5xl mb-1">🌐 Friends Arena</h1>
-        <p className="text-center font-nunito text-teal-200 mb-8">
-          Play together — every player on their own device!
-        </p>
+        <p className="text-center font-nunito text-lg text-teal-200 mb-3">Play together — every player on their own device!</p>
+        <div className="flex justify-center mb-6"><OnlineCount rooms /></div>
 
-        {screen === 'menu' && (
-          <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="grid gap-5 max-w-md mx-auto">
-            <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={() => { playClick(); setJoinError(''); setScreen('create'); }}
-              className="rounded-3xl p-6 bg-gradient-to-br from-emerald-400 to-teal-600 shadow-2xl text-left"
-            >
-              <div className="text-4xl mb-2">👑</div>
-              <div className="font-fredoka font-bold text-2xl">Create a Room</div>
-              <div className="font-nunito text-emerald-100">Get a 4-letter code and invite your friends!</div>
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={() => { playClick(); setJoinError(''); setScreen('join'); }}
-              className="rounded-3xl p-6 bg-gradient-to-br from-cyan-400 to-blue-600 shadow-2xl text-left"
-            >
-              <div className="text-4xl mb-2">🎟️</div>
-              <div className="font-fredoka font-bold text-2xl">Join a Room</div>
-              <div className="font-nunito text-cyan-100">Type the code your friend shared!</div>
-            </motion.button>
-          </motion.div>
+        {screen !== 'lobby' && needName && (
+          <div className="max-w-xl mx-auto mb-6">
+            <TypeBox label={name ? '✨ Change your name' : '✨ What should friends call you? (first name)'} initial={name} placeholder="Your name" max={12} space
+              onDone={saveName} onCancel={name ? () => setEditingName(false) : undefined} />
+          </div>
         )}
 
-        {(screen === 'create' || screen === 'join') && (
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="max-w-md mx-auto bg-white/10 rounded-3xl p-6 border border-white/20"
-          >
-            {screen === 'join' && (
-              <div className="mb-5">
-                <label className="block font-fredoka text-cyan-200 mb-2">🎟️ Room code</label>
-                <input
-                  type="text"
-                  value={joinCode}
-                  maxLength={4}
-                  onChange={(e) => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, ''))}
-                  placeholder="ABCD"
-                  className="w-full px-4 py-3 rounded-2xl bg-white/90 text-gray-800 font-fredoka font-bold text-2xl text-center tracking-[0.5em] border-2 border-cyan-400 focus:outline-none focus:ring-4 focus:ring-cyan-300 uppercase"
-                />
+        {screen === 'menu' && !needName && (
+          <motion.div initial={{ scale: 0.97, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="grid gap-5">
+            <div className={`${panel} flex flex-wrap items-center gap-3`}>
+              <span className="text-4xl">{emoji}</span>
+              <div className="flex-1 min-w-[8rem]">
+                <div className="font-nunito text-base text-teal-200">Playing as</div>
+                <div className="font-fredoka text-2xl">{name}{teacher && ' 🍎'}</div>
               </div>
-            )}
-            <div className="mb-5">
-              <label className="block font-fredoka text-teal-200 mb-2">✨ Your name</label>
-              <input
-                type="text"
-                value={name}
-                maxLength={14}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Superstar name..."
-                className="w-full px-4 py-3 rounded-2xl bg-white/90 text-gray-800 font-nunito border-2 border-teal-400 focus:outline-none focus:ring-4 focus:ring-teal-300"
-               
-              />
-            </div>
-            <div className="mb-6">
-              <label className="block font-fredoka text-teal-200 mb-2">🎭 Pick your avatar</label>
-              <div className="grid grid-cols-6 gap-2">
+              {!teacher && (
+                <button type="button" onClick={() => { playClick(); setEditingName(true); }} className="min-h-[48px] px-4 rounded-full bg-white/15 font-fredoka text-lg">✏️ Change name</button>
+              )}
+              <div className="w-full grid grid-cols-6 sm:grid-cols-12 gap-2">
                 {Array.from(new Set([useGameStore.getState().equipped.avatar, ...EMOJIS])).map((e) => (
-                  <button
-                    key={e}
-                    onClick={() => { playClick(); setEmoji(e); }}
-                    className={`text-2xl md:text-3xl rounded-2xl p-2 transition-all ${emoji === e ? 'bg-amber-400/90 scale-110 shadow-lg' : 'bg-white/10 hover:bg-white/20'}`}
-                  >
+                  <button key={e} type="button" aria-label={`Avatar ${e}`} onClick={() => { playClick(); setEmoji(e); }}
+                    className={`min-h-[48px] text-2xl md:text-3xl rounded-2xl transition-all ${emoji === e ? 'bg-amber-400/90 scale-110 shadow-lg' : 'bg-white/10'}`}>
                     {e}
                   </button>
                 ))}
               </div>
             </div>
             {joinError && (
-              <div className="mb-4 bg-red-500/20 border border-red-400 rounded-2xl p-3 font-nunito text-red-200 text-center">
-                {joinError}
-              </div>
+              <div className="bg-red-500/20 border border-red-400 rounded-2xl p-3 font-nunito text-lg text-red-100 text-center" role="alert">{joinError}</div>
             )}
-            <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={screen === 'create' ? handleCreate : handleJoin}
-              disabled={busy || !name.trim() || (screen === 'join' && joinCode.length !== 4)}
-              className={`w-full py-4 rounded-full font-fredoka font-bold text-xl shadow-xl ${
-                busy || !name.trim() || (screen === 'join' && joinCode.length !== 4)
-                  ? 'bg-gray-500/50 text-gray-300 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-amber-400 to-pink-500'
-              }`}
-            >
-              {busy ? 'Connecting… 📡' : screen === 'create' ? '👑 Create Room!' : '🚀 Join Room!'}
-            </motion.button>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <motion.button whileTap={{ scale: 0.96 }} onClick={handleCreate} disabled={busy}
+                className="rounded-3xl p-6 bg-gradient-to-br from-emerald-400 to-teal-600 shadow-2xl text-left">
+                <div className="text-4xl mb-2">👑</div>
+                <div className="font-fredoka font-bold text-2xl">{busy ? 'Connecting… 📡' : 'Create a Room'}</div>
+                <div className="font-nunito text-lg text-emerald-100">{clubs.length ? 'Club friends will see it — or share the code!' : 'Get a 4-letter code to share with friends!'}</div>
+              </motion.button>
+              <motion.button whileTap={{ scale: 0.96 }} onClick={() => { playClick(); setJoinError(''); setScreen('join'); }}
+                className="rounded-3xl p-6 bg-gradient-to-br from-cyan-400 to-blue-600 shadow-2xl text-left">
+                <div className="text-4xl mb-2">🎟️</div>
+                <div className="font-fredoka font-bold text-2xl">Join with a code</div>
+                <div className="font-nunito text-lg text-cyan-100">Type the code your friend shared!</div>
+              </motion.button>
+            </div>
+            <ClubPanel clubs={clubs} active={club} setActive={setActiveClub} onJoinClub={(c) => { joinClub(c); setActiveClub(c.code); }}
+              onLeaveClub={(code) => { leaveClub(code); setActiveClub(null); }}
+              members={clubApi.members} connected={clubApi.connected} gameTitle={gameTitle} myRoom={null} isHost={false}
+              onKnock={knock} onInvite={invite} pending={pending} />
           </motion.div>
+        )}
+
+        {screen === 'join' && !needName && (
+          <div className="max-w-xl mx-auto">
+            <TypeBox label="🎟️ Room code" placeholder="ABCD" max={4} code enterLabel="🚀 Join"
+              onDone={async (t) => (t.length !== 4 ? 'Room codes have 4 letters' : joinCode(t))}
+              onCancel={() => setScreen('menu')} />
+          </div>
         )}
 
         {statusOverlay}
         {screen === 'lobby' && room.status === 'connecting' && (
-          <div className="text-center font-fredoka text-2xl py-10">📡 Getting you back into the room…</div>
+          <div className="text-center font-fredoka text-2xl py-10">📡 Getting you into the room…</div>
         )}
-        {screen === 'lobby' && room.status === 'lobby' && (
+        {screen === 'lobby' && inRoom && (
           <motion.div initial={{ scale: 0.97, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
             {waitingFor && !room.isHost && (
               <div className="rounded-3xl bg-amber-400/90 text-stone-900 p-5 mb-6 text-center font-fredoka text-xl" role="status">
                 👀 A game of {GAMES.find(g => g.id === waitingFor)?.title ?? 'something fun'} is still going — you'll join the next one!
               </div>
             )}
-            <div className="bg-white/10 rounded-3xl p-6 border border-white/20 mb-6 text-center">
-              <div className="font-nunito text-teal-200 mb-1">Tell your friends to join with code:</div>
+            <div className={`${panel} mb-6 text-center`}>
+              <div className="font-nunito text-lg text-teal-200 mb-1">{clubs.length ? 'Club friends can ask to join — or share the code:' : 'Tell your friends to join with code:'}</div>
               <div className="font-fredoka font-bold text-5xl md:text-7xl tracking-[0.35em] text-amber-300 select-all">
                 {room.code}
               </div>
+              {room.isHost && (
+                <button type="button" onClick={() => { playClick(); room.setLocked(!room.meta.locked); }}
+                  className={`mt-3 min-h-[48px] px-5 rounded-full font-fredoka text-lg ${room.meta.locked ? 'bg-amber-400 text-stone-900' : 'bg-white/15'}`}>
+                  {room.meta.locked ? '🔒 Locked — only people you let in' : '🔓 Open — tap to lock the room'}
+                </button>
+              )}
+              {!room.isHost && room.meta.locked && <div className="mt-2 font-nunito text-lg text-amber-200">🔒 The host locked this room</div>}
             </div>
 
-            <div className="bg-white/10 rounded-3xl p-5 border border-white/20 mb-6">
+            <div className={`${panel} mb-6`}>
               <div className="font-fredoka text-lg mb-3">
                 👥 Players in the room ({playerCount})
               </div>
               <div className="flex flex-wrap gap-2">
                 {room.players.map((p) => (
-                  <motion.div
+                  <motion.button
+                    type="button"
                     key={p.id}
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className={`flex items-center gap-2 rounded-full px-4 py-2 font-nunito ${p.id === room.myId ? 'bg-amber-400/30 border border-amber-300' : 'bg-white/10'}`}
+                    disabled={!room.isHost || p.id === room.myId}
+                    onClick={() => { playClick(); setPicked(x => (x === p.id ? null : p.id)); setConfirmRemove(null); }}
+                    className={`flex items-center gap-2 rounded-full px-4 min-h-[48px] font-nunito text-lg ${p.id === room.myId ? 'bg-amber-400/30 border border-amber-300' : picked === p.id ? 'bg-white/25 border border-white' : 'bg-white/10'}`}
                   >
                     <span className="text-xl">{p.emoji}</span>
                     <span className="font-bold">{p.name}</span>
+                    <TeamDot cls={cls} id={p.id} />
+                    {p.role === 'teacher' && <span title="Teacher">🍎</span>}
                     {p.isHost && <span title="Host">👑</span>}
-                  </motion.div>
+                  </motion.button>
                 ))}
               </div>
+              {room.isHost && picked && room.players.some(p => p.id === picked) && (() => {
+                const p = room.players.find(x => x.id === picked)!;
+                return (
+                  <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl bg-black/20 p-3">
+                    <span className="font-fredoka text-lg mr-2">{p.emoji} {p.name}:</span>
+                    {cls.isTeacherHost && (
+                      <button type="button" disabled={(cls.starsGiven[p.id] ?? 0) >= GOLD_STAR_MAX}
+                        onClick={() => { if (cls.giveStar(p.id)) { playUnlock(); showToast(`⭐ Gold star for ${p.name}!`); } }}
+                        className="min-h-[48px] px-4 rounded-full bg-yellow-400 text-stone-900 font-fredoka text-lg disabled:opacity-40">
+                        ⭐ Gold star ({cls.starsGiven[p.id] ?? 0}/{GOLD_STAR_MAX})
+                      </button>
+                    )}
+                    {!teacher && (
+                      <button type="button" onClick={() => { playClick(); passed.current = true; room.passHost(p.id); setPicked(null); }}
+                        className="min-h-[48px] px-4 rounded-full bg-amber-400 text-stone-900 font-fredoka text-lg">👑 Make host</button>
+                    )}
+                    <button type="button" onClick={() => {
+                      if (confirmRemove === p.id) { room.removePlayer(p.id); setPicked(null); setConfirmRemove(null); showToast(`${p.name} has left the room`); return; }
+                      playClick(); setConfirmRemove(p.id);
+                    }} className={`min-h-[48px] px-4 rounded-full font-fredoka text-lg ${confirmRemove === p.id ? 'bg-red-600' : 'bg-white/15'}`}>
+                      {confirmRemove === p.id ? 'Tap again to remove' : '🚪 Remove from room'}
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
 
+            <div className="flex justify-center mb-6"><ReactionBar react={reactions.react} /></div>
+            {clubs.length > 0 && (
+              <div className="mb-6">
+              <ClubPanel clubs={clubs} active={club} setActive={setActiveClub} onJoinClub={(c) => { joinClub(c); setActiveClub(c.code); }}
+                onLeaveClub={(code) => { leaveClub(code); setActiveClub(null); }}
+                members={clubApi.members} connected={clubApi.connected} gameTitle={gameTitle} myRoom={room.code} isHost={room.isHost}
+                onKnock={knock} onInvite={invite} pending={pending} />
+              </div>
+            )}
+
             {Object.keys(session).length > 0 && (
-              <div className="bg-white/10 rounded-3xl p-5 border border-white/20 mb-6">
+              <div className={`${panel} mb-6`}>
                 <div className="font-fredoka text-lg mb-2">🏆 Tonight's leaderboard</div>
                 {Object.entries(session)
                   .sort((a, b) => b[1].pts - a[1].pts)
@@ -498,14 +654,20 @@ const OnlineHub: React.FC = () => {
                       <div key={id} className={`flex items-center gap-3 font-fredoka text-lg ${id === room.myId ? 'text-amber-300' : ''}`}>
                         <span className="w-6">{i + 1}.</span>
                         <span className="flex-1">{p.emoji} {p.name}</span>
-                        <span className="text-sm font-nunito text-teal-200">{v.wins} 🥇</span>
+                        <span className="text-base font-nunito text-teal-200">{v.wins} 🥇</span>
                         <span>{v.pts} pts</span>
                       </div>
                     );
                   })}
-                <div className="font-nunito text-xs text-teal-300 mt-1">3 points for 1st, 2 for 2nd, 1 for 3rd in each game.</div>
+                <div className="font-nunito text-base text-teal-300 mt-1">3 points for 1st, 2 for 2nd, 1 for 3rd in each game.</div>
               </div>
             )}
+
+            {cls.isTeacherHost && (
+              <TeacherPanel cls={cls} gameTitle={gameTitle} selectedTitle={gameTitle(selGame) ?? 'game'}
+                onQueueSelected={() => cls.queue({ game: selGame, config: buildConfig(selGame) })} />
+            )}
+            {!cls.isTeacherHost && cls.state.n > 0 && <div className="mb-6"><CupBoard cls={cls} /></div>}
 
             {room.isHost ? (
               <>
@@ -532,7 +694,7 @@ const OnlineHub: React.FC = () => {
                         </div>
                         <div className="font-nunito text-base text-teal-100">{g.desc}</div>
                         {!ok && (
-                          <div className="font-nunito text-sm text-amber-300 mt-1">
+                          <div className="font-nunito text-base text-amber-300 mt-1">
                             Needs {g.min}–{g.max} players (you have {playerCount})
                           </div>
                         )}
@@ -543,7 +705,7 @@ const OnlineHub: React.FC = () => {
 
                 {(GAME_OPTIONS[selGame] || []).map((grp) => (
                   <div key={grp.key} className="mb-5">
-                    <div className="font-fredoka text-sm text-teal-200 mb-2">⚙️ {grp.label}:</div>
+                    <div className="font-fredoka text-base text-teal-200 mb-2">⚙️ {grp.label}:</div>
                     <div className="flex flex-wrap gap-2">
                       {grp.choices.map((ch) => {
                         const active = (opts[grp.key] ?? grp.choices[0].value) === ch.value;
@@ -551,7 +713,7 @@ const OnlineHub: React.FC = () => {
                           <button
                             key={ch.value}
                             onClick={() => { playClick(); setOpts((o) => ({ ...o, [grp.key]: ch.value })); }}
-                            className={`px-4 py-2 rounded-full font-fredoka text-sm border-2 transition-all ${
+                            className={`px-4 min-h-[44px] rounded-full font-fredoka text-base border-2 transition-all ${
                               active ? 'bg-amber-400/25 border-amber-400 text-amber-100' : 'bg-white/5 border-white/15 text-teal-100 hover:bg-white/10'
                             }`}
                           >
@@ -564,11 +726,10 @@ const OnlineHub: React.FC = () => {
                 ))}
 
                 <motion.button
-                  whileHover={{ scale: canStart(selGame) ? 1.04 : 1 }}
                   whileTap={{ scale: canStart(selGame) ? 0.96 : 1 }}
                   onClick={startGame}
                   disabled={!canStart(selGame)}
-                  className={`w-full py-4 rounded-full font-fredoka font-bold text-xl shadow-xl ${
+                  className={`w-full py-4 mb-6 rounded-full font-fredoka font-bold text-xl shadow-xl ${
                     canStart(selGame) ? 'bg-gradient-to-r from-amber-400 to-pink-500' : 'bg-gray-500/50 text-gray-300 cursor-not-allowed'
                   }`}
                 >
@@ -576,23 +737,18 @@ const OnlineHub: React.FC = () => {
                 </motion.button>
               </>
             ) : (
-              <div className="text-center bg-white/10 rounded-3xl p-6 border border-white/20">
-                <motion.div
-                  animate={{ rotate: [0, 10, -10, 0] }}
-                  transition={{ duration: 1.2, repeat: Infinity }}
-                  className="text-5xl mb-3"
-                >
-                  ⏳
-                </motion.div>
-                <div className="font-fredoka text-xl">Waiting for the host to start a game…</div>
-                <div className="font-nunito text-teal-200 text-sm mt-1">Stay ready, superstar!</div>
+              <div className={`${panel} text-center mb-6`}>
+                <div className="font-fredoka text-xl">⏳ Waiting for the host to start a game…</div>
+                <div className="font-nunito text-lg text-teal-200 mt-1 mb-4">Stay ready, superstar!</div>
+                <BalloonPop />
               </div>
             )}
+
           </motion.div>
         )}
       </div>
 
-      {/* Host left the room */}
+      {/* Turned away or removed */}
       <AnimatePresence>
         {room.status === 'closed' && (
           <motion.div
@@ -601,13 +757,15 @@ const OnlineHub: React.FC = () => {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
           >
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 border-4 border-red-400 rounded-3xl p-8 text-center max-w-sm mx-4">
-              <div className="text-6xl mb-3">😢</div>
-              <h2 className="font-fredoka font-bold text-2xl mb-2">The host left the room</h2>
-              <p className="font-nunito text-slate-300 mb-6">Ask them to make a new room, or create your own!</p>
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 border-4 border-amber-400 rounded-3xl p-8 text-center max-w-sm mx-4" role="alertdialog">
+              <div className="text-6xl mb-3">{room.closedReason === 'locked' ? '🔒' : '🙂'}</div>
+              <h2 className="font-fredoka font-bold text-2xl mb-2">{room.closedReason === 'locked' ? 'This room is locked' : 'Time for a new room!'}</h2>
+              <p className="font-nunito text-lg text-slate-300 mb-6">
+                {room.closedReason === 'locked' ? 'Ask the host to let you in from your club, or make your own room!' : 'The host has started a new group — find another room or make your own!'}
+              </p>
               <button
                 onClick={leaveToMenu}
-                className="px-8 py-3 rounded-full font-fredoka font-bold bg-gradient-to-r from-amber-400 to-pink-500 shadow-xl"
+                className="px-8 min-h-[52px] rounded-full font-fredoka font-bold text-lg bg-gradient-to-r from-amber-400 to-pink-500 shadow-xl"
               >
                 OK
               </button>

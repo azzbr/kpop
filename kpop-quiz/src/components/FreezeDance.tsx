@@ -23,6 +23,7 @@ type Phase = 'setup' | 'playing' | 'frozen' | 'gameover';
 
 export default function FreezeDance() {
   const { setGameState, playlist, currentTrack, setIsPlaying, setCurrentTrack } = useGameStore();
+  const tname = useGameStore(s => s.teacher?.name) ?? 'Teacher';
   const [phase, setPhase] = useState<Phase>('setup');
   const [pose, setPose] = useState(POSES[0]);
   const [poseCountdown, setPoseCountdown] = useState(5);
@@ -38,7 +39,7 @@ export default function FreezeDance() {
   const phaseRef = useRef<Phase>('setup');
   useEffect(() => { phaseRef.current = phase; }, [phase]);
 
-  // load roster from Jarvis localStorage
+  // load the roll call from the Teacher's Lounge (localStorage 'jarvis_students')
   useEffect(() => {
     try {
       const raw = localStorage.getItem('jarvis_students');
@@ -168,7 +169,7 @@ export default function FreezeDance() {
             {roster.length > 0 && (
               <div className="card-kid bg-white">
                 <h3 className="font-fredoka text-purple-700 text-xl mb-2">
-                  👥 Players ({roster.length} from Mr. Jarvis's roll)
+                  👥 Players ({roster.length} from {tname}'s roll call)
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {roster.map(n => (
@@ -182,7 +183,7 @@ export default function FreezeDance() {
             {roster.length === 0 && (
               <div className="card-kid bg-amber-50 border-amber-300">
                 <p className="font-nunito text-amber-800 text-sm">
-                  💡 Add students in <strong>Mr. Jarvis's Lounge → Roll Call</strong> to enable player elimination. Or just dance!
+                  💡 Add students in <strong>Teacher's Lounge → Roll Call</strong> to enable player elimination. Or just dance!
                 </p>
               </div>
             )}
