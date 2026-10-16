@@ -68,7 +68,7 @@ const GAME_SCREENS: Partial<Record<GameId, React.LazyExoticComponent<GameComp>>>
 const EMOJIS = ['🎤', '🎸', '🥁', '🎹', '🎧', '🌟', '💖', '🔥', '🦄', '🐯', '🐰', '🦊'];
 
 const GAMES: { id: GameId; icon: string; title: string; desc: string; min: number; max: number; tag: string; isNew?: boolean }[] = [
-  { id: 'imposter', icon: '🤫', title: 'Imposter', desc: 'Everyone gets the secret word — except the imposter! Give clues, then vote out the bluffer.', min: 3, max: 12, tag: 'party!' },
+  { id: 'imposter', icon: '🤫', title: 'Imposter', desc: '4 modes — Classic, Undercover, Doodle & Emoji clues. 1–2 imposters, then a drumroll vote!', min: 3, max: 12, tag: 'new! party!', isNew: true },
   { id: 'quiz_party', icon: '🎉', title: 'Quiz Party', desc: 'Kahoot-style quiz on a big screen or everyone\'s iPad — Classic, Gold Quest, Racing & Cash Climb. Topics, school subjects or your own quiz!', min: 2, max: 40, tag: 'whole class!' },
   { id: 'quip_clash', icon: '🎤', title: 'Quip Clash', desc: 'Two friends answer the same funny prompt — everyone votes for the funniest. Get every vote for a QUIPLASH!', min: 3, max: 12, tag: 'new! party!', isNew: true },
   { id: 'spy_station', icon: '🕵️', title: 'Spy Station', desc: 'Everyone knows the secret place except the spy. Ask questions, answer carefully, then vote out the spy!', min: 4, max: 10, tag: 'new! party!', isNew: true },
@@ -88,7 +88,7 @@ const GAMES: { id: GameId; icon: string; title: string; desc: string; min: numbe
   { id: 'copy_cat', icon: '🧠', title: 'Copy Cat', desc: 'Watch the pattern, repeat it perfectly. One slip = out. Last one standing wins!', min: 2, max: 30, tag: 'whole class!' },
   { id: 'emoji_detective', icon: '🕵️', title: 'Emoji Detective', desc: 'Crack the emoji puzzle — 🦁👑, 🌧️🏹 — and race to type the answer first!', min: 2, max: 30, tag: 'whole class!' },
   { id: 'word_scramble', icon: '🔤', title: 'Scramble Race', desc: 'The letters are jumbled — unscramble the word fastest to win the round!', min: 2, max: 30, tag: 'whole class!' },
-  { id: 'riddle_rush', icon: '🤔', title: 'Riddle Rush', desc: 'Solve the brain-teasing riddle and type your answer before your friends!', min: 2, max: 30, tag: 'whole class!' },
+  { id: 'riddle_rush', icon: '🤔', title: 'Riddle Rush', desc: '400+ riddles (word & emoji) with hints that unlock — fewer points per hint!', min: 2, max: 30, tag: 'new! whole class!', isNew: true },
   { id: 'picture_phone', icon: '✏️', title: 'Picture Telephone', desc: 'Draw → guess → draw! Turn the pages together, vote for the funniest moment, save your book.', min: 3, max: 12, tag: 'new! pass it on!', isNew: true },
   { id: 'math_sprint', icon: '➗', title: 'Math Sprint', desc: 'First to solve the sum wins the round! Six levels, from Easy to Legend.', min: 2, max: 30, tag: 'brain game!' },
   { id: 'code_breaker', icon: '🔢', title: 'Code Breaker', desc: 'Crack the secret colour code with logic clues — everyone races!', min: 2, max: 30, tag: 'brain game!' },

@@ -75,6 +75,18 @@ export const GAME_OPTIONS: Partial<Record<GameId, OptionGroup[]>> = {
   memory_digits: [{ key: 'difficulty', label: 'Difficulty', choices: [
     { value: 'easy', label: '😀 Easy · 3' }, { value: 'medium', label: '🙂 Medium · 4' }, { value: 'hard', label: '🤓 Hard · 5' }, { value: 'expert', label: '🧠 Expert · 6' }, { value: 'master', label: '🔥 Master · 7' }, { value: 'legend', label: '💀 Legend · 8' },
   ] }],
+  imposter: [
+    { key: 'mode', label: 'Mode', choices: [
+      { value: 'classic', label: '🤫 Classic' }, { value: 'undercover', label: '🎭 Undercover' }, { value: 'doodle', label: '✏️ Doodle clues' }, { value: 'emoji', label: '😀 Emoji clues' },
+    ] },
+    { key: 'imposters', label: 'Imposters', choices: [{ value: 'auto', label: '🤖 Auto (2 at 7+)' }, { value: '1', label: '1 imposter' }, { value: '2', label: '2 imposters' }] },
+    BOARD,
+  ],
+  riddle_rush: [
+    { key: 'difficulty', label: 'Difficulty', choices: [{ value: 'easy', label: '😀 Easy' }, { value: 'tricky', label: '🤓 Tricky' }, { value: 'genius', label: '🧠 Genius' }] },
+    { key: 'kind', label: 'Riddles', choices: [{ value: 'mixed', label: '🎲 Mixed' }, { value: 'word', label: '💬 Word riddles' }, { value: 'emoji', label: '🖼️ Emoji riddles' }] },
+    BOARD,
+  ],
   sudoku_mini: [{ key: 'difficulty', label: 'Difficulty', choices: [
     { value: 'easy', label: '😀 Easy · 4×4' }, { value: 'medium', label: '🙂 Medium · 4×4' }, { value: 'hard', label: '🤓 Hard · 6×6' }, { value: 'expert', label: '🧠 Expert · 6×6' }, { value: 'master', label: '🔥 Master · 6×6' }, { value: 'legend', label: '💀 Legend · 6×6' },
   ] }],
