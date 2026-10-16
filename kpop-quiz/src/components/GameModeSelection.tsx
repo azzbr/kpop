@@ -176,7 +176,7 @@ const GameModeSelection: React.FC = () => {
           </h1>
           {equipped.title && <p className="font-fredoka text-lg text-yellow-300">{equipped.avatar} {equipped.title}</p>}
           <p className="text-lg md:text-xl font-nunito text-violet-200">Pick a game.</p>
-          <Suspense fallback={null}><OnlineCount className="mt-2" /></Suspense>
+          <div className="min-h-[44px] pt-2"><Suspense fallback={null}><OnlineCount /></Suspense></div>
         </div>
 
         <PlayerLevelBadge />

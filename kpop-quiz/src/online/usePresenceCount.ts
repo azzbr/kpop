@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import type { RealtimeChannel } from '@supabase/realtime-js';
 import { openChannel, closeChannel, presenceList, getMyId } from './channel';
+import { LOCAL_ROOMS } from './localChannel';
 
 export const ONLINE_CHANNEL = 'kpop_online';
 /** A falling count waits this long before it shows (so it doesn't flicker on a reconnect). */
@@ -42,8 +43,12 @@ function update(next: OnlineCount) {
   }
 }
 
+// Automated test browsers (Playwright, CI) never join the real count — except in ?localroom,
+// where the "channel" is just other tabs of the same browser.
+const SKIP = typeof navigator !== 'undefined' && navigator.webdriver && !LOCAL_ROOMS;
+
 function connect() {
-  if (channel || typeof document === 'undefined' || document.hidden) return;
+  if (SKIP || channel || typeof document === 'undefined' || document.hidden) return;
   const ch = openChannel(ONLINE_CHANNEL, getMyId());
   channel = ch;
   ch.on('presence', { event: 'sync' }, () => update(countPresence(presenceList<{ r?: number }>(ch))));

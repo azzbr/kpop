@@ -308,7 +308,7 @@ const WelcomeScreen: React.FC = () => {
             <span className="text-lg">🕵️‍♀️</span>
             <span>Secret HQ</span>
           </button>
-          <div className="mt-4"><Suspense fallback={null}><OnlineCount /></Suspense></div>
+          <div className="mt-4 min-h-[36px]"><Suspense fallback={null}><OnlineCount /></Suspense></div>
         </motion.div>
       </div>
     </motion.div>

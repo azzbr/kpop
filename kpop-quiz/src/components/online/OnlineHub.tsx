@@ -503,7 +503,7 @@ const OnlineHub: React.FC = () => {
       <div className="max-w-3xl mx-auto pt-14">
         <h1 className="text-center font-fredoka font-bold text-3xl md:text-5xl mb-1">🌐 Friends Arena</h1>
         <p className="text-center font-nunito text-lg text-teal-200 mb-3">Play together — every player on their own device!</p>
-        <div className="flex justify-center mb-6"><OnlineCount rooms /></div>
+        <div className="flex justify-center mb-6 min-h-[36px]"><OnlineCount rooms /></div>
 
         {screen !== 'lobby' && needName && (
           <div className="max-w-xl mx-auto mb-6">
