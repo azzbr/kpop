@@ -144,7 +144,7 @@ export const EMOJI_PUZZLES: EmojiPuzzle[] = [
   { emoji: '🦷🧚', answer: 'tooth fairy', hint: 'leaves money under your pillow' },
   { emoji: '🐮👦', answer: 'cowboy', hint: 'rides horses in the wild west' },
   { emoji: '🐌📧', answer: 'snail mail', hint: 'a slow way to send letters' },
-  { emoji: '🌽🐶', answer: 'corn dog', alt: ['corndog'], hint: 'a sausage on a stick in batter' },
+  { emoji: '📚🐛', answer: 'bookworm', alt: ['book worm'], hint: 'someone who loves reading' },
   { emoji: '🐢🥷', answer: 'ninja turtle', alt: ['ninja turtles', 'teenage mutant ninja turtle'], hint: 'reptiles who fight crime' },
   { emoji: '❄️👸', answer: 'frozen', alt: ['elsa'], hint: 'a movie about a princess who makes ice' },
   { emoji: '🐠🔍', answer: 'finding nemo', alt: ['nemo'], hint: 'a movie about a lost clownfish' },

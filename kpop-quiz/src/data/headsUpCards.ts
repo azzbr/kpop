@@ -40,14 +40,14 @@ export const HEADS_UP_CATEGORIES: HeadsUpCategory[] = [
       'Football', 'Basketball', 'Tennis', 'Swimming', 'Gymnastics', 'Baseball', 'Golf', 'Skiing', 'Surfing', 'Skateboarding',
       'Ice Skating', 'Cycling', 'Volleyball', 'Badminton', 'Table Tennis', 'Rugby', 'Cricket', 'Ice Hockey', 'Karate', 'Bowling',
       'Archery', 'Rowing', 'Diving', 'Rock Climbing', 'Sprinting', 'Hurdles', 'Long Jump', 'Snowboarding', 'Sailing', 'Horse Riding',
-      'Dodgeball', 'Netball', 'Tug of War', 'Yoga', 'Trampolining', 'Roller Skating', 'Kayaking', 'Fencing', 'Weightlifting', 'Frisbee',
+      'Dodgeball', 'Netball', 'Tug of War', 'Yoga', 'Trampolining', 'Roller Skating', 'Kayaking', 'Fencing', 'Weightlifting', 'Sack Race',
     ],
   },
   {
     id: 'food', name: 'Food', emoji: '🍕', hint: 'Pretend to eat it, describe the taste!',
     cards: [
       'Pizza', 'Pancakes', 'Spaghetti', 'Ice Cream', 'Banana', 'Apple', 'Strawberry', 'Watermelon', 'Popcorn', 'Sandwich',
-      'Burger', 'Hot Dog', 'Taco', 'Sushi', 'Cookie', 'Cupcake', 'Donut', 'Cereal', 'Toast', 'Cheese',
+      'Burger', 'Hot Dog', 'Taco', 'Sushi', 'Cookie', 'Cupcake', 'Doughnut', 'Cereal', 'Toast', 'Cheese',
       'Carrot', 'Broccoli', 'Corn on the Cob', 'Chips', 'Rice', 'Soup', 'Salad', 'Boiled Egg', 'Yogurt', 'Chocolate',
       'Lemon', 'Grapes', 'Coconut', 'Pineapple', 'Birthday Cake', 'Waffles', 'Noodles', 'Lollipop', 'Pretzel', 'Milkshake',
     ],
@@ -56,7 +56,7 @@ export const HEADS_UP_CATEGORIES: HeadsUpCategory[] = [
     id: 'jobs', name: 'Jobs', emoji: '👩‍🚒', hint: 'What do they do all day?',
     cards: [
       'Doctor', 'Firefighter', 'Teacher', 'Chef', 'Pilot', 'Astronaut', 'Farmer', 'Police Officer', 'Vet', 'Dentist',
-      'Baker', 'Artist', 'Singer', 'Dancer', 'Builder', 'Nurse', 'Scientist', 'Librarian', 'Mail Carrier', 'Zookeeper',
+      'Baker', 'Artist', 'Singer', 'Dancer', 'Builder', 'Nurse', 'Scientist', 'Librarian', 'Postal Worker', 'Zookeeper',
       'Photographer', 'Lifeguard', 'Hairdresser', 'Gardener', 'Bus Driver', 'Magician', 'Clown', 'Plumber', 'Mechanic', 'Detective',
       'Pirate', 'Shopkeeper', 'Waiter', 'Footballer', 'DJ', 'Inventor', 'Referee', 'Window Cleaner', 'News Reporter', 'Explorer',
     ],
