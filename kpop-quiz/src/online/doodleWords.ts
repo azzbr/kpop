@@ -20,9 +20,9 @@ export const DOODLE_CATEGORIES: WordCategory[] = [
   {
     category: 'Food & Treats',
     words: [
-      'apple', 'banana', 'pizza', 'cake', 'ice cream', 'cookie', 'donut', 'burger',
-      'hotdog', 'popcorn', 'lollipop', 'cupcake', 'watermelon', 'strawberry', 'carrot',
-      'cheese', 'egg', 'bread', 'sandwich', 'taco', 'pancake', 'candy', 'grapes', 'cherry',
+      'apple', 'banana', 'pizza', 'pear', 'ice cream', 'cookie', 'pineapple', 'burger',
+      'hot dog', 'popcorn', 'lollipop', 'cupcake', 'watermelon', 'strawberry', 'carrot',
+      'cheese', 'egg', 'bread', 'sandwich', 'taco', 'pancake', 'spaghetti', 'grapes', 'cherry',
     ],
   },
   {
@@ -45,24 +45,24 @@ export const DOODLE_CATEGORIES: WordCategory[] = [
     category: 'On the Move',
     words: [
       'car', 'bus', 'train', 'plane', 'boat', 'rocket', 'bicycle', 'truck',
-      'helicopter', 'submarine', 'tractor', 'scooter', 'ship', 'ambulance', 'firetruck',
-      'taxi', 'motorbike', 'sailboat', 'anchor', 'skateboard',
+      'helicopter', 'submarine', 'tractor', 'scooter', 'roller coaster', 'ambulance', 'fire engine',
+      'taxi', 'motorbike', 'sledge', 'parachute', 'skateboard',
     ],
   },
   {
     category: 'Fairy-Tale & Fantasy',
     words: [
       'dragon', 'castle', 'crown', 'king', 'queen', 'princess', 'knight', 'wizard',
-      'witch', 'unicorn', 'mermaid', 'fairy', 'ghost', 'robot', 'alien', 'monster',
-      'pirate', 'treasure', 'genie', 'troll', 'giant', 'sword',
+      'witch', 'unicorn', 'mermaid', 'fairy', 'gnome', 'robot', 'alien', 'potion',
+      'pirate', 'treasure', 'genie', 'troll', 'beanstalk', 'magic wand',
     ],
   },
   {
     category: 'Sports & Play',
     words: [
       'football', 'basketball', 'tennis', 'swimming', 'kite', 'baseball', 'goal',
-      'trophy', 'medal', 'jump rope', 'hula hoop', 'slide', 'swing', 'seesaw',
-      'bowling', 'surfboard', 'skates', 'dartboard', 'racquet', 'whistle',
+      'trophy', 'medal', 'skipping rope', 'hula hoop', 'slide', 'swing', 'seesaw',
+      'bowling', 'surfboard', 'skates', 'trampoline', 'golf', 'whistle',
     ],
   },
   {
@@ -71,7 +71,7 @@ export const DOODLE_CATEGORIES: WordCategory[] = [
       'guitar', 'drum', 'piano', 'microphone', 'headphones', 'music note', 'speaker',
       'trumpet', 'violin', 'saxophone', 'flute', 'harp', 'xylophone', 'maracas',
       'tambourine', 'bell', 'radio', 'triangle', 'banjo', 'accordion', 'harmonica',
-      'cello', 'trombone', 'recorder', 'drumsticks', 'stage', 'cymbals',
+      'cello', 'trombone', 'recorder', 'disco ball', 'stage', 'cymbals',
     ],
   },
   {
@@ -79,14 +79,14 @@ export const DOODLE_CATEGORIES: WordCategory[] = [
     words: [
       'eye', 'hand', 'foot', 'nose', 'ear', 'tooth', 'hat', 'shoe', 'sock', 'glasses',
       'shirt', 'dress', 'scarf', 'gloves', 'boot', 'jacket', 'button', 'ring',
-      'mustache', 'belt',
+      'necklace', 'belt',
     ],
   },
   {
     category: 'Places',
     words: [
       'school', 'beach', 'park', 'zoo', 'farm', 'hospital', 'library', 'bridge',
-      'lighthouse', 'tent', 'igloo', 'garden', 'playground', 'airport', 'barn',
+      'lighthouse', 'tent', 'igloo', 'garden', 'playground', 'airport', 'skyscraper',
       'windmill', 'cave', 'market', 'house', 'pyramid', 'treehouse',
     ],
   },
@@ -94,7 +94,7 @@ export const DOODLE_CATEGORIES: WordCategory[] = [
     category: 'Jobs & People',
     words: [
       'teacher', 'doctor', 'chef', 'pilot', 'firefighter', 'police', 'farmer',
-      'astronaut', 'clown', 'artist', 'nurse', 'scientist', 'painter', 'baker',
+      'astronaut', 'clown', 'artist', 'nurse', 'scientist', 'gardener', 'baker',
       'magician', 'superhero', 'ballerina', 'cowboy', 'builder', 'dentist', 'lifeguard',
     ],
   },
@@ -103,7 +103,7 @@ export const DOODLE_CATEGORIES: WordCategory[] = [
     words: [
       'present', 'candle', 'fireworks', 'pumpkin', 'party hat', 'christmas tree',
       'santa', 'snow globe', 'easter egg', 'birthday cake', 'confetti', 'ribbon',
-      'lantern', 'costume', 'mask', 'sparkler', 'balloon', 'bow', 'stocking', 'reindeer',
+      'lantern', 'party popper', 'mask', 'sparkler', 'balloon', 'sandcastle', 'gingerbread man', 'reindeer',
       'heart',
     ],
   },
