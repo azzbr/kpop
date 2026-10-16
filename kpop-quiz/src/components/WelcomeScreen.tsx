@@ -33,6 +33,7 @@ const WelcomeScreen: React.FC = () => {
   const [opening, setOpening] = useState<Letter | null>(null);
   const [factBubble, setFactBubble] = useState<string | null>(null);
   const [noteClicks, setNoteClicks] = useState(0);
+  const tapsRef = useRef(0);
   const [djMode, setDjMode] = useState(false);
   const [secretToast, setSecretToast] = useState<string | null>(null);
   const [hint, setHint] = useState<Letter | null>(null);
@@ -92,14 +93,16 @@ const WelcomeScreen: React.FC = () => {
   const tapJoystick = () => {
     if (djMode) return;
     playClick();
-    const next = noteClicks + 1;
+    // Count taps in a ref: fast taps can come before React re-renders with the new count.
+    const next = tapsRef.current + 1;
+    tapsRef.current = next;
     setNoteClicks(next);
     if (next >= 5) {
       setDjMode(true);
       playUnlock();
       found('dj_mode');
       window.clearTimeout(djTimer.current);
-      djTimer.current = window.setTimeout(() => { setDjMode(false); setNoteClicks(0); }, 5000);
+      djTimer.current = window.setTimeout(() => { setDjMode(false); setNoteClicks(0); tapsRef.current = 0; }, 5000);
     }
   };
 
