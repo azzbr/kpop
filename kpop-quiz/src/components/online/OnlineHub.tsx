@@ -4,6 +4,7 @@ import { useGameStore } from '../../store';
 import { useRoom, SESSION_RESULT, savedRoom } from '../../online/useRoom';
 import type { GameId, GameConfig, RoomApi } from '../../online/useRoom';
 import { playClick, playUnlock, playWin } from '../../utils/sounds';
+import { GAME_OPTIONS } from './arenaOptions';
 // Each game is its own download, fetched when the host starts it (the hub stays small).
 // They all take { room, config }.
 type GameComp = React.ComponentType<{ room: RoomApi; config?: GameConfig }>;
@@ -23,6 +24,13 @@ const GAME_SCREENS: Partial<Record<GameId, React.LazyExoticComponent<GameComp>>>
   star_grab: lazy(() => import('./StarGrab') as Promise<{ default: GameComp }>),
   crowd_pleaser: lazy(() => import('./CrowdPleaser') as Promise<{ default: GameComp }>),
   rps_showdown: lazy(() => import('./RpsShowdown') as Promise<{ default: GameComp }>),
+  fake_artist: lazy(() => import('./FakeArtist') as Promise<{ default: GameComp }>),
+  quip_clash: lazy(() => import('./QuipClash') as Promise<{ default: GameComp }>),
+  doodle_decoy: lazy(() => import('./DoodleDecoy') as Promise<{ default: GameComp }>),
+  emoji_charades: lazy(() => import('./EmojiCharades') as Promise<{ default: GameComp }>),
+  heads_up_party: lazy(() => import('./HeadsUpParty') as Promise<{ default: GameComp }>),
+  monster_mash: lazy(() => import('./MonsterMash') as Promise<{ default: GameComp }>),
+  spy_station: lazy(() => import('./SpyStation') as Promise<{ default: GameComp }>),
   emoji_detective: lazy(() => import('./EmojiDetective') as Promise<{ default: GameComp }>),
   word_scramble: lazy(() => import('./WordScramble') as Promise<{ default: GameComp }>),
   riddle_rush: lazy(() => import('./RiddleRush') as Promise<{ default: GameComp }>),
@@ -85,44 +93,6 @@ const GAMES: { id: GameId; icon: string; title: string; desc: string; min: numbe
   { id: 'monopoly_deal', icon: '🃏', title: 'Property Dash', desc: 'The card game! Collect 3 full street sets — charge rent, pull sneaky swaps and say “No way!”', min: 2, max: 4, tag: '2–4 players' },
 ];
 
-// Host-chosen setup for games that support it. Sent inside the `start` message.
-interface OptionGroup {
-  key: string;
-  label: string;
-  choices: { value: string; label: string }[];
-}
-const STD = [
-  { value: 'easy', label: '😀 Easy' }, { value: 'medium', label: '🙂 Medium' }, { value: 'hard', label: '🤓 Hard' }, { value: 'expert', label: '🧠 Expert' }, { value: 'master', label: '🔥 Master' }, { value: 'legend', label: '💀 Legend' },
-];
-const GAME_OPTIONS: Partial<Record<GameId, OptionGroup[]>> = {
-  team_tug: [{ key: 'mode', label: 'Mode', choices: [{ value: 'tug', label: '🪢 Team tug' }, { value: 'rocket', label: '🚀 Rocket race' }] }],
-  math_sprint: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
-  pattern_quest: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
-  make_24: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
-  hangman: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
-  brain_buzzer: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
-  minesweeper: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
-  sliding_puzzle: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
-  colour_clash: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
-  dots_boxes: [{ key: 'difficulty', label: 'Board size', choices: [
-    { value: 'small', label: '▫️ Small · 3×3' }, { value: 'medium', label: '◻️ Medium · 4×4' }, { value: 'large', label: '⬜ Large · 5×5' },
-  ] }],
-  code_breaker: [{ key: 'difficulty', label: 'Difficulty', choices: [
-    { value: 'easy', label: '😀 Easy · 3' }, { value: 'normal', label: '🙂 Normal · 4' }, { value: 'hard', label: '🤓 Hard · 4+' }, { value: 'expert', label: '🧠 Expert · 5' }, { value: 'master', label: '🔥 Master · 5/8' }, { value: 'legend', label: '💀 Legend · 6/8' },
-  ] }],
-  odd_one_out: [{ key: 'difficulty', label: 'Difficulty', choices: [
-    { value: 'easy', label: '😀 Easy' }, { value: 'hard', label: '🤓 Tricky' }, { value: 'expert', label: '🧠 Genius' }, { value: 'master', label: '🔥 Master' }, { value: 'legend', label: '💀 Legend' },
-  ] }],
-  whats_missing: [{ key: 'difficulty', label: 'Difficulty', choices: [
-    { value: 'easy', label: '😀 Easy · 5' }, { value: 'medium', label: '🙂 Medium · 7' }, { value: 'hard', label: '🤓 Hard · 9' }, { value: 'expert', label: '🧠 Expert · 11' }, { value: 'master', label: '🔥 Master · 13' }, { value: 'legend', label: '💀 Legend · 15' },
-  ] }],
-  memory_digits: [{ key: 'difficulty', label: 'Difficulty', choices: [
-    { value: 'easy', label: '😀 Easy · 3' }, { value: 'medium', label: '🙂 Medium · 4' }, { value: 'hard', label: '🤓 Hard · 5' }, { value: 'expert', label: '🧠 Expert · 6' }, { value: 'master', label: '🔥 Master · 7' }, { value: 'legend', label: '💀 Legend · 8' },
-  ] }],
-  sudoku_mini: [{ key: 'difficulty', label: 'Difficulty', choices: [
-    { value: 'easy', label: '😀 Easy · 4×4' }, { value: 'medium', label: '🙂 Medium · 4×4' }, { value: 'hard', label: '🤓 Hard · 6×6' }, { value: 'expert', label: '🧠 Expert · 6×6' }, { value: 'master', label: '🔥 Master · 6×6' }, { value: 'legend', label: '💀 Legend · 6×6' },
-  ] }],
-};
 
 // Games that can take late joiners and survive a host change (they sync from a snapshot).
 const LATE_JOIN_GAMES: GameId[] = ['quiz_party', 'imposter'];

@@ -118,6 +118,16 @@ export interface AgentProgress { solvedIds: string[]; solved: number }
 
 export interface PaperClashPrefs { style: 'new' | 'classic' }
 
+/** A Friends Arena club (data/clubWords.ts): the name comes from the code, never typed. */
+export interface Club { code: string; name: string; emoji: string }
+export const MAX_CLUBS = 3;
+/** Teacher set up in the Grown-ups corner. The PIN is a lock against kids, not real security. */
+export interface TeacherProfile { name: string; pinHash: string }
+/** Gold stars a teacher gave this player: at most GOLD_STAR_MAX per lesson pay coins. */
+export interface GoldStars { lesson: string; inLesson: number; total: number }
+export const GOLD_STAR_MAX = 3;
+export const GOLD_STAR_COINS = 5;
+
 export interface WordGuessState {
   /** The daily puzzle in progress / finished (keyed by local date). */
   daily: { date: string; guesses: string[]; done: boolean; won: boolean } | null;
@@ -170,6 +180,12 @@ interface GameStore {
   /** Hidden easter eggs found (ids from data/secrets.ts). */
   secretsFound: string[];
   paperClash: PaperClashPrefs;
+  // v5
+  clubs: Club[];
+  teacher: TeacherProfile | null;
+  goldStars: GoldStars;
+  /** Teacher mode is on for this visit (after the PIN; never saved). */
+  teacherOn: boolean;
 
   // Team maker
   teamMembers: string[];
@@ -250,6 +266,13 @@ interface GameStore {
   /** Marks an easter egg as found. Returns true the first time. */
   findSecret: (id: string) => boolean;
   setPaperClash: (patch: Partial<PaperClashPrefs>) => void;
+  /** Adds (or moves to the front) a club. Keeps at most MAX_CLUBS. */
+  joinClub: (club: Club) => void;
+  leaveClub: (code: string) => void;
+  setTeacher: (t: TeacherProfile | null) => void;
+  setTeacherOn: (on: boolean) => void;
+  /** A teacher's gold star arrived. Pays GOLD_STAR_COINS for the first GOLD_STAR_MAX in a lesson. */
+  receiveGoldStar: (lesson: string) => boolean;
   incrementDrawingsCreated: () => void;
   incrementBubblesPopped: () => void;
   incrementPatternsCreated: () => void;
@@ -258,7 +281,7 @@ interface GameStore {
 
 const SAVE_KEY = 'funquest-save';
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 /** What gets saved: progress only — never the current screen, an in-progress game or secretReturn. */
 export function partializeSave(s: GameStore) {
@@ -293,6 +316,9 @@ export function partializeSave(s: GameStore) {
     agent: s.agent,
     secretsFound: s.secretsFound,
     paperClash: s.paperClash,
+    clubs: s.clubs,
+    teacher: s.teacher,
+    goldStars: s.goldStars,
   };
 }
 
@@ -317,6 +343,7 @@ export function migrateSave(persisted: unknown, version: number): Partial<GameSt
     s.secretsFound = s.secretsFound ?? [];
     s.paperClash = { style: 'new', ...(s.paperClash ?? {}) };
   }
+  // v4 → v5 added clubs, teacher and goldStars (top-level defaults cover them).
   s.equipped = { ...DEFAULT_EQUIPPED, ...(s.equipped ?? {}) };
   return s;
 }
@@ -418,6 +445,10 @@ export const useGameStore = create<GameStore>()(
       agent: { solvedIds: [], solved: 0 },
       secretsFound: [],
       paperClash: { style: 'new' },
+      clubs: [],
+      teacher: null,
+      goldStars: { lesson: '', inLesson: 0, total: 0 },
+      teacherOn: false,
       secretStats: { bubblesPopped: 0, patternsCreated: 0, drawingsCreated: 0, treasureFound: 0 },
 
       setGameState: (state) => set({ gameState: state }),
@@ -613,6 +644,17 @@ export const useGameStore = create<GameStore>()(
         return true;
       },
       setPaperClash: (patch) => set({ paperClash: { ...get().paperClash, ...patch } }),
+      joinClub: (club) => set({ clubs: [club, ...get().clubs.filter(c => c.code !== club.code)].slice(0, MAX_CLUBS) }),
+      leaveClub: (code) => set({ clubs: get().clubs.filter(c => c.code !== code) }),
+      setTeacher: (t) => set(t ? { teacher: t } : { teacher: null, teacherOn: false }),
+      setTeacherOn: (on) => set({ teacherOn: on && !!get().teacher }),
+      receiveGoldStar: (lesson) => {
+        const g = get().goldStars;
+        const inLesson = g.lesson === lesson ? g.inLesson : 0;
+        if (inLesson >= GOLD_STAR_MAX) return false;
+        set({ goldStars: { lesson, inLesson: inLesson + 1, total: g.total + 1 }, userCurrency: get().userCurrency + GOLD_STAR_COINS });
+        return true;
+      },
       incrementDrawingsCreated: () => bump(set, get, 'drawingsCreated'),
       incrementBubblesPopped: () => bump(set, get, 'bubblesPopped'),
       incrementPatternsCreated: () => bump(set, get, 'patternsCreated'),

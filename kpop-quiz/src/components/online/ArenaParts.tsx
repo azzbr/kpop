@@ -36,8 +36,8 @@ export function RoundPill({ round, of, seconds }: { round: number; of: number; s
 }
 
 /** Everyone's score, best first, you highlighted. */
-export function Scores({ room, scores, note }: { room: RoomApi; scores: Record<string, number>; note?: (id: string) => ReactNode }) {
-  const ids = room.players.map(p => p.id).sort((a, b) => (scores[b] ?? 0) - (scores[a] ?? 0));
+export function Scores({ room, scores, note, ids: only }: { room: RoomApi; scores: Record<string, number>; note?: (id: string) => ReactNode; ids?: string[] }) {
+  const ids = (only ?? room.players.map(p => p.id)).slice().sort((a, b) => (scores[b] ?? 0) - (scores[a] ?? 0));
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
       {ids.map(id => {

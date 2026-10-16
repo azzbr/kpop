@@ -10,7 +10,8 @@ import { playClick } from '../../utils/sounds';
 export type DrawPt = [number, number, number];
 
 export interface DrawCanvasHandle {
-  getImage: () => string; // downscaled JPEG dataURL (~240×180)
+  /** Downscaled JPEG dataURL (default 240×180; Picture Telephone 2.0 uses 480×360). */
+  getImage: (w?: number, h?: number, quality?: number) => string;
   clear: () => void;
   /** Replays points drawn on another device. */
   drawPoints: (pts: DrawPt[], color: string, width: number) => void;
@@ -91,18 +92,18 @@ const DrawCanvas = forwardRef<DrawCanvasHandle, Props>(({ disabled, onPoints, on
     drawPoints: (pts, color, width) => {
       for (const [x, y, ns] of pts) paint(x * CW, y * CH, !!ns, color, width, remoteLast);
     },
-    getImage: () => {
+    getImage: (w = 240, h = 180, quality = 0.5) => {
       const cv = canvasRef.current;
       if (!cv) return '';
       const tmp = document.createElement('canvas');
-      tmp.width = 240;
-      tmp.height = 180;
+      tmp.width = w;
+      tmp.height = h;
       const tctx = tmp.getContext('2d');
       if (!tctx) return '';
       tctx.fillStyle = '#ffffff';
-      tctx.fillRect(0, 0, 240, 180);
-      tctx.drawImage(cv, 0, 0, 240, 180);
-      return tmp.toDataURL('image/jpeg', 0.5);
+      tctx.fillRect(0, 0, w, h);
+      tctx.drawImage(cv, 0, 0, w, h);
+      return tmp.toDataURL('image/jpeg', quality);
     },
   }));
 

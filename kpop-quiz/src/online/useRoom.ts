@@ -38,6 +38,13 @@ export type GameId =
   | 'word_chain'
   | 'star_grab'
   | 'crowd_pleaser'
+  | 'fake_artist'
+  | 'quip_clash'
+  | 'doodle_decoy'
+  | 'emoji_charades'
+  | 'heads_up_party'
+  | 'monster_mash'
+  | 'spy_station'
   | 'rps_showdown';
 
 // Optional per-game setup chosen by the host in the lobby (difficulty, etc.),

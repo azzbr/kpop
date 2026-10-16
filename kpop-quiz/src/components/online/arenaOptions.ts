@@ -1,0 +1,45 @@
+// Host-chosen setup for Friends Arena games, shown in the lobby and sent in the `start`
+// message as GameConfig (key → value).
+import type { GameId } from '../../online/useRoom';
+
+export interface OptionGroup {
+  key: string;
+  label: string;
+  choices: { value: string; label: string }[];
+}
+const STD = [
+  { value: 'easy', label: '😀 Easy' }, { value: 'medium', label: '🙂 Medium' }, { value: 'hard', label: '🤓 Hard' }, { value: 'expert', label: '🧠 Expert' }, { value: 'master', label: '🔥 Master' }, { value: 'legend', label: '💀 Legend' },
+];
+/** Big-screen mode: the host's device shows the game on the board and doesn't play (config.board === '1'). */
+export const BOARD: OptionGroup = { key: 'board', label: 'Host screen', choices: [{ value: '0', label: '📱 Host plays too' }, { value: '1', label: '📺 Big screen (host watches)' }] };
+
+// The first choice of each group is the default.
+export const GAME_OPTIONS: Partial<Record<GameId, OptionGroup[]>> = {
+  team_tug: [{ key: 'mode', label: 'Mode', choices: [{ value: 'tug', label: '🪢 Team tug' }, { value: 'rocket', label: '🚀 Rocket race' }] }],
+  math_sprint: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
+  pattern_quest: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
+  make_24: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
+  hangman: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
+  brain_buzzer: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
+  minesweeper: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
+  sliding_puzzle: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
+  colour_clash: [{ key: 'difficulty', label: 'Difficulty', choices: STD }],
+  dots_boxes: [{ key: 'difficulty', label: 'Board size', choices: [
+    { value: 'small', label: '▫️ Small · 3×3' }, { value: 'medium', label: '◻️ Medium · 4×4' }, { value: 'large', label: '⬜ Large · 5×5' },
+  ] }],
+  code_breaker: [{ key: 'difficulty', label: 'Difficulty', choices: [
+    { value: 'easy', label: '😀 Easy · 3' }, { value: 'normal', label: '🙂 Normal · 4' }, { value: 'hard', label: '🤓 Hard · 4+' }, { value: 'expert', label: '🧠 Expert · 5' }, { value: 'master', label: '🔥 Master · 5/8' }, { value: 'legend', label: '💀 Legend · 6/8' },
+  ] }],
+  odd_one_out: [{ key: 'difficulty', label: 'Difficulty', choices: [
+    { value: 'easy', label: '😀 Easy' }, { value: 'hard', label: '🤓 Tricky' }, { value: 'expert', label: '🧠 Genius' }, { value: 'master', label: '🔥 Master' }, { value: 'legend', label: '💀 Legend' },
+  ] }],
+  whats_missing: [{ key: 'difficulty', label: 'Difficulty', choices: [
+    { value: 'easy', label: '😀 Easy · 5' }, { value: 'medium', label: '🙂 Medium · 7' }, { value: 'hard', label: '🤓 Hard · 9' }, { value: 'expert', label: '🧠 Expert · 11' }, { value: 'master', label: '🔥 Master · 13' }, { value: 'legend', label: '💀 Legend · 15' },
+  ] }],
+  memory_digits: [{ key: 'difficulty', label: 'Difficulty', choices: [
+    { value: 'easy', label: '😀 Easy · 3' }, { value: 'medium', label: '🙂 Medium · 4' }, { value: 'hard', label: '🤓 Hard · 5' }, { value: 'expert', label: '🧠 Expert · 6' }, { value: 'master', label: '🔥 Master · 7' }, { value: 'legend', label: '💀 Legend · 8' },
+  ] }],
+  sudoku_mini: [{ key: 'difficulty', label: 'Difficulty', choices: [
+    { value: 'easy', label: '😀 Easy · 4×4' }, { value: 'medium', label: '🙂 Medium · 4×4' }, { value: 'hard', label: '🤓 Hard · 6×6' }, { value: 'expert', label: '🧠 Expert · 6×6' }, { value: 'master', label: '🔥 Master · 6×6' }, { value: 'legend', label: '💀 Legend · 6×6' },
+  ] }],
+};

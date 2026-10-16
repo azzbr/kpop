@@ -1,0 +1,113 @@
+{
+  "state": {
+    "userName": "Mia",
+    "xp": 151,
+    "userCurrency": 452,
+    "highScores": {
+      "paper_clash": 123,
+      "friends_arena": 100
+    },
+    "datesPlayed": [
+      "2026-10-16"
+    ],
+    "earnedBadges": [],
+    "totalQuizzesCompleted": 0,
+    "totalCorrectAnswers": 0,
+    "songsListened": 0,
+    "inventory": [
+      "rare_star"
+    ],
+    "myQuizzes": [
+      {
+        "id": "q1",
+        "title": "Our pets",
+        "emoji": "🐶",
+        "created": 1,
+        "questions": [
+          {
+            "type": "truefalse",
+            "text": "Cats purr",
+            "options": [
+              "True",
+              "False"
+            ],
+            "correct": 0
+          }
+        ],
+        "updatedAt": 1792153778938
+      }
+    ],
+    "equipped": {
+      "avatar": "🦊",
+      "color": "#3b82f6",
+      "trail": "",
+      "title": "",
+      "skin": ""
+    },
+    "dailyDoneDate": "",
+    "wordGuess": {
+      "daily": null,
+      "played": 0,
+      "won": 0,
+      "streak": 0,
+      "bestStreak": 0
+    },
+    "playLog": {
+      "2026-10-16": {
+        "seconds": 600,
+        "games": {
+          "paper_clash": 1,
+          "friends_arena": 1
+        }
+      }
+    },
+    "rounds": {
+      "paper_clash": 1,
+      "friends_arena": 1
+    },
+    "gameBadges": [
+      "pc_first",
+      "pc_10",
+      "arena_first",
+      "arena_win"
+    ],
+    "parent": {
+      "breakMinutes": 30,
+      "sfxVolume": 1
+    },
+    "pet": null,
+    "events": {},
+    "secretStats": {
+      "bubblesPopped": 0,
+      "patternsCreated": 0,
+      "drawingsCreated": 0,
+      "treasureFound": 0
+    },
+    "huntrxUnlocked": false,
+    "currentTheme": "default",
+    "volume": 0.5,
+    "teamMembers": [],
+    "todCustom": [
+      {
+        "id": "c1",
+        "kind": "truth",
+        "text": "What is your favourite snack?",
+        "emoji": "🙂"
+      }
+    ],
+    "pixelArt": [],
+    "agent": {
+      "solvedIds": [
+        "m1"
+      ],
+      "solved": 1
+    },
+    "secretsFound": [
+      "dj_mode"
+    ],
+    "paperClash": {
+      "style": "classic"
+    }
+  },
+  "version": 4
+}
