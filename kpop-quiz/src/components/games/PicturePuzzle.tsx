@@ -289,6 +289,8 @@ export default function PicturePuzzle() {
   return (
     <GameShell
       gameId="picture_puzzle"
+      // A round only ends in a solve: always the win sound, never the 'wrong' one.
+      celebrateEnd
       title="Picture Puzzles"
       icon="🖼️"
       xpScale={9}

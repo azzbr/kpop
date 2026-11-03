@@ -47,11 +47,11 @@ test('Beat Maker: a tune on the melody grid is saved with the beat', async ({ pa
   await openTile(page, /^Beat Maker$/);
   const melody = page.getByRole('group', { name: 'Melody' });
   // Pop Beat starts with a tune: high Do on step 1.
-  await expect(melody.getByRole('button', { name: /^Do high step 1/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(melody.getByRole('button', { name: 'Do high step 1 on', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: '🧽 Clear tune' }).click();
   await expect(melody.locator('[aria-pressed="true"]')).toHaveCount(0);
-  await melody.getByRole('button', { name: 'Re step 4' }).click();
-  await melody.getByRole('button', { name: 'La high step 9' }).click();
+  await melody.getByRole('button', { name: 'Re step 4', exact: true }).click();
+  await melody.getByRole('button', { name: 'La high step 9', exact: true }).click();
   await page.getByRole('button', { name: '💾 Save this beat' }).click();
   await expect(page.getByText(/^Saved as /)).toBeVisible();
 

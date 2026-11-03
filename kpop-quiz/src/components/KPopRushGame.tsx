@@ -728,7 +728,7 @@ export default function KPopRushGame() {
       ctx.textAlign = 'right';
       ctx.font = 'bold 18px Fredoka, sans-serif';
       ctx.fillText(`🏆 ${Math.max(bestRef.current, Math.floor(g.score))}`, W - 16, 30);
-      ctx.fillText(`🪙 ${g.coinCount}`, W - 16, 54);
+      ctx.fillText(`${g.world === 'valley' ? '🥚' : '🪙'} ${g.coinCount}`, W - 16, 54);
       ctx.textAlign = 'left';
 
       if (g.combo >= 5) {
@@ -827,7 +827,7 @@ export default function KPopRushGame() {
       round={round}
       overTitle="Bonk! Nice run!"
       overStats={[
-        { label: 'Coins grabbed', value: `🪙 ${over.coins}` },
+        { label: world === 'valley' ? 'Eggs grabbed' : 'Coins grabbed', value: `${world === 'valley' ? '🥚' : '🪙'} ${over.coins}` },
         { label: 'Best combo', value: `🔥 ${over.combo}` },
       ]}
       startLabel="▶ Start running!"

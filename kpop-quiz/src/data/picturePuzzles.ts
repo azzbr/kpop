@@ -260,7 +260,7 @@ export const PICTURE_PUZZLES: PicturePuzzleDef[] = [
     '..s....s..',
     '.sss..sss.',
   ] },
-  { id: 'b_lighthouse', name: 'Lighthouse', emoji: '🗼', rows: [
+  { id: 'b_lighthouse', name: 'Lighthouse', emoji: '🌊', rows: [
     '....rr....',
     'yy.yyyy.yy',
     '...rrrr...',
