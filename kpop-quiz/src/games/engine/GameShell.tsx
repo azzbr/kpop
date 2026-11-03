@@ -152,12 +152,12 @@ export default function GameShell(props: GameShellProps) {
           {status !== 'playing' && (
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/55 flex items-center justify-center p-4 overflow-y-auto"
+              className="absolute inset-0 bg-black/55 flex justify-center p-4 overflow-y-auto"
             >
               <motion.div
                 initial={{ scale: 0.85, y: 20 }} animate={{ scale: 1, y: 0 }}
                 transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-                className="w-full max-w-md rounded-3xl bg-indigo-950/95 border-2 border-fuchsia-400/60 p-6 text-center shadow-2xl"
+                className="my-auto w-full max-w-md rounded-3xl bg-indigo-950/95 border-2 border-fuchsia-400/60 p-6 text-center shadow-2xl"
               >
                 {status === 'ready' && (
                   <>

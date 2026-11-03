@@ -40,7 +40,7 @@ import { askBot } from './chessBotClient';
 type Room = 'learn' | 'puzzles' | 'bot' | 'duo';
 type Marks = Record<string, 'star' | 'hint' | 'goal' | 'good' | 'oops'>;
 
-interface ChessHook { room: Room; move: (uci: string) => void; solve?: () => void; load?: (fen: string) => void }
+interface ChessHook { room: Room; move: (uci: string) => void; solve?: () => void; load?: (fen: string) => void; peek?: () => { fen: string; answer?: string } | null }
 declare global { interface Window { __chess?: ChessHook } }
 const DEBUG = typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug');
 
@@ -73,6 +73,7 @@ function useDebugHook(hook: ChessHook | null) {
       move: uci => ref.current?.move(uci),
       solve: () => ref.current?.solve?.(),
       load: fen => ref.current?.load?.(fen),
+      peek: () => ref.current?.peek?.() ?? null,
     } as ChessHook;
     return () => { delete window.__chess; };
   }, []);
@@ -82,7 +83,7 @@ function useDebugHook(hook: ChessHook | null) {
 function Stage({ top, board, message, buttons }: { top: ReactNode; board: ReactNode; message?: ReactNode; buttons?: ReactNode }) {
   return (
     <div className="absolute inset-0 overflow-y-auto overflow-x-hidden px-3 py-3" style={{ touchAction: 'pan-y' }}>
-      <div className="max-w-3xl mx-auto flex flex-col items-center gap-3">
+      <div className="min-h-full max-w-3xl mx-auto flex flex-col items-center justify-center gap-3">
         {top}
         {board}
         {message && <div className="font-nunito text-lg text-center text-violet-100 min-h-[28px] max-w-xl">{message}</div>}
@@ -213,7 +214,7 @@ function LearnRoom({ onExit }: { onExit: () => void }) {
     <GameShell
       gameId="chess_learn" title="Learn chess" icon="🎓" xpScale={20} status={status} score={won ? earned * 100 : 0} round={round}
       celebrateEnd onBack={onExit} leaveLabel="Back to Chess Academy" againLabel={nextLevel ? '▶ Next level' : '🔁 Play again'}
-      formatScore={n => `${'⭐'.repeat(Math.round(n / 100))}`}
+      formatScore={n => (n > 0 ? '⭐'.repeat(Math.round(n / 100)) : '☆')}
       overTitle={`${lesson.title}: ${level.title} — ${'⭐'.repeat(earned)}${'☆'.repeat(3 - earned)}`}
       startLabel={`▶ Play: ${level.title}`}
       onStart={() => startLevel(status === 'over' && won && nextLevel ? nextLevel : level)}
@@ -392,6 +393,11 @@ function PuzzleRoom({ onExit }: { onExit: () => void }) {
   useDebugHook({
     room: 'puzzles',
     move: uci => { const m = parseUci(uci); if (m) onMove(m.from, m.to, m.promotion); },
+    peek: () => {
+      if (!run) return null;
+      const h = puzzleHint(run, 2);
+      return { fen: run.fen, answer: h && h.level === 2 ? h.uci : undefined };
+    },
     solve: () => {
       if (!run || !puzzle) return;
       let r = run;
@@ -574,9 +580,9 @@ function BotRoom({ onExit }: { onExit: () => void }) {
           <div className="grid gap-2">
             {BOT_IDS.map(id => (
               <button key={id} onClick={() => { playClick(); setBot(id); }}
-                className={`min-h-[64px] rounded-2xl p-3 flex items-center gap-3 ${bot === id ? 'bg-fuchsia-500' : 'bg-white/10'}`}>
-                <span className="text-4xl">{BOTS[id].emoji}</span>
-                <span><span className="block font-fredoka text-lg">{BOTS[id].name}</span><span className="block font-nunito text-sm text-violet-100">{BOTS[id].blurb}</span></span>
+                className={`min-h-[60px] rounded-2xl px-3 py-2 flex items-center gap-3 text-left ${bot === id ? 'bg-fuchsia-500' : 'bg-white/10'}`}>
+                <span className="text-3xl shrink-0">{BOTS[id].emoji}</span>
+                <span className="min-w-0"><span className="block font-fredoka text-lg leading-tight">{BOTS[id].name}</span><span className="block font-nunito text-sm leading-snug text-violet-100">{BOTS[id].blurb}</span></span>
               </button>
             ))}
           </div>
