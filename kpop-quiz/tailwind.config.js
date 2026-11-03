@@ -9,7 +9,6 @@ export default {
       fontFamily: {
         'fredoka': ['Fredoka One', 'cursive'],
         'nunito': ['Nunito', 'sans-serif'],
-        'comfortaa': ['Comfortaa', 'cursive'],
       },
       colors: {
         pink: {

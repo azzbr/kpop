@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import './fonts.css'
 import './index.css'
 import './events/halloween.css'
 import App from './App.tsx'
@@ -7,6 +8,9 @@ import { initAppInstall, markUpdateReady } from './utils/appInstall'
 
 // First, so the browser's install event is never missed.
 initAppInstall()
+
+// Canvas games draw with "Fredoka", but canvas text doesn't make the browser fetch a font: ask for it.
+document.fonts?.load('bold 16px Fredoka').catch(() => { /* falls back to sans-serif */ })
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

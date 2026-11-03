@@ -118,7 +118,7 @@ Seven easter eggs, found ids saved in `secretsFound` via `findSecret` (welcome-s
 - **Parent corner** (`parent_corner`, "👪 Grown-ups" button under the grid, behind a times-table check): weekly play time from `playLog` (filled by `PlayTimeTracker` in App every 15 s), break reminder, sound-effect volume (`utils/sounds.setSfxVolume`), 📳 vibration on/off (`parent.vibration`), Friends Arena clubs (`grownups/ClubSetup.tsx`), Teacher setup (`grownups/TeacherSetup.tsx`), reset.
 
 ### Offline (service worker)
-`sw/sw.js` is built into `dist/sw.js` by the `serviceWorker()` plugin in `vite.config.ts` (precache list + version injected). App files are precached; music is cached on first play and answered with 206 range responses (Safari needs them). Registered in `main.tsx` in production only (`?nosw` disables). Cross-origin requests (Supabase, fonts) are not cached. When the app comes back to the front after 30+ min, `main.tsx` checks for a new version; if one takes over, the grid shows "✨ New things have arrived! Tap to update" (`markUpdateReady`).
+`sw/sw.js` is built into `dist/sw.js` by the `serviceWorker()` plugin in `vite.config.ts` (precache list + version injected). App files are precached; music is cached on first play and answered with 206 range responses (Safari needs them). Registered in `main.tsx` in production only (`?nosw` disables). Cross-origin requests (Supabase) are never cached, so **everything the app needs offline must be its own file**: the fonts are bundled (`src/assets/fonts/` woff2 + OFL licences, `@font-face` rules in `src/fonts.css`, imported first in `main.tsx`; `.woff2` files are precached) — never load fonts, images or scripts from another site (the old Google Fonts link made the installed app lose its fonts offline). Canvas text uses `Fredoka` — an alias of Fredoka One in `fonts.css`, loaded at start-up by `main.tsx`. `e2e/offline.spec.ts` checks fonts load with the internet off. When the app comes back to the front after 30+ min, `main.tsx` checks for a new version; if one takes over, the grid shows "✨ New things have arrived! Tap to update" (`markUpdateReady`).
 
 ### Installed app (Android, iPhone/iPad, computers)
 - `utils/appInstall.ts` (`initAppInstall()` first thing in `main.tsx`): `useInstallState()` → `asApp` (opened from the Home Screen; `?app` fakes it for tests), `canPrompt` (Chrome's `beforeinstallprompt`, kept so no browser pop-up appears for kids), `platform` (`ios | android | desktop`; iPadOS says "Macintosh" + touch), `updateReady`. As the app it calls `navigator.storage.persist()`.
@@ -187,7 +187,7 @@ Seven easter eggs, found ids saved in `secretsFound` via `findSecret` (welcome-s
 
 - `.arcade-bg` — dark purple/indigo backdrop for the welcome screen, grid and engine games
 - `.btn-kid`, `.btn-kid-secondary`, `.card-kid`, `.text-kid-glow`, `.bg-kid-pattern` — older light-theme classes used by most existing screens
-- Fonts: **Fredoka One** (headings), **Nunito** (body)
+- Fonts: **Fredoka One** (headings), **Nunito** (body, variable 200–1000) — bundled in `src/fonts.css`, Latin + Latin-extended only
 - Themes (`data-theme` on `<html>`) live in `index.css`; the Theme switcher is in the Secret Menu
 - Framer Motion for UI transitions; keep them short (200–400 ms)
 

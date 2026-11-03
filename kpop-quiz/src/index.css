@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@300;400;500;600;700;800;900&family=Comfortaa:wght@300;400;500;600;700&display=swap');
+/* Fonts are bundled with the app (src/fonts.css, imported first in main.tsx) so they work offline. */
 
 @tailwind base;
 @tailwind components;

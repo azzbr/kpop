@@ -14,7 +14,8 @@ function serviceWorker(): Plugin {
     name: 'funquest-service-worker',
     apply: 'build',
     generateBundle(_options, bundle) {
-      const files = Object.keys(bundle).filter(f => /\.(js|css)$/.test(f)).map(f => `/${f}`).sort();
+      // Fonts too, so they are stored at install and after every update (the app works offline).
+      const files = Object.keys(bundle).filter(f => /\.(js|css|woff2)$/.test(f)).map(f => `/${f}`).sort();
       const version = createHash('sha1').update(files.join('|')).digest('hex').slice(0, 10);
       const source = readFileSync(new URL('./sw/sw.js', import.meta.url), 'utf8')
         .replaceAll('__VERSION__', version)
