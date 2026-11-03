@@ -27,6 +27,8 @@ export interface StarHuntLevel {
   blockers?: Square[];
   /** The fewest moves that collect every star (checked against bfsMinMoves in the tests). */
   target: number;
+  /** Optional one-line hint shown above the board. */
+  tip?: string;
 }
 
 /** check = any move that gives check wins · mate = any checkmating move wins · escape = she's in check, any legal move wins. */
