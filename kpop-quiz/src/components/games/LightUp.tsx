@@ -186,7 +186,7 @@ export default function LightUp() {
     setHistory(history.slice(0, -1));
   };
   const clear = () => {
-    if (!playing || !lamps.length && !Object.keys(marks).length) return;
+    if (!playing || Object.keys(marksRef.current).length === 0) return;
     playClick();
     commit({});
   };

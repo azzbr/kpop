@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createRng } from '../../games/engine/rng';
 import {
   UNTANGLE_LEVELS, DOT_MARGIN, generateUntangle, segmentsCross, crossingEdges, crossingPairs, crossingCount,
-  isSolved, untangleScore, levelSeed, clampPoint,
+  isSolved, untangleScore, levelSeed, clampPoint, crossingPoint,
 } from './untangleLogic';
 import type { Edge, Point, UntanglePuzzle } from './untangleLogic';
 
@@ -150,6 +150,13 @@ describe('segmentsCross', () => {
 
   it('a dot resting on the middle of someone else\'s line counts as tangled', () => {
     expect(segmentsCross(P(0, 0), P(1, 0), P(0.5, 0), P(0.5, 1))).toBe(true);
+  });
+
+  it('crossingPoint finds where an X meets (for the marker), and nothing for parallel lines', () => {
+    const c = crossingPoint(P(0, 0), P(1, 1), P(0, 1), P(1, 0))!;
+    expect(c.x).toBeCloseTo(0.5);
+    expect(c.y).toBeCloseTo(0.5);
+    expect(crossingPoint(P(0, 0), P(1, 0), P(0, 0.2), P(1, 0.2))).toBeNull();
   });
 });
 

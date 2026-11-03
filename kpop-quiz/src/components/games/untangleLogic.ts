@@ -76,6 +76,14 @@ export function segmentsCross(p1: Point, p2: Point, p3: Point, p4: Point): boole
     || (o3 === 0 && strictlyInside(p3, p4, p1)) || (o4 === 0 && strictlyInside(p3, p4, p2));
 }
 
+/** Where the lines p1–p2 and p3–p4 meet (for drawing a marker), or null if they're parallel. */
+export function crossingPoint(p1: Point, p2: Point, p3: Point, p4: Point): Point | null {
+  const d = (p2.x - p1.x) * (p4.y - p3.y) - (p2.y - p1.y) * (p4.x - p3.x);
+  if (Math.abs(d) < EPS) return null;
+  const t = ((p3.x - p1.x) * (p4.y - p3.y) - (p3.y - p1.y) * (p4.x - p3.x)) / d;
+  return { x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y) };
+}
+
 /** Every pair of lines (by edge index, i < j) that cross. */
 export function crossingPairs(edges: Edge[], pts: Point[]): [number, number][] {
   const out: [number, number][] = [];

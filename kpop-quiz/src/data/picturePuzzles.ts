@@ -1,0 +1,361 @@
+// Picture Puzzles: original pixel pictures for the nonogram game (components/games/PicturePuzzle.tsx).
+// Each row uses PALETTE letters, '.' = empty. Every letter is a filled square in the puzzle; the
+// colours only show once it's solved. picturePuzzles.test.ts proves each one can be solved with
+// line logic alone (no guessing). Never rename an id — solved ids are saved on her iPad.
+
+export interface PicturePuzzleDef {
+  id: string;
+  name: string;
+  emoji: string;
+  rows: string[];
+}
+
+export const PALETTE: Record<string, string> = {
+  r: '#ef4444', // red
+  o: '#f97316', // orange
+  y: '#facc15', // yellow
+  l: '#a3e635', // lime
+  g: '#22c55e', // green
+  e: '#15803d', // dark green
+  c: '#38bdf8', // sky blue
+  b: '#3b82f6', // blue
+  n: '#1e3a8a', // navy
+  p: '#a855f7', // purple
+  k: '#f472b6', // pink
+  u: '#a16207', // brown
+  t: '#fde68a', // cream
+  w: '#f8fafc', // white
+  s: '#94a3b8', // grey
+  d: '#334155', // dark grey
+};
+
+export const PICTURE_PUZZLES: PicturePuzzleDef[] = [
+  // ---------- Small 5×5 ----------
+  { id: 's_heart', name: 'Heart', emoji: '❤️', rows: [
+    '.r.r.',
+    'rkrrr',
+    'rrrrr',
+    '.rrr.',
+    '..r..',
+  ] },
+  { id: 's_star', name: 'Star', emoji: '⭐', rows: [
+    '..y..',
+    'yyyyy',
+    '.yyy.',
+    '.y.y.',
+    'y...y',
+  ] },
+  { id: 's_house', name: 'House', emoji: '🏠', rows: [
+    '..r..',
+    '.rrr.',
+    'rrrrr',
+    '.tut.',
+    '.tut.',
+  ] },
+  { id: 's_tree', name: 'Tree', emoji: '🌳', rows: [
+    '.ggg.',
+    'grggg',
+    '.ggr.',
+    '..u..',
+    '..u..',
+  ] },
+  { id: 's_fish', name: 'Fish', emoji: '🐟', rows: [
+    '..oo.',
+    'o.ooo',
+    'ooodo',
+    'o.ooo',
+    '..oo.',
+  ] },
+  { id: 's_mushroom', name: 'Mushroom', emoji: '🍄', rows: [
+    '.rrr.',
+    'rwrwr',
+    'rrrrr',
+    '.ttt.',
+    '.ttt.',
+  ] },
+  { id: 's_umbrella', name: 'Umbrella', emoji: '☂️', rows: [
+    '.ppp.',
+    'ppppp',
+    '..s..',
+    '..s..',
+    '.ss..',
+  ] },
+  { id: 's_sailboat', name: 'Sailboat', emoji: '⛵', rows: [
+    '.w...',
+    '.ww..',
+    '.www.',
+    'rrrrr',
+    '.rrr.',
+  ] },
+  { id: 's_apple', name: 'Apple', emoji: '🍎', rows: [
+    '..ug.',
+    '.rrr.',
+    'rrrrr',
+    'rrrrr',
+    '.r.r.',
+  ] },
+  { id: 's_mug', name: 'Mug', emoji: '☕', rows: [
+    'cccc.',
+    'ccc.c',
+    'ccc.c',
+    'cccc.',
+    '.cc..',
+  ] },
+  { id: 's_sun', name: 'Sun', emoji: '☀️', rows: [
+    'y.y.y',
+    '.ooo.',
+    'yoooy',
+    '.ooo.',
+    'y.y.y',
+  ] },
+  { id: 's_note', name: 'Music Note', emoji: '🎵', rows: [
+    '..pp.',
+    '..p.p',
+    '..p..',
+    'ppp..',
+    'ppp..',
+  ] },
+  { id: 's_crown', name: 'Crown', emoji: '👑', rows: [
+    'y.y.y',
+    'y.y.y',
+    'yyyyy',
+    'ykyby',
+    'yyyyy',
+  ] },
+
+  // ---------- Medium 8×8 ----------
+  { id: 'm_cat', name: 'Cat', emoji: '🐱', rows: [
+    '.o....o.',
+    '.oo..oo.',
+    '.oooooo.',
+    'oo.oo.oo',
+    'oooooooo',
+    'oookkooo',
+    '.oooooo.',
+    '..oooo..',
+  ] },
+  { id: 'm_rocket', name: 'Rocket', emoji: '🚀', rows: [
+    '...rr...',
+    '..rrrr..',
+    '..wwww..',
+    '..wbbw..',
+    '..wwww..',
+    '.rwwwwr.',
+    '.r.oo.r.',
+    '...oo...',
+  ] },
+  { id: 'm_duck', name: 'Duck', emoji: '🦆', rows: [
+    '...yyy..',
+    '..yyyyy.',
+    '..yydyoo',
+    '..yyyy..',
+    'y.yyyy..',
+    'yyyyyyyy',
+    '.yyyyyy.',
+    '..yyyy..',
+  ] },
+  { id: 'm_cupcake', name: 'Cupcake', emoji: '🧁', rows: [
+    '....r...',
+    '..kkkk..',
+    '.kkwkkk.',
+    'kkkkkwkk',
+    '.uuuuuu.',
+    '.u.uu.u.',
+    '..uuuu..',
+    '..uuuu..',
+  ] },
+  { id: 'm_icecream', name: 'Ice Cream', emoji: '🍦', rows: [
+    '...kk...',
+    '..kkkk..',
+    '.kkkkkk.',
+    '.gggggg.',
+    '.tttttt.',
+    '..tttt..',
+    '..tttt..',
+    '...tt...',
+  ] },
+  { id: 'm_key', name: 'Key', emoji: '🔑', rows: [
+    '..yyyy..',
+    '.yy..yy.',
+    '.yy..yy.',
+    '..yyyy..',
+    '...yy...',
+    '...yyy..',
+    '...yy...',
+    '...yyyy.',
+  ] },
+  { id: 'm_butterfly', name: 'Butterfly', emoji: '🦋', rows: [
+    'pp....pp',
+    'ppp..ppp',
+    'pppddppp',
+    '.ppddpp.',
+    '.kkddkk.',
+    'kkkddkkk',
+    'kkk..kkk',
+    'kk....kk',
+  ] },
+  { id: 'm_flower', name: 'Flower', emoji: '🌸', rows: [
+    '..k..k..',
+    '.kkkkkk.',
+    'kkkyykkk',
+    '.kkyykk.',
+    '..kkkk..',
+    '...g....',
+    '.g.g.g..',
+    '..ggg...',
+  ] },
+  { id: 'm_balloon', name: 'Balloon', emoji: '🎈', rows: [
+    '..rrrr..',
+    '.rrrrrr.',
+    '.rwrrrr.',
+    '.rrrrrr.',
+    '..rrrr..',
+    '...rr...',
+    '....s...',
+    '...s....',
+  ] },
+  { id: 'm_cactus', name: 'Cactus', emoji: '🌵', rows: [
+    '...gg...',
+    'g..gg...',
+    'g..gg.g.',
+    'gg.gg.g.',
+    '.gggggg.',
+    '...gg...',
+    '.oooooo.',
+    '..oooo..',
+  ] },
+
+  // ---------- Big 10×10 ----------
+  { id: 'b_owl', name: 'Owl', emoji: '🦉', rows: [
+    '.u......u.',
+    '.uuuuuuuu.',
+    'uwwwuuwwwu',
+    'uwdwuuwdwu',
+    'uwwwuuwwwu',
+    'uuuuyyuuuu',
+    '.uuuyyuuu.',
+    '.utttttu..',
+    '.uuuuuuuu.',
+    '..y.yy.y..',
+  ] },
+  { id: 'b_robot', name: 'Robot', emoji: '🤖', rows: [
+    '....rr....',
+    '....ss....',
+    '.ssssssss.',
+    '.s..ss..s.',
+    '.s..ss..s.',
+    '.ssssssss.',
+    '.ss.rr.ss.',
+    '.ssssssss.',
+    '..s....s..',
+    '.sss..sss.',
+  ] },
+  { id: 'b_lighthouse', name: 'Lighthouse', emoji: '🗼', rows: [
+    '....rr....',
+    'y..yyyy..y',
+    '.y.rrrr.y.',
+    '....ww....',
+    '...rrrr...',
+    '...wwww...',
+    '...rrrr...',
+    '..wwwwww..',
+    '..rrrrrr..',
+    'bbbbbbbbbb',
+  ] },
+  { id: 'b_rainbow', name: 'Rainbow', emoji: '🌈', rows: [
+    '..rrrrrr..',
+    '.rroooorr.',
+    'rrooyyoorr',
+    'rooyyyyoor',
+    'royyggyyor',
+    'royg..gyor',
+    'royg..gyor',
+    'royg..gyor',
+    'www....www',
+    'wwww..wwww',
+  ] },
+  { id: 'b_turtle', name: 'Turtle', emoji: '🐢', rows: [
+    '....ll....',
+    '....ll....',
+    '.l.eeee.l.',
+    '.leegeeel.',
+    '..egeege..',
+    '..eeegee..',
+    '.l.eeee.l.',
+    '.l..ll..l.',
+    '.....l....',
+    '..........',
+  ] },
+  { id: 'b_planet', name: 'Planet', emoji: '🪐', rows: [
+    'y.........',
+    '...pppp...',
+    '..pppppp..',
+    '.pppppppp.',
+    'cccccccccc',
+    '.pppppppp.',
+    '..pppppp..',
+    '...pppp...',
+    '.........y',
+    '....y.....',
+  ] },
+  { id: 'b_penguin', name: 'Penguin', emoji: '🐧', rows: [
+    '...dddd...',
+    '..dddddd..',
+    '..dwddwd..',
+    '..ddoodd..',
+    '.ddwwwwdd.',
+    'dddwwwwddd',
+    'd.dwwwwd.d',
+    '..dwwwwd..',
+    '..dddddd..',
+    '..oo..oo..',
+  ] },
+  { id: 'b_strawberry', name: 'Strawberry', emoji: '🍓', rows: [
+    '...gggg...',
+    '..g.gg.g..',
+    '.rrrrrrrr.',
+    'rrtrrrtrrr',
+    'rrrrrrrrrr',
+    '.rrtrrtrr.',
+    '.rrrrrrrr.',
+    '..rrtrrr..',
+    '...rrrr...',
+    '....rr....',
+  ] },
+  { id: 'b_castle', name: 'Castle', emoji: '🏰', rows: [
+    '..r....r..',
+    '..s....s..',
+    's.s.ss.s.s',
+    'ssssssssss',
+    'ss.ssss.ss',
+    'ssssssssss',
+    'sss.ss.sss',
+    'ssssssssss',
+    'ssss..ssss',
+    'ssss..ssss',
+  ] },
+  { id: 'b_whale', name: 'Whale', emoji: '🐳', rows: [
+    '......c.c.',
+    '.......c..',
+    '..bbbbbb..',
+    '.bbbbbbbb.',
+    'bbwbbbbbb.',
+    'bbbbbbbbbb',
+    'cccccbbbbb',
+    '.cccccbbb.',
+    '..ccc..bb.',
+    '.......b.b',
+  ] },
+  { id: 'b_snail', name: 'Snail', emoji: '🐌', rows: [
+    '....pppp..',
+    '...pp..pp.',
+    '..pp.pp.pp',
+    '..p.p..p.p',
+    'd.p.p.pp.p',
+    'd.pp..p.pp',
+    'll.pppppp.',
+    'llllllllll',
+    '.lllllllll',
+    '..........',
+  ] },
+];
