@@ -11,7 +11,7 @@
  *   Iterative deepening with a time cap for every bot (only Hoot ever gets near it).
  * - 🐶 Biscuit: depth 1, and ~30% of the time a random move — never one that simply loses its queen.
  * - 🦊 Fox: depth 2. 🦉 Hoot: up to depth 4 + a short capture-only quiescence, stops at `timeMs`.
- *   Both pick at random among moves within 20 centipawns of the best, so games differ.
+ *   Both pick at random among moves within 20 centipawns of the best (weighted towards the best), so games differ.
  *
  * Speed: chess.js's public `move()` / `moves({ verbose: true })` build SAN and two FENs for every
  * move (≈100× slower than its own move generator), so the search drives chess.js's internal
@@ -131,6 +131,7 @@ interface Board {
   inCheck(): boolean;
   /** Does any piece of `by` attack the 0x88 square? */
   attacked(by: Color, sq: number): boolean;
+  fen(): string;
 }
 
 /** chess.js 1.4.0 private members the fast path uses. */
@@ -172,6 +173,7 @@ function fastBoard(chess: Chess): Board {
     undo: () => void raw._undoMove(),
     inCheck: () => raw._isKingAttacked(raw._turn),
     attacked: (by, sq) => raw._attacked(by, sq),
+    fen: () => chess.fen(),
   };
 }
 
@@ -212,6 +214,7 @@ function publicBoard(chess: Chess): Board {
     },
     inCheck: () => chess.inCheck(),
     attacked: (by, sq) => chess.isAttacked(alg(sq), by),
+    fen: () => chess.fen(),
   };
 }
 
@@ -235,13 +238,18 @@ const centreDist = (f: number, r: number) => Math.abs(f - 3.5) + Math.abs(r - 3.
 /** A table indexed by rank * 8 + file, rank 0 = the owner's back rank. */
 const table = (fn: (f: number, r: number) => number) => Int16Array.from({ length: 64 }, (_, i) => Math.round(fn(i & 7, i >> 3)));
 
-const PAWN_CENTRE = [0, -10, 2, 14, 12, 6, 0, 0];
-const PAWN_SIDE = [0, 0, 2, 4, 4, 2, 0, 0];
-const PAWN_WING = [0, 4, 0, -2, 0, 2, 0, 0];
+/** Pawn bonus by rank for each file group: d/e want to go to the middle; f/g/h stay home to guard a castled king. */
+const PAWN_FILES: Record<'centre' | 'c' | 'king' | 'queen', number[]> = {
+  centre: [0, -12, 2, 18, 14, 6, 0, 0],
+  c: [0, 0, 2, 6, 4, 2, 0, 0],
+  king: [0, 8, 0, -6, -4, 0, 0, 0],
+  queen: [0, 2, 0, -2, 0, 2, 0, 0],
+};
+const pawnFile = (f: number) => (f === 3 || f === 4 ? PAWN_FILES.centre : f === 2 ? PAWN_FILES.c : f >= 5 ? PAWN_FILES.king : PAWN_FILES.queen);
 
 /** Middlegame tables. Pawns and kings have endgame ones too (blended by how many pieces are left). */
 const PST_MG: Record<PieceSymbol, Int16Array> = {
-  p: table((f, r) => [0, 0, 3, 8, 16, 28, 50, 0][r] + (f === 3 || f === 4 ? PAWN_CENTRE : f === 2 || f === 5 ? PAWN_SIDE : PAWN_WING)[r]),
+  p: table((f, r) => [0, 0, 3, 8, 16, 28, 50, 0][r] + pawnFile(f)[r]),
   n: table((f, r) => 24 - 8 * centreDist(f, r)),
   b: table((f, r) => 10 - 4 * centreDist(f, r) - (r === 0 ? 8 : 0)),
   r: table((f, r) => (r === 6 ? 16 : 0) + (r === 0 && f >= 2 && f <= 5 ? 4 : 0)),
@@ -324,7 +332,7 @@ interface Plan {
   maxDepth: number;
   /** Plies of capture-only search at the leaves (0 = none). */
   quiesce: number;
-  /** Pick at random among moves within this many centipawns of the best. */
+  /** Pick at random (weighted towards the best) among moves within this many centipawns of the best. */
   margin: number;
   timeMs: number;
 }
@@ -336,11 +344,13 @@ class Search {
   private readonly b: Board;
   private readonly quiesce: number;
   private readonly deadline: number;
+  private readonly repeats: Set<Mv>;
 
-  constructor(b: Board, quiesce: number, deadline: number) {
+  constructor(b: Board, quiesce: number, deadline: number, repeats: Set<Mv>) {
     this.b = b;
     this.quiesce = quiesce;
     this.deadline = deadline;
+    this.repeats = repeats;
   }
 
   private tick() {
@@ -471,9 +481,10 @@ class Search {
     for (let i = 0; i < moves.length; i++) {
       const alpha = best <= -INF ? -INF : Math.abs(best) >= MATE_BOUND ? best - 1 : best - margin - 1;
       this.b.play(moves[i]);
-      const v = -this.negamax(depth - 1, -INF, -alpha, 1);
+      let v = -this.negamax(depth - 1, -INF, -alpha, 1);
       this.b.undo();
       if (this.stopped) return null;
+      if (this.repeats.has(moves[i])) v = Math.min(v, 0); // back to an earlier position: no better than a draw
       partial[i] = v;
       if (v > best) best = v;
     }
@@ -481,17 +492,26 @@ class Search {
   }
 }
 
-/** Uniform pick among the moves close to the best score (exact best only once a mate is involved). */
+/**
+ * A random pick among the moves within `margin` of the best score, weighted towards the best
+ * ((margin + 1 − gap)²: equal moves are equally likely, one 20 cp worse is rare). Only the exact
+ * best once a mate is involved.
+ */
 function pickNear(moves: Mv[], scores: number[], margin: number, rng: () => number): Mv {
   const best = Math.max(...scores);
-  const floor = Math.abs(best) >= MATE_BOUND ? best : best - margin;
-  const near = moves.filter((_, i) => scores[i] >= floor);
-  return near[Math.min(near.length - 1, Math.floor(rng() * near.length))];
+  const room = Math.abs(best) >= MATE_BOUND ? 0 : margin;
+  const weights = scores.map(v => (best - v <= room ? (room + 1 - (best - v)) ** 2 : 0));
+  let r = rng() * weights.reduce((a, w) => a + w, 0);
+  for (let i = 0; i < moves.length; i++) {
+    r -= weights[i];
+    if (weights[i] > 0 && r < 0) return moves[i];
+  }
+  return moves[scores.indexOf(best)];
 }
 
 /** Iterative deepening over the root moves (all legal). Never returns without a move. */
-function think(b: Board, rootMoves: Mv[], plan: Plan, rng: () => number): Mv {
-  const s = new Search(b, plan.quiesce, Date.now() + plan.timeMs);
+function think(b: Board, rootMoves: Mv[], plan: Plan, rng: () => number, repeats = new Set<Mv>()): Mv {
+  const s = new Search(b, plan.quiesce, Date.now() + plan.timeMs, repeats);
   let order = s.order(rootMoves, 0, true);
   let scores: number[] | null = null;
   for (let depth = 1; depth <= plan.maxDepth; depth++) {
@@ -545,14 +565,29 @@ function legalMoves(b: Board): Mv[] {
   });
 }
 
-function makeBoard(fen: string): { b: Board; fast: boolean } | null {
+const positionKey = (fen: string) => fen.split(' ').slice(0, 4).join(' ');
+
+/** Root moves that go back to a position from `seen` (FENs from earlier in the game). */
+function repeatingMoves(b: Board, moves: Mv[], seen: string[] | undefined): Set<Mv> {
+  const out = new Set<Mv>();
+  if (!seen?.length) return out;
+  const keys = new Set(seen.map(positionKey));
+  for (const m of moves) {
+    if (!b.play(m)) continue;
+    if (keys.has(positionKey(b.fen()))) out.add(m);
+    b.undo();
+  }
+  return out;
+}
+
+function makeBoard(fen: string, publicApiOnly = false): { b: Board; fast: boolean } | null {
   let chess: Chess;
   try {
     chess = new Chess(fen);
   } catch {
     return null;
   }
-  const fast = hasFastPath(chess);
+  const fast = !publicApiOnly && hasFastPath(chess);
   return { b: fast ? fastBoard(chess) : publicBoard(chess), fast };
 }
 
@@ -569,13 +604,26 @@ const PLANS: Record<BotId, Omit<Plan, 'timeMs'>> = {
   hoot: { maxDepth: 4, quiesce: 4, margin: 20 },
 };
 
+export interface ChooseOptions {
+  /** Time cap in ms (default 1500). Only Hoot ever gets near it; it then plays the best move found so far. */
+  timeMs?: number;
+  /**
+   * FENs of the earlier positions in this game (e.g. `history({ verbose: true }).map(m => m.before)`).
+   * A move back to one of them counts as no better than a draw, so a bot that is ahead doesn't
+   * give endless checks or shuffle back and forth.
+   */
+  seen?: string[];
+  /** Tests only: search with chess.js's public API (the fallback used if its internals change). */
+  publicApiOnly?: boolean;
+}
+
 /**
  * The bot's move for the side to move in `fen`, in UCI ("e2e4", "e7e8q").
  * Returns '' when there is no move (checkmate, stalemate) or the FEN is not valid.
  * Same `rng` seed ⇒ same move, as long as the time cap isn't reached (only Hoot gets near it).
  */
-export function chooseMove(fen: string, bot: BotId, rng: () => number, opts: { timeMs?: number } = {}): string {
-  const made = makeBoard(fen);
+export function chooseMove(fen: string, bot: BotId, rng: () => number, opts: ChooseOptions = {}): string {
+  const made = makeBoard(fen, opts.publicApiOnly);
   if (!made) return '';
   const { b, fast } = made;
   const moves = legalMoves(b);
@@ -587,9 +635,9 @@ export function chooseMove(fen: string, bot: BotId, rng: () => number, opts: { t
     const safe = moves.filter(m => !hangsQueen(b, m));
     const pool = safe.length ? safe : moves;
     if (rng() < BISCUIT_RANDOM) return uci(pool[Math.min(pool.length - 1, Math.floor(rng() * pool.length))]);
-    return uci(think(b, pool, plan, rng));
+    return uci(think(b, pool, plan, rng, repeatingMoves(b, pool, opts.seen)));
   }
-  return uci(think(b, moves, plan, rng));
+  return uci(think(b, moves, plan, rng, repeatingMoves(b, moves, opts.seen)));
 }
 
 /** A good move for the player to move in `fen` (depth 2 + captures), for the 💡 hint button. '' if none. */

@@ -19,6 +19,8 @@ interface Palette {
   shine: string;
   shineOpacity: number;
   gem: string;
+  /** A thin dark rim outside the light outline (plum pieces), so they keep their size on light squares. */
+  rim?: string;
 }
 
 const PALETTE: Record<PieceColor, Palette> = {
@@ -28,7 +30,7 @@ const PALETTE: Record<PieceColor, Palette> = {
   },
   b: {
     top: '#7a4aa6', bottom: '#33194f', outline: '#f6eeff', detail: '#f1e4ff', accent: '#9b6bd1',
-    shine: '#e9d5ff', shineOpacity: 0.55, gem: '#fbbf24',
+    shine: '#e9d5ff', shineOpacity: 0.55, gem: '#fbbf24', rim: '#2a1245',
   },
 };
 
@@ -120,8 +122,8 @@ const DRAWINGS: Record<PieceType, Drawing> = {
       <>
         {/* mane: soft bumps down the back of the neck */}
         <path
-          d="M57 18 C63 17 67 21 66 26 C71 26 74 31 72 36 C77 37 79 43 76 47 C80 50 80 56 76 59 L75 55 C77 39 70 23.5 57 18 Z"
-          fill={p.accent} stroke={p.outline} strokeWidth={LINE}
+          d="M56.5 17.5 C70 23.5 77 39 75 55 C74.6 59 74 62 73.4 65 C69 64 66.5 60.5 68 56.5 C64 54.5 63 50 65.5 46.5 C61.5 44 61 39.5 63.5 36 C59.5 33.5 59 29 61.5 26 C58 24.5 56 21 56.5 17.5 Z"
+          fill={p.accent} stroke={p.detail} strokeWidth={LINE}
         />
         <circle cx={39} cy={33} r={3.6} fill={p.detail} stroke="none" />
         <circle cx={38} cy={31.8} r={1.2} fill={p === PALETTE.w ? '#ffffff' : '#33194f'} stroke="none" />
@@ -211,7 +213,8 @@ export function ChessPiece({ type, color, size = 48, shadow = true, labelled = f
           <stop offset="1" stopColor={p.bottom} />
         </linearGradient>
       </defs>
-      {shadow && <ellipse cx={50} cy={91} rx={31} ry={4.5} fill="rgba(20, 6, 40, 0.28)" />}
+      {shadow && <ellipse cx={50} cy={91.5} rx={27} ry={3.5} fill="rgba(20, 6, 40, 0.22)" />}
+      {p.rim && <g fill={p.rim} stroke={p.rim} strokeWidth={OUT * 2 + 2.2} strokeLinejoin="round" strokeLinecap="round">{d.body}</g>}
       <g fill={p.outline} stroke={p.outline} strokeWidth={OUT * 2} strokeLinejoin="round" strokeLinecap="round">{d.body}</g>
       <g fill={`url(#${gid})`}>{d.body}</g>
       <g fill="none" stroke={p.detail} strokeWidth={LINE} strokeLinecap="round" strokeLinejoin="round">{d.details?.(p)}</g>

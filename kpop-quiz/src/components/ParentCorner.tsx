@@ -17,7 +17,7 @@ const NAMES: Record<string, string> = {
   sparkle_match: '💎 Gem Match', tower_defense: '🏰 Tower Defense', heads_up: '🙆 Heads Up', imposter: '🤫 Imposter', truth_or_dare: '🎭 Truth or Dare',
   battle_arena_losses: '⚔️ Battle Arena',
   picture_puzzle: '🖼️ Picture Puzzles', bridges: '🌉 Bridges', light_up: '💡 Light Up', untangle: '🕸️ Untangle',
-  chess_puzzles: '♟️ Chess puzzles', chess_bot: '🤖 Chess vs bots', chess_learn: '🎓 Chess lessons',
+  chess_puzzles: '♟️ Chess puzzles', chess_bot: '🤖 Chess vs bots', chess_learn: '🎓 Chess lessons', chess_duo: '👫 Chess for two',
 };
 const BREAKS = [0, 20, 30, 45, 60];
 

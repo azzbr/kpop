@@ -37,6 +37,12 @@ interface GameShellProps {
   startLabel?: string;
   /** Party games end on a celebration: always play the win sound, never the 'wrong' one. */
   celebrateEnd?: boolean;
+  /** Back (and "Pick another game") go here instead of the game grid — e.g. a game's own menu. */
+  onBack?: () => void;
+  /** Label of the over card's play-again button (default "🔁 Play again"). */
+  againLabel?: string;
+  /** Label of the over card's leave button (default "Pick another game"). */
+  leaveLabel?: string;
   onStart: () => void;
   onPause: () => void;
   onResume: () => void;
@@ -83,7 +89,7 @@ export default function GameShell(props: GameShellProps) {
 
   const back = () => {
     playClick();
-    setGameState('game_mode');
+    if (props.onBack) props.onBack(); else setGameState('game_mode');
   };
 
   // Installed app: the back gesture pauses a running round first (utils/backGuard.ts).
@@ -200,9 +206,9 @@ export default function GameShell(props: GameShellProps) {
                     <div className="mb-3" />
                     <button onClick={() => { playClick(); props.onStart(); }}
                       className="w-full min-h-[56px] rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-400 font-fredoka text-2xl mb-3">
-                      🔁 Play again
+                      {props.againLabel ?? '🔁 Play again'}
                     </button>
-                    <button onClick={back} className="w-full min-h-[48px] rounded-full bg-white/15 font-fredoka text-lg">Pick another game</button>
+                    <button onClick={back} className="w-full min-h-[48px] rounded-full bg-white/15 font-fredoka text-lg">{props.leaveLabel ?? 'Pick another game'}</button>
                   </>
                 )}
               </motion.div>
