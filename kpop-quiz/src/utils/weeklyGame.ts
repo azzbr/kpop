@@ -1,0 +1,42 @@
+// Game of the week: one solo game per Monday–Sunday week gives 2× XP and coins (store.finishRound).
+// Dates are local "YYYY-MM-DD" keys, turned into whole days with Date.UTC so clock changes
+// (summer time) can never shift a day.
+import type { GameState } from '../store';
+import { MASTERY } from '../data/mastery';
+
+const DAY_MS = 86_400_000;
+/** 1 January 2024 was a Monday. */
+const EPOCH_MONDAY = Date.UTC(2024, 0, 1) / DAY_MS;
+
+/** Interleaved arcade / puzzle / quiz, so neighbouring weeks feel different. */
+export const WEEKLY_ROTATION: GameState[] = [
+  'snake_arena', 'game_2048', 'quiz_arena', 'ninja_slice', 'block_blast', 'emoji_guess',
+  'paper_clash', 'word_scramble', 'real_or_fake', 'kpop_rush', 'sparkle_match', 'guess_intro',
+  'rocket_launch', 'mini_sudoku', 'tower_defense', 'pattern_memory', 'battle_arena', 'crossword_mini',
+  'memory_speed', 'zip_game', 'word_ladder',
+].filter(id => id in MASTERY) as GameState[];
+
+function dayNumber(dateKey: string): number {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  return Date.UTC(y, m - 1, d) / DAY_MS;
+}
+
+function keyOf(day: number): string {
+  const dt = new Date(day * DAY_MS);
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+}
+
+/** Weeks since the epoch Monday (negative before it). */
+export function weekIndex(dateKey: string): number {
+  return Math.floor((dayNumber(dateKey) - EPOCH_MONDAY) / 7);
+}
+
+/** The Monday of that week, as a date key. */
+export function weekStart(dateKey: string): string {
+  return keyOf(EPOCH_MONDAY + weekIndex(dateKey) * 7);
+}
+
+export function gameOfTheWeek(dateKey: string): GameState {
+  const n = WEEKLY_ROTATION.length;
+  return WEEKLY_ROTATION[((weekIndex(dateKey) % n) + n) % n];
+}

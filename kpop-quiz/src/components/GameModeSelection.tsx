@@ -14,20 +14,16 @@ import PinPad from './ui/PinPad';
 import TeacherSplash from './TeacherSplash';
 import { checkPin } from '../utils/pin';
 import { offerInstall, useInstallState } from '../utils/appInstall';
+import GameTile, { RecentCard } from './home/GameTile';
+import type { HomeTile } from './home/GameTile';
+import TodayStrip from './home/TodayStrip';
+import WeeklyCard from './home/WeeklyCard';
+import { pickSurpriseGame } from './home/homeLogic';
+import { gameOfTheWeek } from '../utils/weeklyGame';
 
 type Category = 'arcade' | 'puzzle' | 'quiz' | 'party' | 'create' | 'me' | 'teacher';
 
-interface Tile {
-  id: GameState;
-  /** High-score key in the store, when it differs from `id`. */
-  scoreKey?: string;
-  title: string;
-  description: string;
-  icon: string;
-  color: string;
-  category: Category;
-  isNew?: boolean;
-}
+type Tile = HomeTile & { category: Category };
 
 const CATEGORIES: { id: Category; title: string; subtitle: string }[] = [
   { id: 'arcade', title: '🕹️ Arcade', subtitle: 'Fast reflexes, big scores' },
@@ -111,6 +107,13 @@ const GameModeSelection: React.FC = () => {
   const [askPin, setAskPin] = useState(false);
   const [splash, setSplash] = useState(false);
   const tiles = TILES.filter(t => t.category !== 'teacher' || teacherMode);
+  const favourites = useGameStore(s => s.favourites);
+  const recent = useGameStore(s => s.recent);
+  const toggleFavourite = useGameStore(s => s.toggleFavourite);
+  const byId = new Map(tiles.map(t => [t.id, t] as const));
+  const weeklyTile = byId.get(gameOfTheWeek(localDateKey()));
+  const recentTiles = recent.map(id => byId.get(id)).filter((t): t is Tile => !!t).slice(0, 4);
+  const favTiles = favourites.map(id => byId.get(id)).filter((t): t is Tile => !!t);
   const install = useInstallState();
 
   const handleTitleClick = () => {
@@ -139,8 +142,24 @@ const GameModeSelection: React.FC = () => {
 
   const open = (id: GameState) => {
     playClick();
+    // "Jump back in" lists games only (not My Stuff screens or the Grown-ups corner).
+    const tile = TILES.find(t => t.id === id);
+    if (tile && tile.category !== 'me') useGameStore.getState().noteOpened(id);
     setGameState(id);
   };
+
+  const renderTile = (tile: Tile, delay = 0) => (
+    <GameTile
+      key={tile.id}
+      tile={tile}
+      best={highScores[tile.scoreKey ?? tile.id]}
+      fav={favourites.includes(tile.id)}
+      weekly={weeklyTile?.id === tile.id}
+      delay={delay}
+      onOpen={() => open(tile.id)}
+      onToggleFav={() => { playClick(); toggleFavourite(tile.id); }}
+    />
+  );
 
   let tileIndex = 0;
 
@@ -183,6 +202,8 @@ const GameModeSelection: React.FC = () => {
 
         <PlayerLevelBadge />
 
+        <TodayStrip onOpen={open} />
+
         <div className="max-w-xl mx-auto mt-4"><EventBanner /></div>
 
         {install.updateReady && (
@@ -193,11 +214,12 @@ const GameModeSelection: React.FC = () => {
           </button>
         )}
 
+        <div className={`mx-auto mt-4 grid gap-3 ${weeklyTile ? 'max-w-4xl md:grid-cols-2' : 'max-w-xl'}`}>
         <motion.button
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => open(daily.screen)}
-          className={`w-full max-w-xl mx-auto mt-4 flex items-center gap-4 rounded-2xl p-4 text-left border-2 min-h-[72px] ${
+          className={`w-full flex items-center gap-4 rounded-2xl p-4 text-left border-2 min-h-[72px] ${
             dailyDone ? 'bg-green-600/30 border-green-400' : 'bg-gradient-to-r from-amber-500/30 to-fuchsia-500/30 border-amber-300'
           }`}
         >
@@ -211,14 +233,18 @@ const GameModeSelection: React.FC = () => {
           </span>
           {!dailyDone && <span className="font-fredoka text-lg">Go ▶</span>}
         </motion.button>
+        {weeklyTile && <WeeklyCard tile={weeklyTile} onOpen={() => open(weeklyTile.id)} />}
+        </div>
 
         <div className="flex justify-center my-6">
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => {
-              const playable = tiles.filter(t => t.category !== 'me');
-              open(playable[Math.floor(Math.random() * playable.length)].id);
+              // Leans towards games she hasn't tried or mastered yet (home/homeLogic.ts).
+              const playable = tiles.filter(t => t.category !== 'me').map(t => t.id);
+              const pick = pickSurpriseGame(playable, highScores, recent);
+              if (pick) open(pick);
             }}
             className="bg-gradient-to-r from-fuchsia-500 via-pink-500 to-orange-400 text-white font-fredoka text-xl px-8 py-4 rounded-full shadow-xl min-h-[56px]"
           >
@@ -226,44 +252,39 @@ const GameModeSelection: React.FC = () => {
           </motion.button>
         </div>
 
+        {recentTiles.length > 0 && (
+          <section aria-label="Jump back in" className="mb-8">
+            <h2 className="font-fredoka text-2xl text-white mb-3 px-1">▶ Jump back in</h2>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {recentTiles.map(t => (
+                <RecentCard key={t.id} tile={t} best={highScores[t.scoreKey ?? t.id]} onOpen={() => open(t.id)} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {favTiles.length > 0 ? (
+          <section aria-label="My favourites" className="mb-8">
+            <h2 className="font-fredoka text-2xl text-white mb-3 px-1">⭐ My favourites</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {favTiles.map(t => renderTile(t))}
+            </div>
+          </section>
+        ) : (
+          <p className="text-center font-nunito text-base text-violet-200 -mt-2 mb-6">Tap ☆ on a game to keep it at the top.</p>
+        )}
+
         {CATEGORIES.map(cat => {
           const catTiles = tiles.filter(t => t.category === cat.id);
           if (catTiles.length === 0) return null;
           return (
-            <section key={cat.id} className="mb-8">
+            <section key={cat.id} aria-label={cat.title} className="mb-8">
               <div className="flex items-baseline gap-3 mb-3 px-1">
                 <h2 className="font-fredoka text-2xl text-white">{cat.title}</h2>
                 <span className="font-nunito text-violet-300 text-base">{cat.subtitle}</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {catTiles.map(tile => {
-                  const delay = Math.min(tileIndex++ * 0.03, 0.3);
-                  const best = highScores[tile.scoreKey ?? tile.id];
-                  return (
-                    <motion.button
-                      key={tile.id}
-                      initial={{ opacity: 0, y: 12 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay, duration: 0.25 }}
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => open(tile.id)}
-                      className="relative w-full text-left rounded-2xl p-4 bg-white/10 hover:bg-white/15 border border-white/15 backdrop-blur-sm shadow-lg flex items-center gap-4 min-h-[88px]"
-                    >
-                      <div className={`text-4xl w-16 h-16 shrink-0 rounded-2xl bg-gradient-to-br ${tile.color} flex items-center justify-center shadow-md`}>
-                        {tile.icon}
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="font-fredoka text-xl text-white leading-tight">{tile.title}</h3>
-                        <p className="font-nunito text-base text-violet-200 leading-snug">{tile.description}</p>
-                        {best ? <p className="font-nunito text-sm text-yellow-300 mt-1">🏅 Best: {best.toLocaleString()}</p> : null}
-                      </div>
-                      {tile.isNew && (
-                        <span className="absolute top-2 right-2 bg-yellow-400 text-stone-900 font-fredoka text-xs px-2 py-0.5 rounded-full">NEW</span>
-                      )}
-                    </motion.button>
-                  );
-                })}
+                {catTiles.map(tile => renderTile(tile, Math.min(tileIndex++ * 0.03, 0.3)))}
               </div>
             </section>
           );

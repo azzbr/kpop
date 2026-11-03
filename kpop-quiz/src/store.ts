@@ -4,6 +4,9 @@ import { localDateKey, getStreak } from './utils/dates';
 import { challengeFor, DAILY_REWARD } from './utils/dailyChallenge';
 import type { QuizQuestion } from './data/quiz/types';
 import { GAME_BADGES } from './data/gameBadges';
+import { starsFor } from './data/mastery';
+import { gameOfTheWeek } from './utils/weeklyGame';
+import { pushRecent, toggleIn } from './components/home/homeLogic';
 
 export type GameState =
   | 'welcome' | 'game_mode'
@@ -64,7 +67,17 @@ export interface Badge {
   unlocked: boolean;
 }
 
-export interface RoundResult { isBest: boolean; best: number; xp: number; coins: number; dailyDone?: boolean; newBadges?: string[] }
+export interface RoundResult {
+  isBest: boolean; best: number; xp: number; coins: number; dailyDone?: boolean; newBadges?: string[];
+  /** 2× XP and coins: this is the game of the week (utils/weeklyGame.ts). */
+  weekly?: boolean;
+  /** Mastery stars (data/mastery.ts) before and after this round; each new star pays STAR_COINS. */
+  starsBefore?: number;
+  starsAfter?: number;
+}
+
+/** Coins for each new mastery star. */
+export const STAR_COINS = 5;
 
 /** Seconds played and rounds per game, per local date (last 30 days kept). */
 export type PlayLog = Record<string, { seconds: number; games: Record<string, number> }>;
@@ -74,8 +87,10 @@ export interface ParentSettings {
   breakMinutes: number;
   /** Sound-effect volume 0–1 (music has its own slider). */
   sfxVolume: number;
+  /** Short vibrations on big moments (Android; utils/haptics.ts). */
+  vibration: boolean;
 }
-export const DEFAULT_PARENT: ParentSettings = { breakMinutes: 0, sfxVolume: 1 };
+export const DEFAULT_PARENT: ParentSettings = { breakMinutes: 0, sfxVolume: 1, vibration: true };
 
 export interface PetState {
   name: string;
@@ -186,6 +201,12 @@ interface GameStore {
   goldStars: GoldStars;
   /** Teacher mode is on for this visit (after the PIN; never saved). */
   teacherOn: boolean;
+  /** Favourite games, shown first on the grid. */
+  favourites: GameState[];
+  /** Games opened lately, newest first ("Jump back in"). */
+  recent: GameState[];
+  /** A GameShell game is on screen (moves the music button into its header). Never saved. */
+  inGame: boolean;
 
   // Team maker
   teamMembers: string[];
@@ -271,6 +292,10 @@ interface GameStore {
   leaveClub: (code: string) => void;
   setTeacher: (t: TeacherProfile | null) => void;
   setTeacherOn: (on: boolean) => void;
+  toggleFavourite: (id: GameState) => void;
+  /** A game tile was opened from the grid. */
+  noteOpened: (id: GameState) => void;
+  setInGame: (on: boolean) => void;
   /** A teacher's gold star arrived. Pays GOLD_STAR_COINS for the first GOLD_STAR_MAX in a lesson. */
   receiveGoldStar: (lesson: string) => boolean;
   incrementDrawingsCreated: () => void;
@@ -281,7 +306,7 @@ interface GameStore {
 
 const SAVE_KEY = 'funquest-save';
 
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 
 /** What gets saved: progress only — never the current screen, an in-progress game or secretReturn. */
 export function partializeSave(s: GameStore) {
@@ -319,6 +344,8 @@ export function partializeSave(s: GameStore) {
     clubs: s.clubs,
     teacher: s.teacher,
     goldStars: s.goldStars,
+    favourites: s.favourites,
+    recent: s.recent,
   };
 }
 
@@ -344,6 +371,12 @@ export function migrateSave(persisted: unknown, version: number): Partial<GameSt
     s.paperClash = { style: 'new', ...(s.paperClash ?? {}) };
   }
   // v4 → v5 added clubs, teacher and goldStars (top-level defaults cover them).
+  // v5 → v6 added favourites, recent and parent.vibration.
+  if (version < 6) {
+    s.favourites = s.favourites ?? [];
+    s.recent = s.recent ?? [];
+    s.parent = { ...DEFAULT_PARENT, ...(s.parent ?? {}) };
+  }
   s.equipped = { ...DEFAULT_EQUIPPED, ...(s.equipped ?? {}) };
   return s;
 }
@@ -450,6 +483,9 @@ export const useGameStore = create<GameStore>()(
       teacher: null,
       goldStars: { lesson: '', inLesson: 0, total: 0 },
       teacherOn: false,
+      favourites: [],
+      recent: [],
+      inGame: false,
       secretStats: { bubblesPopped: 0, patternsCreated: 0, drawingsCreated: 0, treasureFound: 0 },
 
       setGameState: (state) => set({ gameState: state }),
@@ -511,13 +547,17 @@ export const useGameStore = create<GameStore>()(
       },
 
       finishRound: (gameId, score, xpScale) => {
+        const starsBefore = starsFor(gameId, get().highScores[gameId] ?? 0);
         const { isBest, best } = get().submitScore(gameId, score);
+        const starsAfter = starsFor(gameId, best);
+        const today = localDateKey();
         const base = Math.min(50, Math.max(5, Math.round(score / Math.max(xpScale, 0.0001))));
-        const xp = base + (isBest && score > 0 ? 25 : 0);
-        let coins = Math.floor(xp / 5);
+        // Game of the week doubles the round's XP (and so its coins); the daily bonus is added on top.
+        const weekly = gameOfTheWeek(today) === gameId;
+        const xp = (base + (isBest && score > 0 ? 25 : 0)) * (weekly ? 2 : 1);
+        let coins = Math.floor(xp / 5) + Math.max(0, starsAfter - starsBefore) * STAR_COINS;
         let bonusXp = 0;
         // Daily challenge: first time today this game hits its target.
-        const today = localDateKey();
         const ch = challengeFor(today);
         const dailyDone = get().dailyDoneDate !== today && ch.gameId === gameId && score >= ch.target;
         if (dailyDone) {
@@ -540,7 +580,7 @@ export const useGameStore = create<GameStore>()(
           playLog: log,
           gameBadges: newBadges.length ? [...get().gameBadges, ...newBadges] : get().gameBadges,
         });
-        return { isBest, best, xp: xp + bonusXp, coins: coins + newBadges.length * 10, dailyDone, newBadges };
+        return { isBest, best, xp: xp + bonusXp, coins: coins + newBadges.length * 10, dailyDone, newBadges, weekly, starsBefore, starsAfter };
       },
 
       recordPlay: () => {
@@ -649,6 +689,9 @@ export const useGameStore = create<GameStore>()(
       leaveClub: (code) => set({ clubs: get().clubs.filter(c => c.code !== code) }),
       setTeacher: (t) => set(t ? { teacher: t } : { teacher: null, teacherOn: false }),
       setTeacherOn: (on) => set({ teacherOn: on && !!get().teacher }),
+      toggleFavourite: (id) => set({ favourites: toggleIn(get().favourites, id) }),
+      noteOpened: (id) => set({ recent: pushRecent(get().recent, id) }),
+      setInGame: (on) => { if (get().inGame !== on) set({ inGame: on }); },
       receiveGoldStar: (lesson) => {
         const g = get().goldStars;
         const inLesson = g.lesson === lesson ? g.inLesson : 0;

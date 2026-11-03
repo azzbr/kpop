@@ -132,6 +132,14 @@ export default function ParentCorner() {
                 <input type="range" min={0} max={1} step={0.1} value={volume} onChange={e => setVolume(Number(e.target.value))} className="flex-1 accent-fuchsia-400 h-2" />
                 <span className="w-12 text-right font-nunito">{Math.round(volume * 100)}%</span>
               </label>
+              <div className="flex items-center gap-4">
+                <span className="w-36 font-nunito text-lg">📳 Vibration</span>
+                <button onClick={() => { playClick(); setParent({ vibration: parent.vibration === false }); }} aria-pressed={parent.vibration !== false}
+                  className={`min-h-[48px] px-5 rounded-xl font-fredoka text-lg ${parent.vibration !== false ? 'bg-fuchsia-500' : 'bg-white/10'}`}>
+                  {parent.vibration !== false ? 'On' : 'Off'}
+                </button>
+                <span className="font-nunito text-sm text-violet-300">Android phones and tablets: a short buzz for a new best, a star or a badge.</span>
+              </div>
               <p className="font-nunito text-sm text-violet-300">On iPad the music volume follows the device buttons; the slider here works on computers.</p>
             </section>
 

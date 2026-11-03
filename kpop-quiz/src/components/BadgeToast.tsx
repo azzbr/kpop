@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { buzz } from '../utils/haptics';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
 import { gameBadgeById } from '../data/gameBadges';
@@ -30,6 +31,7 @@ export default function BadgeToast() {
   useEffect(() => {
     if (!current) return;
     playUnlock();
+    buzz('great');
     const id = window.setTimeout(() => setQueue(q => q.slice(1)), SHOW_MS);
     return () => clearTimeout(id);
   }, [current]);

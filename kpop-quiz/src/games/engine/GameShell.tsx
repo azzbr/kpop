@@ -4,8 +4,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store';
 import type { RoundResult } from '../../store';
 import ConfettiBurst from '../../components/ConfettiBurst';
-import { playClick, playWin, playWrong } from '../../utils/sounds';
+import { playClick, playNote, playWin, playWrong } from '../../utils/sounds';
 import { BACK_EVENT } from '../../utils/backGuard';
+import { buzz } from '../../utils/haptics';
+import { MUSIC_EVENT } from '../../utils/appEvents';
+import { MASTERY, nextStarAt, prevStarAt, starsFor } from '../../data/mastery';
+import { STAR_COINS } from '../../store';
+import type { GameState } from '../../store';
+
+const STAR_STEP_S = 0.18;
 
 export type ShellStatus = 'ready' | 'playing' | 'paused' | 'over';
 
@@ -49,10 +56,30 @@ export default function GameShell(props: GameShellProps) {
     const res = useGameStore.getState().finishRound(gameId, score, xpScale);
     setResult(res);
     if ((res.isBest && score > 0) || props.celebrateEnd) playWin(); else playWrong();
+    // Vibrate (Android) for happy moments only — never for a plain loss.
+    const great = (res.isBest && score > 0) || (res.starsAfter ?? 0) > (res.starsBefore ?? 0) || res.dailyDone || !!res.newBadges?.length;
+    if (great) buzz('great'); else if (props.celebrateEnd) buzz('good');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, round, score, gameId, xpScale]);
 
   useEffect(() => { if (status === 'playing') setResult(null); }, [status]);
+
+  // A chime for each new star as it pops in on the game-over card.
+  useEffect(() => {
+    if (!result) return;
+    const from = result.starsBefore ?? 0;
+    const timers: number[] = [];
+    for (let i = from; i < (result.starsAfter ?? 0); i++) {
+      timers.push(window.setTimeout(() => playNote(1046.5 + (i - from) * 262, 0.22, 'triangle', 0.12), (0.35 + i * STAR_STEP_S) * 1000));
+    }
+    return () => timers.forEach(t => clearTimeout(t));
+  }, [result]);
+
+  // The music button moves into this header while a game is on screen (MusicPlayer reads inGame).
+  useEffect(() => {
+    useGameStore.getState().setInGame(true);
+    return () => useGameStore.getState().setInGame(false);
+  }, []);
 
   const back = () => {
     playClick();
@@ -72,6 +99,31 @@ export default function GameShell(props: GameShellProps) {
     return () => window.removeEventListener(BACK_EVENT, onBack);
   }, []);
 
+  // Switching apps or locking the screen pauses a running round (some games also do this themselves).
+  useEffect(() => {
+    const onVis = () => { if (document.hidden && live.current.status === 'playing') live.current.onPause(); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+
+  // Keep the screen awake while a round runs (no dimming mid-puzzle). Released on pause, game over
+  // and when leaving; the browser drops it by itself when the app is hidden.
+  useEffect(() => {
+    if (status !== 'playing') return;
+    type Lock = { release: () => Promise<void> };
+    const wl = (navigator as unknown as { wakeLock?: { request: (t: 'screen') => Promise<Lock> } }).wakeLock;
+    let lock: Lock | null = null;
+    let done = false;
+    wl?.request('screen').then(l => { if (done) l.release().catch(() => {}); else lock = l; }).catch(() => { /* not allowed or unsupported */ });
+    return () => { done = true; lock?.release().catch(() => {}); };
+  }, [status]);
+
+  const openMusic = () => {
+    playClick();
+    if (status === 'playing') props.onPause();
+    window.dispatchEvent(new Event(MUSIC_EVENT));
+  };
+
   return (
     <div className="arcade-bg game-surface fixed inset-0 z-40 flex flex-col text-white"
       style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
@@ -81,6 +133,7 @@ export default function GameShell(props: GameShellProps) {
         <button data-back onClick={back} className="min-h-[48px] px-4 rounded-full bg-white/15 font-fredoka text-lg">← Back</button>
         <h1 className="flex-1 font-fredoka text-xl md:text-2xl truncate">{icon} {title}</h1>
         <span className="font-nunito text-yellow-300 text-base hidden sm:block">🏅 {formatScore(best)}</span>
+        <button onClick={openMusic} className="min-h-[48px] min-w-[48px] rounded-full bg-white/15 text-2xl" aria-label="Music">🎵</button>
         {status === 'playing' && (
           <button onClick={() => { playClick(); props.onPause(); }} className="min-h-[48px] min-w-[48px] rounded-full bg-white/15 text-2xl" aria-label="Pause">⏸️</button>
         )}
@@ -141,7 +194,10 @@ export default function GameShell(props: GameShellProps) {
                         ))}
                       </div>
                     )}
-                    {result && <p className="font-fredoka text-lg text-fuchsia-300 mb-4">+{result.xp} XP · +{result.coins} 🪙</p>}
+                    {result && gameId in MASTERY && <StarsRow gameId={gameId} score={score} result={result} formatScore={formatScore} />}
+                    {result && <p className="font-fredoka text-lg text-fuchsia-300 mb-1">+{result.xp} XP · +{result.coins} 🪙</p>}
+                    {result?.weekly && <p className="font-fredoka text-base text-sky-300 mb-1">🌟 2× Game of the week!</p>}
+                    <div className="mb-3" />
                     <button onClick={() => { playClick(); props.onStart(); }}
                       className="w-full min-h-[56px] rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-400 font-fredoka text-2xl mb-3">
                       🔁 Play again
@@ -154,6 +210,52 @@ export default function GameShell(props: GameShellProps) {
           )}
         </AnimatePresence>
       </div>
+    </div>
+  );
+}
+
+/** Game-over stars: earned stars pop in one by one, new ones bounce, then how close this round came to the next star. */
+function StarsRow({ gameId, score, result, formatScore }: { gameId: string; score: number; result: RoundResult; formatScore: (n: number) => string }) {
+  const id = gameId as GameState;
+  const now = result.starsAfter ?? starsFor(id, result.best);
+  const before = result.starsBefore ?? now;
+  const fresh = now - before;
+  const next = nextStarAt(id, result.best);
+  const from = prevStarAt(id, result.best);
+  const progress = next === null ? 1 : Math.max(0, Math.min(1, (score - from) / (next - from)));
+  const soClose = next !== null && progress >= 0.85 && score < next;
+  return (
+    <div className="mb-3" data-testid="round-stars">
+      <div className="flex justify-center gap-2 text-4xl" role="img" aria-label={`${now} of 3 stars`}>
+        {[0, 1, 2].map(i => {
+          const earned = i < now;
+          const isNew = earned && i >= before;
+          return (
+            <motion.span key={i}
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: isNew ? [0, 1.6, 1] : 1, opacity: 1 }}
+              transition={{ delay: 0.35 + i * STAR_STEP_S, duration: isNew ? 0.5 : 0.25 }}
+              className={earned ? '' : 'opacity-40'}
+            >
+              {earned ? '⭐' : '☆'}
+            </motion.span>
+          );
+        })}
+      </div>
+      {fresh > 0 && (
+        <p className="font-fredoka text-lg text-yellow-300 mt-1">{fresh === 1 ? 'New star!' : `${fresh} new stars!`} +{fresh * STAR_COINS} 🪙</p>
+      )}
+      {next !== null && (
+        <div className="mt-2">
+          <div className="h-3 rounded-full bg-white/15 overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}>
+            <motion.div className="h-full rounded-full bg-gradient-to-r from-amber-300 to-yellow-400"
+              initial={{ width: 0 }} animate={{ width: `${progress * 100}%` }} transition={{ delay: 0.9, duration: 0.6 }} />
+          </div>
+          <p className="font-nunito text-sm text-violet-200 mt-1">
+            {soClose ? `🔥 So close! Only ${formatScore(next - score)} more for the next star!` : `Next star at ${formatScore(next)}`}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

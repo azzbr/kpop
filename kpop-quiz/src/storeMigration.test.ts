@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import fixture from './__fixtures__/save-v3.json';
 import fixture4 from './__fixtures__/save-v4.json';
-import { migrateSave, partializeSave, useGameStore, SAVE_VERSION, DEFAULT_EQUIPPED } from './store';
+import fixture5 from './__fixtures__/save-v5.json';
+import { migrateSave, partializeSave, useGameStore, SAVE_VERSION, DEFAULT_EQUIPPED, DEFAULT_PARENT } from './store';
 
 // A real save captured from the v3 build (src/__fixtures__/save-v3.json).
 describe('save migration v3 → v4', () => {
@@ -10,9 +11,10 @@ describe('save migration v3 → v4', () => {
     const before = structuredClone(fixture.state) as Record<string, unknown>;
     const after = migrateSave(structuredClone(fixture.state), fixture.version) as Record<string, unknown>;
     for (const [k, v] of Object.entries(before)) {
-      if (k === 'equipped') continue;
+      if (k === 'equipped' || k === 'parent') continue;
       expect(after[k], k).toEqual(v);
     }
+    expect(after.parent).toEqual({ ...DEFAULT_PARENT, ...(before.parent as object) });
     expect(after.equipped).toEqual({ ...DEFAULT_EQUIPPED, ...(before.equipped as object) });
     expect((after.equipped as { avatar: string }).avatar).toBe('🦊');
     expect(after.todCustom).toEqual([]);
@@ -40,7 +42,10 @@ describe('save migration v3 → v4', () => {
     expect(saved).not.toHaveProperty('gameState');
     for (const k of ['todCustom', 'pixelArt', 'agent', 'secretsFound', 'paperClash', 'clubs', 'teacher', 'goldStars']) expect(saved).toHaveProperty(k);
     expect(saved).not.toHaveProperty('teacherOn');
-    expect(SAVE_VERSION).toBe(5);
+    expect(SAVE_VERSION).toBe(6);
+    expect(saved).toHaveProperty('favourites');
+    expect(saved).toHaveProperty('recent');
+    expect(saved).not.toHaveProperty('inGame');
   });
 
   it('openSecret / leaveSecret return to where the screen was opened from', () => {
@@ -60,7 +65,10 @@ describe('save migration v4 → v5', () => {
     expect(fixture4.version).toBe(4);
     const before = structuredClone(fixture4.state) as Record<string, unknown>;
     const after = migrateSave(structuredClone(fixture4.state), 4) as Record<string, unknown>;
-    for (const [k, v] of Object.entries(before)) expect(after[k], k).toEqual(v);
+    for (const [k, v] of Object.entries(before)) {
+      if (k === 'parent') expect(after.parent).toEqual({ ...(v as object), vibration: true });
+      else expect(after[k], k).toEqual(v);
+    }
   });
 
   it('loads with clubs, teacher and gold stars at their defaults', () => {
@@ -103,5 +111,41 @@ describe('save migration v4 → v5', () => {
     expect(useGameStore.getState().teacherOn).toBe(true);
     s.setTeacher(null);
     expect(useGameStore.getState().teacherOn).toBe(false);
+  });
+});
+
+// A real save captured from the v5 build (src/__fixtures__/save-v5.json).
+describe('save migration v5 → v6', () => {
+  it('keeps every v5 field and adds favourites, recent and parent.vibration', () => {
+    expect(fixture5.version).toBe(5);
+    const before = structuredClone(fixture5.state) as Record<string, unknown>;
+    const after = migrateSave(structuredClone(fixture5.state), 5) as Record<string, unknown>;
+    for (const [k, v] of Object.entries(before)) {
+      if (k === 'parent') continue;
+      expect(after[k], k).toEqual(v);
+    }
+    expect(after.parent).toEqual({ breakMinutes: 20, sfxVolume: 1, vibration: true });
+    expect(after.favourites).toEqual([]);
+    expect(after.recent).toEqual([]);
+  });
+
+  it('loads into the store with progress intact', () => {
+    useGameStore.setState(migrateSave(structuredClone(fixture5.state), 5));
+    const s = useGameStore.getState();
+    expect(s.userName).toBe('Mia');
+    expect(s.highScores.paper_clash).toBe(123);
+    expect(s.favourites).toEqual([]);
+    expect(s.inGame).toBe(false);
+  });
+
+  it('favourites toggle and recent keeps the newest 6', () => {
+    useGameStore.setState({ favourites: [], recent: [] });
+    const s = useGameStore.getState();
+    s.toggleFavourite('snake_arena');
+    s.toggleFavourite('game_2048');
+    s.toggleFavourite('snake_arena');
+    expect(useGameStore.getState().favourites).toEqual(['game_2048']);
+    for (const id of ['paper_clash', 'game_2048', 'quiz_arena', 'paper_clash'] as const) s.noteOpened(id);
+    expect(useGameStore.getState().recent).toEqual(['paper_clash', 'quiz_arena', 'game_2048']);
   });
 });

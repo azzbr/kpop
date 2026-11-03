@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useGameStore, trackInfo } from '../store';
 import { initAudio } from '../utils/sounds';
+import { MUSIC_EVENT } from '../utils/appEvents';
 
 interface MusicPlayerProps {
   /** Keep the audio running but hide the controls (e.g. FM Radio draws its own). */
@@ -14,6 +15,30 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ hidden = false }) => {
     currentTrack, isPlaying, volume, playlist,
     setIsPlaying, nextTrack, prevTrack, setVolume, incrementSongsListened,
   } = useGameStore();
+
+  // In a game the floating button would cover the board on phones: GameShell's 🎵 opens the panel instead.
+  const inGame = useGameStore(s => s.inGame);
+  useEffect(() => {
+    const open = () => setExpanded(true);
+    window.addEventListener(MUSIC_EVENT, open);
+    return () => window.removeEventListener(MUSIC_EVENT, open);
+  }, []);
+
+  // Switching apps or locking the screen pauses the music; it carries on when she comes back.
+  useEffect(() => {
+    let resume = false;
+    const onVis = () => {
+      const st = useGameStore.getState();
+      if (document.hidden) {
+        if (st.isPlaying) { resume = true; st.setIsPlaying(false); }
+      } else if (resume) {
+        resume = false;
+        st.setIsPlaying(true); // play() may be refused; the effect below then shows it paused
+      }
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
 
   const file = playlist[currentTrack];
   const info = trackInfo(file);
@@ -52,7 +77,10 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ hidden = false }) => {
   const skip = (fn: () => void) => { fn(); incrementSongsListened(); };
 
   return (
-    <div className={hidden ? 'hidden' : 'fixed right-2 top-1/2 -translate-y-1/2 z-50'} style={{ marginRight: 'env(safe-area-inset-right)' }}>
+    <div
+      className={hidden ? 'hidden' : inGame ? 'fixed right-2 z-50' : 'fixed right-2 top-1/2 -translate-y-1/2 z-50'}
+      style={{ marginRight: 'env(safe-area-inset-right)', ...(inGame && !hidden ? { top: 'calc(env(safe-area-inset-top) + 68px)' } : {}) }}
+    >
       <audio ref={audioRef} src={`/musickpop/${file}`} onEnded={nextTrack} preload="none" />
       {expanded ? (
         <div className="w-64 bg-violet-950/95 backdrop-blur text-white rounded-2xl p-3 shadow-2xl border border-white/15">
@@ -80,7 +108,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ hidden = false }) => {
             />
           </label>
         </div>
-      ) : (
+      ) : inGame ? null : (
         <button
           onClick={() => setExpanded(true)}
           aria-label={`Music: ${info.title}`}
