@@ -11,7 +11,9 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest became 26.04, where Playwright 1.56.1 can't install WebKit.
+    # Move to a newer image together with a Playwright upgrade.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     defaults:
       run:
