@@ -149,7 +149,8 @@ export default function Bridges() {
   };
 
   const commit = (next: Bridge[]) => {
-    setHistory(h => [...h.slice(-199), bridgesRef.current]);
+    const prev = bridgesRef.current; // read now: the updater below runs after setBridges
+    setHistory(h => [...h.slice(-199), prev]);
     setBridges(next);
     setStarted(true);
     if (isSolved(puzzle, next)) solved();
@@ -257,7 +258,8 @@ export default function Bridges() {
   const clear = () => {
     if (!playing || !bridges.length) return;
     playClick();
-    setHistory(h => [...h, bridgesRef.current]);
+    const prev = bridgesRef.current;
+    setHistory(h => [...h, prev]);
     setBridges([]);
     setSelected(null);
   };
@@ -287,6 +289,14 @@ export default function Bridges() {
     : ([0, 1, 2, 3] as Dir[]).map(d => neighbourIn(puzzle, selected, d)).filter(j => j >= 0 && canLink(puzzle, selected, j, bridges));
   const score = won ? bridgesScore(level, seconds) : 0;
   const centre = (id: number) => ({ x: islands[id].c + 0.5, y: islands[id].r + 0.5 });
+  // squares under a bridge (no water dot there)
+  const underBridge = new Set<number>();
+  for (const br of bridges) {
+    const A = islands[br.a], B = islands[br.b];
+    for (let r = Math.min(A.r, B.r); r <= Math.max(A.r, B.r); r++) {
+      for (let c = Math.min(A.c, B.c); c <= Math.max(A.c, B.c); c++) underBridge.add(r * size + c);
+    }
+  }
 
   const hint = won
     ? '🎉 Every island is joined up!'
@@ -366,9 +376,9 @@ export default function Bridges() {
             >
               <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
                 {/* the water: a faint dot on every square, so lines are easy to see */}
-                {Array.from({ length: size * size }, (_, i) => (
+                {Array.from({ length: size * size }, (_, i) => (underBridge.has(i) ? null : (
                   <circle key={i} cx={(i % size) + 0.5} cy={Math.floor(i / size) + 0.5} r={0.05} fill="rgba(255,255,255,0.16)" />
-                ))}
+                )))}
 
                 {bridges.map(br => (
                   <BridgeLines key={`${br.a}-${br.b}`} from={centre(br.a)} to={centre(br.b)} count={br.count} />

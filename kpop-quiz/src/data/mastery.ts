@@ -28,11 +28,13 @@ export const MASTERY: Partial<Record<GameState, Mastery>> = {
   mini_sudoku: { stars: [100, 250, 450], max: 700 },
   // Easy tops out at 300: 3★ needs a harder level.
   zip_game: { stars: [100, 250, 500], max: 900 },
-  // The new puzzles score like Zip: Easy tops out at 300, Medium 500, Hard 700.
-  picture_puzzle: { stars: [100, 250, 450], max: 700 },
-  bridges: { stars: [100, 250, 450], max: 700 },
-  light_up: { stars: [100, 250, 450], max: 700 },
-  untangle: { stars: [100, 250, 450], max: 700 },
+  // The new puzzles score like Zip (Easy tops out at 300, Medium 500, Hard 700, never below 30 %):
+  // 1★ = any finished puzzle (90 is a slow Easy solve; Picture Puzzles can halve it with hints),
+  // 3★ = Medium very fast or Hard in about 2–3 minutes.
+  picture_puzzle: { stars: [40, 250, 400], max: 700 },
+  bridges: { stars: [90, 250, 400], max: 700 },
+  light_up: { stars: [90, 250, 400], max: 700 },
+  untangle: { stars: [90, 250, 400], max: 700 },
   word_ladder: { stars: [40, 80, 100], max: 100 },
   crossword_mini: { stars: [400, 600, 800], max: 1000 },
   word_scramble: { stars: [600, 1200, 1800], max: 2650 },

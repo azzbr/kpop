@@ -265,6 +265,9 @@ export function wrongCell(board: Board, solution: Solution): Pos | null {
   return null;
 }
 
+/** "a" or "an" before a picture's name: "You made an 🦉 Owl!". */
+export const article = (name: string): 'a' | 'an' => (/^[aeiou]/i.test(name.trim()) ? 'an' : 'a');
+
 // ---------- picking the next picture ----------
 
 /**

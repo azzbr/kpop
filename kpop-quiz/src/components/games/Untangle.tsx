@@ -253,6 +253,8 @@ export default function Untangle() {
   return (
     <GameShell
       gameId="untangle"
+      // A round only ends in a solve: always the win sound, never the 'wrong' one.
+      celebrateEnd
       title="Untangle"
       icon="🕸️"
       xpScale={9}
@@ -321,30 +323,30 @@ export default function Untangle() {
                 aria-label={`Untangle board: ${puzzle.edges.length} lines, ${counter}`}
               >
                 {/* lines: gold when solved; free ones first, crossing ones on top */}
-                {won && puzzle.edges.map(([a, b], i) => line(pts[a], pts[b], `glow${i}`, '#fde68a', 3.2, 0.35))}
+                {won && puzzle.edges.map(([a, b], i) => line(pts[a], pts[b], `glow${i}`, LINE_GOLD, 3.4, 0.3))}
                 {puzzle.edges.map(([a, b], i) => (crossing.has(i) ? null : line(pts[a], pts[b], i, won ? LINE_GOLD : LINE_OK, 1.3)))}
                 {!won && puzzle.edges.map(([a, b], i) => (crossing.has(i) ? line(pts[a], pts[b], i, LINE_CROSS, 1.1) : null))}
-                {/* little rings where lines cross (so it isn't only told by colour) */}
+                {/* little rings where lines cross (so it isn't only told by colour); smaller when there are lots */}
                 {!won && marks.map((m, k) => (
-                  <circle key={`x${k}`} cx={m.x * VIEW} cy={m.y * VIEW} r={1.3} fill="#fff1f2" stroke={LINE_CROSS} strokeWidth={0.5} />
+                  <circle key={`x${k}`} cx={m.x * VIEW} cy={m.y * VIEW} r={marks.length > 30 ? 0.9 : 1.3}
+                    fill="#fff1f2" stroke={LINE_CROSS} strokeWidth={0.4} />
                 ))}
-
-                {/* the faint line from the finger up to the dot she's holding */}
-                {drag && drag.moved && drag.lift > 0 && (
-                  <g pointerEvents="none">
-                    {line(pts[drag.dot], drag.finger, 'finger', '#ffffff', 0.6, 0.35)}
-                    <circle cx={drag.finger.x * VIEW} cy={drag.finger.y * VIEW} r={2.2} fill="#ffffff" opacity={0.18} />
-                  </g>
-                )}
 
                 {dotOrder.map(i => {
                   const p = pts[i];
                   const held = i === dragDot;
-                  const r = held ? DOT_R * 1.3 : DOT_R;
+                  const r = held ? DOT_R * 1.25 : DOT_R;
                   const cx = p.x * VIEW, cy = p.y * VIEW;
                   return (
                     <g key={i} pointerEvents="none">
-                      {held && <circle cx={cx} cy={cy} r={r + 2.6} fill="#ffffff" opacity={0.25} />}
+                      {held && <circle cx={cx} cy={cy} r={r + 1.8} fill="#ffffff" opacity={0.22} />}
+                      {/* the faint line down to her finger, and a ring round the fingertip */}
+                      {held && drag?.moved && drag.lift > 0 && (
+                        <>
+                          {line(p, drag.finger, 'finger', '#ffffff', 0.6, 0.45)}
+                          <circle cx={drag.finger.x * VIEW} cy={drag.finger.y * VIEW} r={3.2} fill="none" stroke="#ffffff" strokeWidth={0.5} opacity={0.45} />
+                        </>
+                      )}
                       <circle cx={cx} cy={cy} r={r + 0.7} fill="#1e1b4b" />
                       <circle cx={cx} cy={cy} r={r} fill={DOT_COLORS[i % DOT_COLORS.length]} stroke={won ? LINE_GOLD : '#ffffff'} strokeWidth={0.7} />
                       <circle cx={cx - r * 0.35} cy={cy - r * 0.35} r={r * 0.3} fill="#ffffff" opacity={0.55} />

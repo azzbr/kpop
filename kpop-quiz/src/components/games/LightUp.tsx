@@ -228,6 +228,8 @@ export default function LightUp() {
   return (
     <GameShell
       gameId="light_up"
+      // A round only ends in a solve: always the win sound, never the 'wrong' one.
+      celebrateEnd
       title="Light Up"
       icon="💡"
       xpScale={9}
