@@ -1,20 +1,19 @@
 // Game of the week: one solo game per Monday–Sunday week gives 2× XP and coins (store.finishRound).
 // Dates are local "YYYY-MM-DD" keys, turned into whole days with Date.UTC so clock changes
 // (summer time) can never shift a day.
-import type { GameState } from '../store';
 import { MASTERY } from '../data/mastery';
 
 const DAY_MS = 86_400_000;
 /** 1 January 2024 was a Monday. */
 const EPOCH_MONDAY = Date.UTC(2024, 0, 1) / DAY_MS;
 
-/** Interleaved arcade / puzzle / quiz, so neighbouring weeks feel different. */
-export const WEEKLY_ROTATION: GameState[] = [
+/** gameIds, interleaved arcade / puzzle / quiz so neighbouring weeks feel different. New games go at the end. */
+export const WEEKLY_ROTATION: string[] = [
   'snake_arena', 'game_2048', 'quiz_arena', 'ninja_slice', 'block_blast', 'emoji_guess', 'picture_puzzle',
   'paper_clash', 'word_scramble', 'real_or_fake', 'kpop_rush', 'sparkle_match', 'guess_intro', 'bridges',
   'rocket_launch', 'mini_sudoku', 'tower_defense', 'pattern_memory', 'battle_arena', 'light_up', 'crossword_mini',
-  'memory_speed', 'zip_game', 'word_ladder', 'untangle',
-].filter(id => id in MASTERY) as GameState[];
+  'memory_speed', 'zip_game', 'word_ladder', 'untangle', 'chess_puzzles',
+].filter(id => id in MASTERY);
 
 function dayNumber(dateKey: string): number {
   const [y, m, d] = dateKey.split('-').map(Number);
@@ -43,7 +42,8 @@ export function weekStart(dateKey: string): string {
  */
 const ROTATION_START = '2026-10-26';
 
-export function gameOfTheWeek(dateKey: string): GameState {
+/** The gameId of the week (open it through the tile whose score key it is). */
+export function gameOfTheWeek(dateKey: string): string {
   const n = WEEKLY_ROTATION.length;
   const k = weekIndex(dateKey) - weekIndex(ROTATION_START);
   return WEEKLY_ROTATION[((k % n) + n) % n];

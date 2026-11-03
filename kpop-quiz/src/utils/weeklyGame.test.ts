@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { gameOfTheWeek, weekIndex, weekStart, WEEKLY_ROTATION } from './weeklyGame';
-import { MASTERY_IDS } from '../data/mastery';
+import { MASTERY, MASTERY_IDS } from '../data/mastery';
 
 describe('game of the week', () => {
-  it('uses every mastery game exactly once in the rotation', () => {
-    expect([...WEEKLY_ROTATION].sort()).toEqual([...MASTERY_IDS].sort());
+  it('uses every mastery game exactly once in the rotation (except ones marked weekly: false)', () => {
+    expect([...WEEKLY_ROTATION].sort()).toEqual(MASTERY_IDS.filter(id => MASTERY[id].weekly !== false).sort());
   });
 
   it('weeks start on Monday', () => {

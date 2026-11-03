@@ -10,10 +10,14 @@ export interface Mastery {
   stars: [number, number, number];
   /** Highest score one round can give, when the game has one. */
   max?: number;
+  /** The screen, when the gameId isn't also the screen's GameState (e.g. Chess Academy's rooms). */
+  screen?: GameState;
+  /** false: never game of the week (e.g. a second score of the same tile). */
+  weekly?: false;
 }
 
-/** Keyed by the gameId passed to GameShell — for these games it is also the screen's GameState. */
-export const MASTERY: Partial<Record<GameState, Mastery>> = {
+/** Keyed by the gameId passed to GameShell (usually also the screen's GameState). */
+export const MASTERY: Record<string, Mastery> = {
   paper_clash: { stars: [50, 100, 150], max: 1000 },
   snake_arena: { stars: [30, 60, 120] },
   tower_defense: { stars: [500, 1000, 1500], max: 1809 },
@@ -45,27 +49,31 @@ export const MASTERY: Partial<Record<GameState, Mastery>> = {
   real_or_fake: { stars: [3, 7, 10], max: 15 },
   emoji_guess: { stars: [5, 8, 10], max: 10 },
   guess_intro: { stars: [2, 4, 5], max: 5 },
+  // Chess Academy: puzzle streak score = Σ puzzle rating / 10; bot game = 100 / 250 / 450 for a win
+  // against Biscuit / Fox / Professor Hoot (draws 30 / 60 / 90, never a "win" star).
+  chess_puzzles: { stars: [300, 800, 1500], screen: 'chess_academy' },
+  chess_bot: { stars: [100, 250, 450], max: 450, screen: 'chess_academy', weekly: false },
 };
 
-export const MASTERY_IDS = Object.keys(MASTERY) as GameState[];
+export const MASTERY_IDS = Object.keys(MASTERY);
 
 /** 0–3 stars for a best score (0 for games without mastery stars). */
 export function starsFor(gameId: string, best: number): number {
-  const m = MASTERY[gameId as GameState];
+  const m = MASTERY[gameId];
   if (!m || !(best > 0)) return 0;
   return m.stars.filter(t => best >= t).length;
 }
 
 /** Score needed for the next star, or null at 3★ (or for games without stars). */
 export function nextStarAt(gameId: string, best: number): number | null {
-  const m = MASTERY[gameId as GameState];
+  const m = MASTERY[gameId];
   if (!m) return null;
   return m.stars[starsFor(gameId, best)] ?? null;
 }
 
 /** Score of the star already earned (0 before the first) — the start of the progress bar. */
 export function prevStarAt(gameId: string, best: number): number {
-  const m = MASTERY[gameId as GameState];
+  const m = MASTERY[gameId];
   const n = starsFor(gameId, best);
   return m && n > 0 ? m.stars[n - 1] : 0;
 }

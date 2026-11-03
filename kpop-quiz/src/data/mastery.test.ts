@@ -15,8 +15,8 @@ function allSource(dir: string): string {
 describe('mastery stars data', () => {
   const src = allSource(join(__dirname, '..'));
 
-  it('has 25 solo games with rising thresholds that fit inside the maximum', () => {
-    expect(MASTERY_IDS).toHaveLength(25);
+  it('has 27 solo-game scores with rising thresholds that fit inside the maximum', () => {
+    expect(MASTERY_IDS).toHaveLength(27);
     for (const id of MASTERY_IDS) {
       const { stars: [a, b, c], max } = MASTERY[id]!;
       expect(a, id).toBeGreaterThan(0);
@@ -29,13 +29,14 @@ describe('mastery stars data', () => {
   it('every id is a real GameShell gameId and a routed screen', () => {
     for (const id of MASTERY_IDS) {
       expect(src.includes(`gameId="${id}"`), `${id} is never passed to GameShell`).toBe(true);
-      expect(src.includes(`${id}: lazy(`), `${id} is not routed in App.tsx`).toBe(true);
+      const screen = MASTERY[id]!.screen ?? id;
+      expect(src.includes(`${screen}: lazy(`), `${screen} is not routed in App.tsx`).toBe(true);
     }
   });
 
   it("each daily-challenge target sits between that game's 1★ and 3★", () => {
     for (const c of ALL_CHALLENGES) {
-      const m = MASTERY[c.screen];
+      const m = MASTERY[c.gameId];
       if (!m) continue; // Word Guess scores 0/1, so it has no stars.
       expect(c.target, c.gameId).toBeGreaterThanOrEqual(m.stars[0]);
       expect(c.target, c.gameId).toBeLessThanOrEqual(m.stars[2]);
@@ -61,8 +62,8 @@ describe('mastery helpers', () => {
   });
 
   it('totals stars over every game', () => {
-    expect(totalStars({})).toEqual({ have: 0, of: 75 });
-    expect(totalStars({ paper_clash: 150, game_2048: 2500, word_guess: 1 })).toEqual({ have: 5, of: 75 });
+    expect(totalStars({})).toEqual({ have: 0, of: 81 });
+    expect(totalStars({ paper_clash: 150, game_2048: 2500, word_guess: 1 })).toEqual({ have: 5, of: 81 });
   });
 
   it('draws the star row', () => {

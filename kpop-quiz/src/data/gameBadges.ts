@@ -154,6 +154,14 @@ export const GAME_BADGES: GameBadge[] = [
   plays('un_first', 'untangle', 'Knot Undoer', '🪢', 1, 'Finish an Untangle puzzle'),
   best('un_400', 'untangle', 'Tidy Tangler', '🧶', 400, 'Score 400 in Untangle'),
   plays('un_10', 'untangle', 'Web Wizard', '🕸️', 10, 'Finish 10 Untangle puzzles'),
+  plays('chp_first', 'chess_puzzles', 'Puzzle Pawn', '♟️', 1, 'Play a chess Puzzle Streak'),
+  best('chp_800', 'chess_puzzles', 'Tactic Tiger', '🐯', 800, 'Score 800 in a Puzzle Streak'),
+  best('chp_1500', 'chess_puzzles', 'Puzzle Master', '🧠', 1500, 'Score 1,500 in a Puzzle Streak'),
+  plays('chb_first', 'chess_bot', 'Bot Buddy', '🤝', 1, 'Play a chess game against a bot'),
+  best('chb_win', 'chess_bot', 'Bot Beater', '🏆', 100, 'Win a chess game against a bot'),
+  best('chb_hoot', 'chess_bot', 'Wise Owl', '🦉', 450, 'Beat Professor Hoot at chess'),
+  plays('chl_first', 'chess_learn', 'First Lesson', '🎓', 1, 'Finish a chess lesson level'),
+  plays('chl_10', 'chess_learn', 'Chess Scholar', '📚', 10, 'Finish 10 chess lesson levels'),
 
   // 🔢 Mini Sudoku — level points for time
   plays('su_first', 'mini_sudoku', 'Grid Solver', '🔢', 1, 'Solve a Mini Sudoku'),

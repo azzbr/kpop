@@ -55,6 +55,7 @@ const TILES: Tile[] = [
   { id: 'bridges', title: 'Bridges', description: 'Join the islands with bridges. Each number says how many.', icon: '🌉', color: 'from-sky-500 to-teal-600', category: 'puzzle', isNew: true },
   { id: 'light_up', title: 'Light Up', description: 'Place lamps to light every square — no lamp may see another.', icon: '💡', color: 'from-yellow-400 to-orange-600', category: 'puzzle', isNew: true },
   { id: 'untangle', title: 'Untangle', description: 'Drag the dots until no lines cross.', icon: '🕸️', color: 'from-violet-500 to-fuchsia-600', category: 'puzzle', isNew: true },
+  { id: 'chess_academy', scoreKey: 'chess_puzzles', title: 'Chess Academy', description: 'Learn every piece, solve puzzles and beat friendly bots!', icon: '♟️', color: 'from-slate-500 to-indigo-700', category: 'puzzle', isNew: true },
   { id: 'word_ladder', title: 'Word Ladder', description: 'Change one letter at a time to climb to the goal word.', icon: '🪜', color: 'from-blue-500 to-sky-600', category: 'puzzle' },
   { id: 'crossword_mini', title: 'Crossword Mini', description: 'Mini crosswords — tap a square and type with the big keys.', icon: '📰', color: 'from-indigo-500 to-violet-600', category: 'puzzle' },
   { id: 'word_scramble', title: 'Word Scramble', description: 'Unscramble 10 jumbled words. Be fast for streak bonuses!', icon: '🔤', color: 'from-amber-500 to-yellow-500', category: 'puzzle' },
@@ -115,7 +116,8 @@ const GameModeSelection: React.FC = () => {
   const recent = useGameStore(s => s.recent);
   const toggleFavourite = useGameStore(s => s.toggleFavourite);
   const byId = new Map(tiles.map(t => [t.id, t] as const));
-  const weeklyTile = byId.get(gameOfTheWeek(localDateKey()));
+  const weeklyId = gameOfTheWeek(localDateKey());
+  const weeklyTile = tiles.find(t => (t.scoreKey ?? t.id) === weeklyId);
   const recentTiles = recent.map(id => byId.get(id)).filter((t): t is Tile => !!t).slice(0, 4);
   const favTiles = favourites.map(id => byId.get(id)).filter((t): t is Tile => !!t);
   const install = useInstallState();
@@ -158,7 +160,7 @@ const GameModeSelection: React.FC = () => {
       tile={tile}
       best={highScores[tile.scoreKey ?? tile.id]}
       fav={favourites.includes(tile.id)}
-      weekly={weeklyTile?.id === tile.id}
+      weekly={(tile.scoreKey ?? tile.id) === weeklyId}
       delay={delay}
       onOpen={() => open(tile.id)}
       onToggleFav={() => { playClick(); toggleFavourite(tile.id); }}

@@ -17,6 +17,7 @@ const NAMES: Record<string, string> = {
   sparkle_match: '💎 Gem Match', tower_defense: '🏰 Tower Defense', heads_up: '🙆 Heads Up', imposter: '🤫 Imposter', truth_or_dare: '🎭 Truth or Dare',
   battle_arena_losses: '⚔️ Battle Arena',
   picture_puzzle: '🖼️ Picture Puzzles', bridges: '🌉 Bridges', light_up: '💡 Light Up', untangle: '🕸️ Untangle',
+  chess_puzzles: '♟️ Chess puzzles', chess_bot: '🤖 Chess vs bots', chess_learn: '🎓 Chess lessons',
 };
 const BREAKS = [0, 20, 30, 45, 60];
 
@@ -164,6 +165,16 @@ export default function ParentCorner() {
                 🦖 Open the Dino game ↗
               </a>
               <p className="font-nunito text-sm text-violet-300 mt-2">In Chrome on Android or a computer you can also type <b>chrome://dino</b> in the address bar — that one works offline too.</p>
+            </section>
+
+            <section className="rounded-3xl bg-white/10 p-5">
+              <h2 className="font-fredoka text-2xl mb-2">📜 Credits</h2>
+              <ul className="font-nunito text-base text-violet-100 space-y-1 list-disc pl-5">
+                <li>Chess rules: <b>chess.js</b> by Jeff Hlywa (BSD licence).</li>
+                <li>Chess puzzles: the <b>Lichess</b> puzzle database (public domain, CC0).</li>
+                <li>Fonts: <b>Fredoka One</b> and <b>Nunito</b> (SIL Open Font Licence).</li>
+              </ul>
+              <p className="font-nunito text-sm text-violet-300 mt-2">The full licence texts come with the app in <b>licenses.txt</b>. Everything else — games, pictures, levels and pieces — was made for Fun Quest.</p>
             </section>
 
             <section className="rounded-3xl bg-white/10 p-5">

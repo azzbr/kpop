@@ -74,6 +74,7 @@ const SCREENS: Partial<Record<GameState, LazyExoticComponent<ComponentType>>> = 
   bridges: lazy(() => import('./components/games/Bridges')),
   light_up: lazy(() => import('./components/games/LightUp')),
   untangle: lazy(() => import('./components/games/Untangle')),
+  chess_academy: lazy(() => import('./components/games/ChessAcademy')),
 };
 
 const Loading = () => (
