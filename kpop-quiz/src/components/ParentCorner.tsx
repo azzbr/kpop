@@ -20,6 +20,10 @@ const NAMES: Record<string, string> = {
 };
 const BREAKS = [0, 20, 30, 45, 60];
 
+// The one link to another website (CLAUDE.md content rule 1): Chrome's T-Rex runner, as published
+// on GitHub Pages from github.com/wayou/t-rex-runner. Only here, behind the grown-up check.
+export const DINO_URL = 'https://wayou.github.io/t-rex-runner/';
+
 function GrownUpCheck({ onPass }: { onPass: () => void }) {
   const [q] = useState(() => {
     const a = 12 + Math.floor(Math.random() * 8);
@@ -149,6 +153,18 @@ export default function ParentCorner() {
             <TeacherSetup />
 
             {asApp && <AppSetup />}
+
+            <section className="rounded-3xl bg-white/10 p-5">
+              <h2 className="font-fredoka text-2xl mb-1">🦖 The Dino game</h2>
+              <p className="font-nunito text-violet-200 mb-3">
+                Chrome's jumping-dinosaur game, on another website (a copy published on GitHub). It needs the internet and opens outside Fun Quest, so there are no stars or coins there. Open it, then hand over the device.
+              </p>
+              <a href={DINO_URL} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 min-h-[52px] px-6 rounded-full font-fredoka text-lg bg-white/15 active:bg-white/25">
+                🦖 Open the Dino game ↗
+              </a>
+              <p className="font-nunito text-sm text-violet-300 mt-2">In Chrome on Android or a computer you can also type <b>chrome://dino</b> in the address bar — that one works offline too.</p>
+            </section>
 
             <section className="rounded-3xl bg-white/10 p-5">
               <h2 className="font-fredoka text-2xl mb-2">Privacy &amp; saving</h2>

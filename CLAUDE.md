@@ -99,7 +99,7 @@ Original games built from ideas in open-source collections (Simon Tatham's puzzl
 - **Picture Puzzles** (`pictureLogic.ts`, pictures in `data/picturePuzzles.ts`): every picture must be solvable by the line solver alone (`solveByLines`, checked in `data/picturePuzzles.test.ts`) so she never has to guess. Picture ids are saved — never rename them. Pictures are original and G-rated.
 - **Bridges / Light Up / Untangle**: generators build a solution first, so every level is solvable; the tests run hundreds of seeds per level.
 - `?debug` puts `window.__puzzle.solve()` on each puzzle for e2e tests (`e2e/puzzles.spec.ts`).
-- **No copies of existing games.** Ideas and genres are fine; another game's code, art, levels, characters or name are not — even with an open licence (e.g. the Chrome Dino extracted on GitHub stays out; Rush Runner's Dino Valley is the original take).
+- **No copies of existing games.** Ideas and genres are fine; another game's code, art, levels, characters or name are not — even with an open licence (e.g. the Chrome Dino extracted on GitHub is never copied in — the Grown-ups corner only links to it; Rush Runner's Dino Valley is the original take).
 
 ### Drawing (`components/draw/`)
 `DoodleCanvas` is the only drawing surface: a fixed 1200×900 board (survives rotation), Pointer Events, pen/marker/rainbow/eraser/fill/stickers (+ owned Locker stickers), undo capped at 20 (older ops are flattened). Rules in `doodleLogic.ts` (+ test). `DoodlePad` screen (`doodle_pad`, gallery in IndexedDB via `doodleStore.ts`, max 30) and the sticker board (`sticker_board`, autosaves one picture). Truth or Dare's "Draw it" dares use `<DoodleCanvas compact>`. tldraw was removed (the old Living Mural needed a licence key on the live site).
@@ -195,7 +195,7 @@ Seven easter eggs, found ids saved in `secretsFound` via `findSecret` (welcome-s
 
 ## Content rules (kids 8–12)
 
-1. **No external links**, no embeds (YouTube etc.), no third-party sites
+1. **No external links**, no embeds (YouTube etc.), no third-party sites. The one exception, at the family's request: the Grown-ups corner's **🦖 Open the Dino game** link (`DINO_URL` in `ParentCorner.tsx`, the GitHub Pages copy of Chrome's T-Rex runner from `wayou/t-rex-runner`), behind the times-table check — a grown-up opens it in the browser. Don't add others; `e2e/installApp.spec.ts` checks it stays the only one
 2. **No personal data leaves the device** — progress is local (store + localStorage). The one exception is Friends Arena: `src/online/` uses Supabase Realtime *broadcast/presence* (publishable key in `supabaseClient.ts`) to send a player's first name, avatar and game moves to others in the same 4-letter room, and — only in a club the family/teacher joined by code — name, avatar and what they're playing to the other club members in Friends Arena. The live count sends nothing but an anonymous id. Nothing is written to a database. Keep it that way: no accounts, no stored chat, no public lists of names, first names only
 3. **Positive tone** — wrong answers get encouragement, never shame
 4. **Readable** — body text `text-base`/`text-lg`+, instructions `text-xl`+

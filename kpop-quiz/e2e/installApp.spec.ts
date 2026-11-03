@@ -26,6 +26,20 @@ test('iPad: "Get the app" shows the Add to Home Screen steps and the copy-progre
   await expect(card).toContainText('keeps its own progress');
 });
 
+test('the Dino game link lives only behind the grown-up check and opens in the browser', async ({ page }) => {
+  await openApp(page, '/?nosw');
+  await enterName(page, 'Mia');
+  await expect(page.getByRole('link', { name: /Dino game/ })).toHaveCount(0);
+  await openGrownUps(page);
+  const link = page.getByRole('link', { name: '🦖 Open the Dino game ↗' });
+  await expect(link).toHaveAttribute('href', 'https://wayou.github.io/t-rex-runner/');
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', /noopener/);
+  // It is the only link to another website in the whole app.
+  const outside = await page.evaluate(() => [...document.querySelectorAll('a[href^="http"]')].map(a => a.getAttribute('href')));
+  expect(outside).toEqual(['https://wayou.github.io/t-rex-runner/']);
+});
+
 test('progress moves to a fresh device with a save code', async ({ browser }) => {
   const from = await browser.newPage();
   await openApp(from, '/?nosw', {
