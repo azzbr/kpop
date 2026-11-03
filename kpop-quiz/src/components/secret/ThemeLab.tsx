@@ -55,7 +55,7 @@ export default function ThemeLab() {
     >
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center gap-3 mb-2">
-          <button
+          <button data-back
             onClick={() => { playClick(); leaveSecret(); }}
             className="min-h-[48px] min-w-[48px] px-4 rounded-full bg-white/15 active:bg-white/25 font-fredoka text-lg"
           >

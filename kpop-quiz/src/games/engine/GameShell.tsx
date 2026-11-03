@@ -5,6 +5,7 @@ import { useGameStore } from '../../store';
 import type { RoundResult } from '../../store';
 import ConfettiBurst from '../../components/ConfettiBurst';
 import { playClick, playWin, playWrong } from '../../utils/sounds';
+import { BACK_EVENT } from '../../utils/backGuard';
 
 export type ShellStatus = 'ready' | 'playing' | 'paused' | 'over';
 
@@ -58,13 +59,26 @@ export default function GameShell(props: GameShellProps) {
     setGameState('game_mode');
   };
 
+  // Installed app: the back gesture pauses a running round first (utils/backGuard.ts).
+  const live = useRef({ status, onPause: props.onPause });
+  live.current = { status, onPause: props.onPause };
+  useEffect(() => {
+    const onBack = (e: Event) => {
+      if (live.current.status !== 'playing') return;
+      e.preventDefault();
+      live.current.onPause();
+    };
+    window.addEventListener(BACK_EVENT, onBack);
+    return () => window.removeEventListener(BACK_EVENT, onBack);
+  }, []);
+
   return (
     <div className="arcade-bg game-surface fixed inset-0 z-40 flex flex-col text-white"
       style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {result?.isBest && score > 0 && <ConfettiBurst count={80} durationMs={3000} />}
 
       <header className="flex items-center gap-3 px-3 py-2 bg-black/30">
-        <button onClick={back} className="min-h-[48px] px-4 rounded-full bg-white/15 font-fredoka text-lg">← Back</button>
+        <button data-back onClick={back} className="min-h-[48px] px-4 rounded-full bg-white/15 font-fredoka text-lg">← Back</button>
         <h1 className="flex-1 font-fredoka text-xl md:text-2xl truncate">{icon} {title}</h1>
         <span className="font-nunito text-yellow-300 text-base hidden sm:block">🏅 {formatScore(best)}</span>
         {status === 'playing' && (

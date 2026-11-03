@@ -264,7 +264,7 @@ export default function TruthOrDare() {
       style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {phase === 'finale' && <ConfettiBurst count={90} durationMs={3500} />}
       <header className="flex items-center gap-3 px-3 py-2 bg-black/30">
-        <button onClick={back} className={`${pill} ${confirmBack ? 'bg-red-500' : 'bg-white/15'}`}>{confirmBack ? 'End the game? Tap again' : '← Back'}</button>
+        <button data-back onClick={back} className={`${pill} ${confirmBack ? 'bg-red-500' : 'bg-white/15'}`}>{confirmBack ? 'End the game? Tap again' : '← Back'}</button>
         <h1 className="flex-1 font-fredoka text-xl md:text-2xl truncate">🎭 Truth or Dare</h1>
         {phase !== 'setup' && phase !== 'cards' && phase !== 'finale' && <span className="font-fredoka text-lg rounded-full bg-white/10 px-3 py-1">Lap {lap}/{laps}</span>}
       </header>

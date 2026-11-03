@@ -25,7 +25,7 @@ export default function SecretMenu() {
       style={{ paddingTop: 'max(16px, env(safe-area-inset-top))', paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}>
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center gap-3 mb-2">
-          <button onClick={() => { playClick(); setGameState('welcome'); }} className="min-h-[48px] px-4 rounded-full bg-white/15 font-fredoka text-lg">← Back</button>
+          <button data-back onClick={() => { playClick(); setGameState('welcome'); }} className="min-h-[48px] px-4 rounded-full bg-white/15 font-fredoka text-lg">← Back</button>
         </div>
         <h1 className="font-fredoka text-4xl md:text-5xl text-center mt-2">🔓 The Secret Club</h1>
         <p className="font-nunito text-lg text-violet-200 text-center mb-6">You found the hidden door. Don't tell anyone… 🤫</p>

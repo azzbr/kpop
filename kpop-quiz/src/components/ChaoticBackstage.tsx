@@ -179,7 +179,7 @@ export default function ChaoticBackstage() {
       {confetti && <ConfettiBurst count={100} durationMs={4000} />}
 
       <div className="w-full max-w-xl">
-        <button onClick={() => setGameState('game_mode')} className="btn-kid-secondary mb-4 font-fredoka">
+        <button data-back onClick={() => setGameState('game_mode')} className="btn-kid-secondary mb-4 font-fredoka">
           ← Back
         </button>
 

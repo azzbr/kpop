@@ -31,7 +31,7 @@ export default function ScreenFrame({ title, icon, children, onBack, right, widt
       style={{ paddingTop: 'max(12px, env(safe-area-inset-top))', paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}>
       <div className={`${width} mx-auto`}>
         <header className="flex items-center gap-3 py-2 mb-3">
-          <button onClick={back} className="min-h-[48px] px-4 rounded-full bg-white/15 font-fredoka text-lg shrink-0">← Back</button>
+          <button data-back onClick={back} className="min-h-[48px] px-4 rounded-full bg-white/15 font-fredoka text-lg shrink-0">← Back</button>
           <h1 className="flex-1 min-w-0 font-fredoka text-2xl md:text-3xl truncate">{icon} {title}</h1>
           {right}
         </header>

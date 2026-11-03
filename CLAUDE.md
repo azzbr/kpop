@@ -56,7 +56,7 @@ To add a screen:
 1. Add the key to the `GameState` union in `store.ts`
 2. Add `my_key: lazy(() => import('./components/...'))` to `SCREENS` in `App.tsx`
 3. Add a tile to `TILES` in `GameModeSelection.tsx` with a `category` (`arcade | puzzle | quiz | party | create | me | teacher`). Set `isNew: true` for a while. Each icon is used once.
-4. Every screen needs a clear Back button → `setGameState('game_mode')`
+4. Every screen needs a clear Back button → `setGameState('game_mode')`, marked `data-back` so Android's back gesture presses it in the installed app (ScreenFrame / GameShell do this for you)
 
 ### Store (`store.ts`)
 Zustand with `persist` (save key `funquest-save`, `SAVE_VERSION` 5; v2 added `myQuizzes`, `equipped`, `dailyDoneDate`, `wordGuess`; v3 added `playLog`, `rounds`, `gameBadges`, `parent`, `pet`, `events`; v4 added `todCustom`, `pixelArt`, `agent`, `secretsFound`, `paperClash`, `equipped.skin`; v5 added `clubs`, `teacher`, `goldStars`). `teacherOn` (teacher mode for this visit) is never saved. `partializeSave` saves **progress only** (name, XP, coins, high scores, days played, badges, stats, theme, volume) — never the current screen or an in-progress game. Bump `SAVE_VERSION` and add a step to `migrateSave` when changing the saved shape; `src/storeMigration.test.ts` loads real v3 and v4 saves (`src/__fixtures__/save-v3.json`, `save-v4.json`) — capture a new fixture from the live build before each bump. `secretReturn` (where a hidden screen's Back goes; `openSecret` / `leaveSecret`) is never saved.
@@ -104,7 +104,16 @@ Seven easter eggs, found ids saved in `secretsFound` via `findSecret` (welcome-s
 - **Parent corner** (`parent_corner`, "👪 Grown-ups" button under the grid, behind a times-table check): weekly play time from `playLog` (filled by `PlayTimeTracker` in App every 15 s), break reminder, sound-effect volume (`utils/sounds.setSfxVolume`), Friends Arena clubs (`grownups/ClubSetup.tsx`), Teacher setup (`grownups/TeacherSetup.tsx`), reset.
 
 ### Offline (service worker)
-`sw/sw.js` is built into `dist/sw.js` by the `serviceWorker()` plugin in `vite.config.ts` (precache list + version injected). App files are precached; music is cached on first play and answered with 206 range responses (Safari needs them). Registered in `main.tsx` in production only (`?nosw` disables). Cross-origin requests (Supabase, fonts) are not cached.
+`sw/sw.js` is built into `dist/sw.js` by the `serviceWorker()` plugin in `vite.config.ts` (precache list + version injected). App files are precached; music is cached on first play and answered with 206 range responses (Safari needs them). Registered in `main.tsx` in production only (`?nosw` disables). Cross-origin requests (Supabase, fonts) are not cached. When the app comes back to the front after 30+ min, `main.tsx` checks for a new version; if one takes over, the grid shows "✨ New things have arrived! Tap to update" (`markUpdateReady`).
+
+### Installed app (Android, iPhone/iPad, computers)
+- `utils/appInstall.ts` (`initAppInstall()` first thing in `main.tsx`): `useInstallState()` → `asApp` (opened from the Home Screen; `?app` fakes it for tests), `canPrompt` (Chrome's `beforeinstallprompt`, kept so no browser pop-up appears for kids), `platform` (`ios | android | desktop`; iPadOS says "Macintosh" + touch), `updateReady`. As the app it calls `navigator.storage.persist()`.
+- **Grown-ups corner → 📲 Get the app** (`grownups/AppSetup.tsx`, first section until installed; the grid shows "📲 Get the app" next to 👪 Grown-ups when `offerInstall()`): the browser's install dialog, or picture steps for iPhone/iPad (Share → Add to Home Screen → Open as Web App) and Android menus.
+- **iPhone/iPad Home Screen apps have their own storage, separate from Safari** — the app starts empty. **🔁 Move progress** (`utils/saveTransfer.ts` + test) makes a save code (every localStorage key, gzip + base64, prefix `FUNQUEST-SAVE:`) to copy/share and paste in the app or on a new device; it shows both saves and asks twice before replacing. Never uploaded. Doodle Pad pictures (IndexedDB) don't move. New per-game localStorage keys move automatically; keys starting with `__` are skipped.
+- **Back gesture** (`utils/backGuard.ts`, installed app only): off the Welcome screen and grid there is one guard history entry; Android's back pops it → `funquest:back` (GameShell cancels it to pause a running round) → else the screen's `[data-back]` button is clicked → else grid / `leaveSecret()`. **Give every new screen's main Back button `data-back`** (ScreenFrame and GameShell already have it).
+- `components/ui/ScreenErrorBoundary.tsx` wraps the screens: a screen file that fails to load (a deploy while the app was open) reloads once per 30 s, otherwise a friendly "Try again / Back to the games" card — never a blank page in an app without browser buttons.
+- Manifest: `id`, `display_override`, maskable icons (`icons/icon-maskable.svg`, no text, inside the middle 80%) and `screenshots/` (Chrome's richer install sheet). Remake them with `npm run build && node scripts/makeAppImages.mjs` (`PW_CHROMIUM=/opt/pw-browsers/chromium` if Playwright's own browser is missing) and keep the sizes in the manifest in step.
+- e2e: `e2e/installApp.spec.ts`.
 
 ### Online rooms (Friends Arena)
 `src/online/useRoom.ts` joins a Supabase Realtime channel named after the room code. The host's device holds the authoritative game state and broadcasts it; other devices send inputs. Question/puzzle banks live in `src/online/*.ts`.
@@ -155,7 +164,7 @@ Seven easter eggs, found ids saved in `secretsFound` via `findSecret` (welcome-s
 - Use `.min-h-screen-d` (dvh) rather than 100vh, and respect `env(safe-area-inset-*)`.
 - Audio only starts after a tap (MusicPlayer unlocks on the first tap). Safari ignores `<audio>` volume changes — pause other audio instead of fading it.
 - Pause games when the page is hidden (`useGameLoop`'s `onHidden`).
-- Saved progress: Safari can wipe site data after ~7 days without a visit, **except** for sites added to the Home Screen. Tell users to add it to the Home Screen.
+- Saved progress: Safari can wipe site data after ~7 days without a visit, **except** for sites added to the Home Screen. Tell users to add it to the Home Screen — and to move their progress into it first (Grown-ups corner → 🔁 Move progress), because the Home Screen app has its own storage.
 - Draw dragged pieces above the finger so the hand doesn't hide them.
 
 ---

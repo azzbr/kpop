@@ -13,6 +13,7 @@ import EventBanner from './events/EventBanner';
 import PinPad from './ui/PinPad';
 import TeacherSplash from './TeacherSplash';
 import { checkPin } from '../utils/pin';
+import { offerInstall, useInstallState } from '../utils/appInstall';
 
 type Category = 'arcade' | 'puzzle' | 'quiz' | 'party' | 'create' | 'me' | 'teacher';
 
@@ -110,6 +111,7 @@ const GameModeSelection: React.FC = () => {
   const [askPin, setAskPin] = useState(false);
   const [splash, setSplash] = useState(false);
   const tiles = TILES.filter(t => t.category !== 'teacher' || teacherMode);
+  const install = useInstallState();
 
   const handleTitleClick = () => {
     const next = discoTaps + 1;
@@ -182,6 +184,14 @@ const GameModeSelection: React.FC = () => {
         <PlayerLevelBadge />
 
         <div className="max-w-xl mx-auto mt-4"><EventBanner /></div>
+
+        {install.updateReady && (
+          <button onClick={() => { playClick(); location.reload(); }}
+            className="w-full max-w-xl mx-auto mt-4 flex items-center gap-3 rounded-2xl p-3 text-left bg-sky-500/25 border-2 border-sky-300 min-h-[56px]">
+            <span className="text-3xl">✨</span>
+            <span className="flex-1 font-fredoka text-lg">New things have arrived! Tap to update.</span>
+          </button>
+        )}
 
         <motion.button
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
@@ -266,6 +276,11 @@ const GameModeSelection: React.FC = () => {
           <button onClick={() => open('parent_corner')} className="min-h-[48px] px-5 rounded-full bg-white/10 font-fredoka text-base text-violet-200">
             👪 Grown-ups
           </button>
+          {offerInstall(install) && (
+            <button onClick={() => open('parent_corner')} className="min-h-[48px] px-5 rounded-full bg-white/10 font-fredoka text-base text-violet-200">
+              📲 Get the app
+            </button>
+          )}
           {teacher && (
             <button onClick={() => { playClick(); if (teacherMode) setTeacherOn(false); else setAskPin(true); }}
               className={`min-h-[48px] px-5 rounded-full font-fredoka text-base ${teacherMode ? 'bg-amber-400 text-stone-900' : 'bg-white/10 text-violet-200'}`}>

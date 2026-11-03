@@ -285,7 +285,7 @@ export default function PixelStudio() {
       }}
     >
       <div className="flex items-center gap-3 mb-1">
-        <button type="button" onClick={() => { playClick(); leaveSecret(); }} className="min-h-[48px] px-4 rounded-full bg-white/15 font-fredoka text-lg">← Back</button>
+        <button data-back type="button" onClick={() => { playClick(); leaveSecret(); }} className="min-h-[48px] px-4 rounded-full bg-white/15 font-fredoka text-lg">← Back</button>
         <h1 className="font-fredoka text-3xl md:text-4xl">👾 Pixel Studio</h1>
       </div>
       <p className="text-lg text-white/80 mb-3">Drag to paint. Your art can be your Paper Clash skin!</p>

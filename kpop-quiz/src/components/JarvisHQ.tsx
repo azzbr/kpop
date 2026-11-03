@@ -482,7 +482,7 @@ const JarvisHQ: React.FC = () => {
 
       <div className="max-w-2xl w-full mx-auto">
         <div className="flex flex-wrap gap-2 mb-3">
-          <button onClick={() => { playClick(); setGameState('game_mode'); }}
+          <button data-back onClick={() => { playClick(); setGameState('game_mode'); }}
             className="min-h-[48px] min-w-[48px] px-5 py-2 bg-amber-500 hover:bg-amber-400 text-stone-900 rounded-full font-fredoka text-base">← Back</button>
           <button onClick={() => setShowIntro(true)}
             className="min-h-[48px] min-w-[48px] px-4 py-2 bg-stone-800 hover:bg-stone-700 text-amber-300 rounded-full font-fredoka text-base border border-amber-700">📜 Pact</button>

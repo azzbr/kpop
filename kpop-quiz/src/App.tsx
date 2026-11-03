@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
 import type { ComponentType, LazyExoticComponent } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from './store';
@@ -10,6 +10,10 @@ import PlayTimeTracker from './components/PlayTimeTracker';
 import BadgeToast from './components/BadgeToast';
 import PumpkinHunt from './components/events/PumpkinHunt';
 import { useEventTheme } from './events/useEventTheme';
+import ScreenErrorBoundary from './components/ui/ScreenErrorBoundary';
+import { getInstallState } from './utils/appInstall';
+import { installBackGuard } from './utils/backGuard';
+import type { BackGuard } from './utils/backGuard';
 
 // Every screen except the first two loads on demand, so the iPad downloads only what she opens.
 const SCREENS: Partial<Record<GameState, LazyExoticComponent<ComponentType>>> = {
@@ -84,6 +88,29 @@ function App() {
     try { if (sessionStorage.getItem('kpop_room')) useGameStore.getState().setGameState('online_hub'); } catch { /* ignore */ }
   }, []);
 
+  // Installed app: the back gesture pauses the game or presses the screen's Back, instead of
+  // closing the app (utils/backGuard.ts).
+  const guard = useRef<BackGuard | null>(null);
+  useEffect(() => {
+    if (!getInstallState().asApp) return;
+    const g = installBackGuard({
+      isHome: () => ['welcome', 'game_mode'].includes(useGameStore.getState().gameState),
+      fallback: () => {
+        const s = useGameStore.getState();
+        if (s.secretReturn) s.leaveSecret(); else s.setGameState('game_mode');
+      },
+    });
+    guard.current = g;
+    g.sync();
+    return () => { g.dispose(); guard.current = null; };
+  }, []);
+  useEffect(() => { guard.current?.sync(); }, [gameState]);
+
+  const goHome = () => {
+    const s = useGameStore.getState();
+    s.setGameState(s.gameState === 'game_mode' ? 'welcome' : 'game_mode');
+  };
+
   const renderCurrentScreen = () => {
     if (gameState === 'welcome') return <WelcomeScreen key="welcome" />;
     if (gameState === 'game_mode') return <GameModeSelection key="game_mode" />;
@@ -93,11 +120,13 @@ function App() {
 
   return (
     <div className="App">
-      <Suspense fallback={<Loading />}>
-        <AnimatePresence mode="wait">
-          {renderCurrentScreen()}
-        </AnimatePresence>
-      </Suspense>
+      <ScreenErrorBoundary screen={gameState} onHome={goHome}>
+        <Suspense fallback={<Loading />}>
+          <AnimatePresence mode="wait">
+            {renderCurrentScreen()}
+          </AnimatePresence>
+        </Suspense>
+      </ScreenErrorBoundary>
       <MusicPlayer />
       <PlayTimeTracker />
       <BadgeToast />

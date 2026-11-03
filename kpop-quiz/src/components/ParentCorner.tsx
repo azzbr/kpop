@@ -5,6 +5,8 @@ import { localDateKey } from '../utils/dates';
 import { playClick } from '../utils/sounds';
 import ClubSetup from './grownups/ClubSetup';
 import TeacherSetup from './grownups/TeacherSetup';
+import AppSetup from './grownups/AppSetup';
+import { useInstallState } from '../utils/appInstall';
 
 // Friendly names for the play log (fall back to the id).
 const NAMES: Record<string, string> = {
@@ -50,6 +52,7 @@ export default function ParentCorner() {
   const { setGameState, playLog, parent, setParent, volume, setVolume, resetProgress, xp, datesPlayed, gameBadges, userName } = useGameStore();
   const [unlocked, setUnlocked] = useState(false);
   const [confirmReset, setConfirmReset] = useState(0);
+  const { asApp } = useInstallState();
 
   const week = useMemo(() => {
     const days = Array.from({ length: 7 }, (_, i) => {
@@ -72,12 +75,15 @@ export default function ParentCorner() {
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="arcade-bg min-h-screen-d text-white px-4 py-5">
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center gap-3 mb-5">
-          <button onClick={() => { playClick(); setGameState('game_mode'); }} className="min-h-[48px] px-4 rounded-full bg-white/15 font-fredoka text-lg">← Back</button>
+          <button data-back onClick={() => { playClick(); setGameState('game_mode'); }} className="min-h-[48px] px-4 rounded-full bg-white/15 font-fredoka text-lg">← Back</button>
           <h1 className="font-fredoka text-3xl">👪 Parent corner</h1>
         </div>
 
         {!unlocked ? <GrownUpCheck onPass={() => setUnlocked(true)} /> : (
           <div className="space-y-5">
+            {/* Not installed yet: the grid's "📲 Get the app" button lands here, so it comes first. */}
+            {!asApp && <AppSetup />}
+
             <section className="rounded-3xl bg-white/10 p-5">
               <h2 className="font-fredoka text-2xl mb-1">This week</h2>
               <p className="font-nunito text-violet-200 mb-4">{userName || 'Your player'} played <b>{week.total} minutes</b> in the last 7 days · {datesPlayed.length} days played in total · {gameBadges.length} badges · {xp.toLocaleString()} XP</p>
@@ -133,12 +139,14 @@ export default function ParentCorner() {
 
             <TeacherSetup />
 
+            {asApp && <AppSetup />}
+
             <section className="rounded-3xl bg-white/10 p-5">
               <h2 className="font-fredoka text-2xl mb-2">Privacy &amp; saving</h2>
               <ul className="font-nunito text-base text-violet-100 space-y-1 list-disc pl-5">
                 <li>All progress is saved only on this device. There are no accounts and nothing is uploaded.</li>
                 <li>Friends Arena sends the chosen first name, avatar and game moves to the other devices in the same 4-letter room — and, if you join a club, the name, avatar and what they're playing to the other club members who are in Friends Arena. Nothing is stored online.</li>
-                <li>On iPad, add the site to the Home Screen (Share → Add to Home Screen) so Safari never clears the saved progress.</li>
+                <li>Install it (📲 Get the app above) so the device never clears the saved progress. Moving progress uses a save code that you copy and paste yourself — it is never uploaded.</li>
               </ul>
             </section>
 

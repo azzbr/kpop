@@ -255,7 +255,7 @@ const AgentHQ: React.FC = () => {
 
       <div className="max-w-2xl mx-auto relative z-10">
         <div className="flex items-center justify-between gap-2 mb-4">
-          <button
+          <button data-back
             onClick={leave}
             className="min-h-[48px] px-5 bg-white/10 active:bg-white/20 text-cyan-200 rounded-full font-fredoka text-lg border border-cyan-500/40"
           >

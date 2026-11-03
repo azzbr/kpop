@@ -92,7 +92,7 @@ export default function QuestMap() {
       style={{ paddingTop: 'max(1.25rem, env(safe-area-inset-top))', paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}>
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-3 mb-3">
-          <button onClick={() => { playClick(); setGameState('game_mode'); }} className="min-h-[48px] px-4 rounded-full bg-white/15 font-fredoka text-lg">← Back</button>
+          <button data-back onClick={() => { playClick(); setGameState('game_mode'); }} className="min-h-[48px] px-4 rounded-full bg-white/15 font-fredoka text-lg">← Back</button>
           <h1 className="font-fredoka text-3xl flex-1">🧭 Quest Map</h1>
           <span className="rounded-full bg-yellow-400 text-stone-900 font-fredoka text-xl px-4 py-2">🪙 {userCurrency}</span>
         </div>

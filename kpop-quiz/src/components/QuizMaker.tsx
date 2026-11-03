@@ -251,7 +251,7 @@ function Screen({ title, onBack, children }: { title: string; onBack: () => void
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="arcade-bg min-h-screen-d text-white px-4 py-5">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-3 mb-4">
-          <button onClick={() => { playClick(); onBack(); }} className="min-h-[48px] px-4 rounded-full bg-white/15 font-fredoka text-lg">← Back</button>
+          <button data-back onClick={() => { playClick(); onBack(); }} className="min-h-[48px] px-4 rounded-full bg-white/15 font-fredoka text-lg">← Back</button>
           <h1 className="font-fredoka text-3xl truncate">{title}</h1>
         </div>
         {children}

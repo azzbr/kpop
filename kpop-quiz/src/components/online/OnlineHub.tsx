@@ -466,7 +466,7 @@ const OnlineHub: React.FC = () => {
         )}
         <ReactionBar react={reactions.react} compact />
         <TeacherBar cls={cls} />
-        <button
+        <button data-back
           onClick={() => {
             if (confirmLeave) { setConfirmLeave(false); leaveToMenu(); return; }
             playClick();
@@ -492,7 +492,7 @@ const OnlineHub: React.FC = () => {
       className="min-h-screen-d bg-gradient-to-br from-emerald-900 via-teal-900 to-cyan-950 text-white px-4"
       style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))', paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
     >
-      <button
+      <button data-back
         onClick={screen === 'lobby' ? leaveToMenu : screen === 'join' ? () => { playClick(); setScreen('menu'); } : exitHub}
         className="absolute left-4 bg-white/10 hover:bg-white/20 rounded-full px-5 min-h-[48px] font-fredoka text-lg z-20"
         style={{ top: 'max(1rem, env(safe-area-inset-top))' }}

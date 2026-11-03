@@ -142,7 +142,7 @@ export default function FreezeDance() {
       {confetti && <ConfettiBurst count={120} durationMs={4000} />}
 
       <div className="w-full max-w-lg">
-        <button onClick={() => { clearTimers(); setIsPlaying(false); setGameState('game_mode'); }}
+        <button data-back onClick={() => { clearTimers(); setIsPlaying(false); setGameState('game_mode'); }}
           className="btn-kid-secondary mb-4 font-fredoka">
           ← Back
         </button>

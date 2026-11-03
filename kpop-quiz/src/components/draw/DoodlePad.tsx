@@ -89,7 +89,7 @@ export default function DoodlePad({ mode = 'pad' }: { mode?: 'pad' | 'mural' }) 
     <div className="arcade-bg min-h-screen-d h-[100dvh] flex flex-col text-white px-3 pb-3"
       style={{ paddingTop: 'max(12px, env(safe-area-inset-top))', paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
       <div className="flex flex-wrap items-center gap-2 mb-2">
-        <button onClick={back} className={`${pill} bg-white/15`}>← Back</button>
+        <button data-back onClick={back} className={`${pill} bg-white/15`}>← Back</button>
         <h1 className="font-fredoka text-2xl md:text-3xl mr-auto">{mode === 'mural' ? '🖼️ Sticker Board' : '🎨 Doodle Pad'}</h1>
         <button onClick={() => { playClick(); setShowBg(v => !v); }} className={`${pill} bg-white/15`} aria-expanded={showBg}>🎨 Paper</button>
         {mode === 'pad' && (
