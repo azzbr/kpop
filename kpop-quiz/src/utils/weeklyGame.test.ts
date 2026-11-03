@@ -23,6 +23,11 @@ describe('game of the week', () => {
     expect(weekIndex('2023-12-31')).toBe(-1);
   });
 
+  it('kept the week the puzzles were added on the same game', () => {
+    expect(gameOfTheWeek('2026-10-28')).toBe('snake_arena');
+    expect(gameOfTheWeek('2026-11-03')).toBe('game_2048');
+  });
+
   it('is the same all week and changes every Monday, never twice in a row', () => {
     const days = ['2026-11-02', '2026-11-03', '2026-11-05', '2026-11-08'];
     expect(new Set(days.map(gameOfTheWeek)).size).toBe(1);

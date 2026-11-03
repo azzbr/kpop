@@ -94,6 +94,13 @@ Top to bottom: level badge, `TodayStrip` (🔥 streak from `getStreak`, 🐾 pet
 - `home/GameTile.tsx`: tile button + a sibling ☆/⭐ favourite button (bottom-right; NEW sits top-right), stars line `⭐⭐☆ · 🏅 Best: …`, "🌟 2× XP" chip on the weekly game, gold card + 🏆 at 3★ (`data-mastered`).
 - **Mastery stars** (`data/mastery.ts` + test): 1★/2★/3★ score thresholds per solo game in its own finishRound units, computed from `highScores` (no saved stars, old bests count). 2★ ≈ the daily target, 3★ ≤ the game's max. Word Guess has none (score 0/1). Thresholds are first guesses — tune them after watching her play.
 
+### Logic puzzles (Nov 2026: Picture Puzzles, Bridges, Light Up, Untangle)
+Original games built from ideas in open-source collections (Simon Tatham's puzzles) — own code, levels and pictures, nothing copied. Each has a pure `components/games/xxxLogic.ts` (+ test) and a GameShell component scored like Zip (`round(base × max(0.3, 1 − seconds/par))`, Easy/Small 300 · Medium 500 · Hard/Big 700; stars 100/250/450). Levels are seeded (`levelSeed(diff, n)`), so "Level 7" is the same everywhere; progress is a content key (`bridges_level`, `lightup_level`, `untangle_level`, `picture_solved`, …) and any valid answer counts, not just the generated one.
+- **Picture Puzzles** (`pictureLogic.ts`, pictures in `data/picturePuzzles.ts`): every picture must be solvable by the line solver alone (`solveByLines`, checked in `data/picturePuzzles.test.ts`) so she never has to guess. Picture ids are saved — never rename them. Pictures are original and G-rated.
+- **Bridges / Light Up / Untangle**: generators build a solution first, so every level is solvable; the tests run hundreds of seeds per level.
+- `?debug` puts `window.__puzzle.solve()` on each puzzle for e2e tests (`e2e/puzzles.spec.ts`).
+- **No copies of existing games.** Ideas and genres are fine; another game's code, art, levels, characters or name are not — even with an open licence (e.g. the Chrome Dino extracted on GitHub stays out; Rush Runner's Dino Valley is the original take).
+
 ### Drawing (`components/draw/`)
 `DoodleCanvas` is the only drawing surface: a fixed 1200×900 board (survives rotation), Pointer Events, pen/marker/rainbow/eraser/fill/stickers (+ owned Locker stickers), undo capped at 20 (older ops are flattened). Rules in `doodleLogic.ts` (+ test). `DoodlePad` screen (`doodle_pad`, gallery in IndexedDB via `doodleStore.ts`, max 30) and the sticker board (`sticker_board`, autosaves one picture). Truth or Dare's "Draw it" dares use `<DoodleCanvas compact>`. tldraw was removed (the old Living Mural needed a licence key on the live site).
 
@@ -150,11 +157,11 @@ Seven easter eggs, found ids saved in `secretsFound` via `findSecret` (welcome-s
 
 | Category | Games (`gameState`) |
 |---|---|
-| Arcade | `paper_clash`, `snake_arena`, `tower_defense` (quiz-powered), `kpop_rush` (Rush Runner), `ninja_slice`, `rocket_launch`, `battle_arena` |
-| Puzzles | `word_guess`, `game_2048`, `block_blast`, `mini_sudoku`, `zip_game`, `word_ladder`, `crossword_mini`, `word_scramble`, `pattern_memory`, `memory_speed`, `sparkle_match` (Gem Match) |
+| Arcade | `paper_clash`, `snake_arena`, `tower_defense` (quiz-powered), `kpop_rush` (Rush Runner: 🏙️ City or 🦖 Dino Valley world, saved as `rush_world`; one best score for both), `ninja_slice`, `rocket_launch`, `battle_arena` |
+| Puzzles | `word_guess`, `game_2048`, `block_blast`, `mini_sudoku`, `zip_game`, `word_ladder`, `crossword_mini`, `word_scramble`, `pattern_memory`, `memory_speed`, `sparkle_match` (Gem Match), `picture_puzzle` (nonograms), `bridges`, `light_up`, `untangle` |
 | Quiz | `quiz_arena` (solo, Classic/Lightning, any source), `quiz_maker`, `real_or_fake`, `emoji_guess`, `idol_personality_quiz` ("Which Arcade Hero Are You?") |
 | Party | `online_hub` (Friends Arena — online rooms incl. Quiz Party and Imposter, ~30 games in `components/online/`), `heads_up` (tilt the iPad; needs DeviceOrientation permission from a tap), `would_you_rather`, `tug_of_war`, `truth_or_dare`, `trivia_battle` (Buzzer Battle, questions from every quiz bank), `reaction_duel`, `talent_show`, `team_maker`. One-iPad party games pass `celebrateEnd` to GameShell (win sound, never the 'wrong' one); names use `components/games/partyNames.tsx` |
-| Create & Music | `beat_maker`, `guess_intro`, `style_studio`, `idol_profile` (Player Card, saved in localStorage `funquest-player-card`), `idol_diary` (Adventure Diary: `data/adventureStories.ts`, 8 branching stories) |
+| Create & Music | `beat_maker` (drums + a 10-note pentatonic melody grid; saved beats carry an optional `melody`, older saves load without one), `guess_intro`, `style_studio`, `idol_profile` (Player Card, saved in localStorage `funquest-player-card`), `idol_diary` (Adventure Diary: `data/adventureStories.ts`, 8 branching stories) |
 | My Stuff | `pet_pal`, `quest_map`, `locker`, `achievement_showcase` (Trophy Room: every badge, best scores, streak calendar) |
 | Grown-ups | `parent_corner` |
 | Teacher (hidden) | `jarvis_hq` (Teacher's Lounge), `freeze_dance`, `chaotic_backstage` — the Classroom tiles show in teacher mode (Grown-ups corner → Teacher setup, then 🍎 Teacher + PIN under the grid; 🍎 End lesson turns it off). Texts use the teacher's name (`teacher.name`) |

@@ -13,6 +13,7 @@ export type GameState =
   | 'team_maker' | 'secret_menu' | 'doodle_pad' | 'sticker_board' | 'pixel_studio' | 'theme_lab' | 'my_stats' | 'agent_hq' | 'kpop_rush'
   | 'word_scramble' | 'idol_personality_quiz' | 'beat_maker'
   | 'huntrx_splash' | 'truth_or_dare' | 'trivia_battle' | 'talent_show' | 'zip_game' | 'mini_sudoku'
+  | 'picture_puzzle' | 'bridges' | 'light_up' | 'untangle'
   | 'crossword_mini' | 'word_ladder' | 'memory_speed' | 'reaction_duel'
   | 'achievement_showcase' | 'pattern_memory' | 'ninja_slice' | 'battle_arena' | 'rocket_launch'
   | 'style_studio' | 'sparkle_match' | 'idol_diary' | 'jarvis_hq' | 'guess_intro' | 'idol_profile'

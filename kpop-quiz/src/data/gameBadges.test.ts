@@ -10,6 +10,7 @@ const KNOWN_GAMES = [
   'battle_arena', 'pattern_memory', 'sparkle_match', 'tower_defense', 'heads_up', 'imposter', 'truth_or_dare',
   'crossword_mini', 'zip_game', 'mini_sudoku', 'word_ladder', 'word_scramble', 'memory_speed', 'guess_intro',
   'trivia_battle', 'reaction_duel', 'tug_of_war', 'talent_show', 'friends_arena',
+  'picture_puzzle', 'bridges', 'light_up', 'untangle',
 ];
 
 /** A plausible good-but-not-amazing score per game, in finishRound units. */

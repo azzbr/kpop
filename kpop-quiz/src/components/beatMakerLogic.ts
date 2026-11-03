@@ -75,9 +75,74 @@ export const stepSeconds = (bpm: number) => 60 / clampBpm(bpm) / 4;
 const SYNTH_NOTES = [523.25, 587.33, 659.25, 783.99, 880.0, 783.99, 659.25, 587.33];
 export const synthFreq = (step: number) => SYNTH_NOTES[step % SYNTH_NOTES.length];
 
+// ── Melody grid ───────────────────────────────────────────────────────────────
+// Ten notes, high to low: the C-major pentatonic (do re mi so la) over two octaves, so any notes
+// tapped together sound nice. A column can hold several notes (a chord).
+
+export interface MelodyNote { id: string; label: string; freq: number; high: boolean; on: string }
+export const MELODY_NOTES: MelodyNote[] = [
+  { id: 'A5', label: 'La', freq: 880.0, high: true, on: 'bg-sky-300 border-sky-100' },
+  { id: 'G5', label: 'So', freq: 783.99, high: true, on: 'bg-emerald-300 border-emerald-100' },
+  { id: 'E5', label: 'Mi', freq: 659.25, high: true, on: 'bg-yellow-300 border-yellow-100' },
+  { id: 'D5', label: 'Re', freq: 587.33, high: true, on: 'bg-orange-300 border-orange-100' },
+  { id: 'C5', label: 'Do', freq: 523.25, high: true, on: 'bg-rose-300 border-rose-100' },
+  { id: 'A4', label: 'La', freq: 440.0, high: false, on: 'bg-sky-500 border-sky-300' },
+  { id: 'G4', label: 'So', freq: 392.0, high: false, on: 'bg-emerald-500 border-emerald-300' },
+  { id: 'E4', label: 'Mi', freq: 329.63, high: false, on: 'bg-yellow-500 border-yellow-300' },
+  { id: 'D4', label: 'Re', freq: 293.66, high: false, on: 'bg-orange-500 border-orange-300' },
+  { id: 'C4', label: 'Do', freq: 261.63, high: false, on: 'bg-rose-500 border-rose-300' },
+];
+
+export type Melody = boolean[][];
+
+export const emptyMelody = (): Melody => MELODY_NOTES.map(() => Array<boolean>(STEPS).fill(false));
+
+export function toggleMelody(m: Melody, note: number, step: number): Melody {
+  return m.map((r, i) => (i === note ? r.map((c, s) => (s === step ? !c : c)) : r));
+}
+
+/** A tune from one note (or a rest) per two steps, e.g. ['C5', 'E5', null, …]. */
+export function tuneToMelody(tune: (string | null)[]): Melody {
+  const m = emptyMelody();
+  tune.forEach((id, slot) => {
+    const i = MELODY_NOTES.findIndex(n => n.id === id);
+    if (i >= 0 && slot * 2 < STEPS) m[i][slot * 2] = true;
+  });
+  return m;
+}
+
+/** Each preset beat comes with a short tune. */
+export const PRESET_TUNES: Record<string, (string | null)[]> = {
+  'Pop Beat': ['C5', 'E5', 'G5', 'E5', 'D5', 'E5', 'C5', null],
+  'Hip-Hop': ['A4', null, 'C5', 'A4', 'G4', null, 'E4', null],
+  'Disco': ['G4', 'A4', 'C5', 'D5', 'E5', 'D5', 'C5', 'A4'],
+};
+
+/** A random tune that still sounds like a tune: small steps up and down, ending on Do. */
+export function randomMelody(rng: Rng): Melody {
+  const m = emptyMelody();
+  let pos = 4 + Math.floor(rng() * 4); // somewhere between C5 and E4
+  for (let step = 0; step < STEPS; step += 2) {
+    const last = step === STEPS - 2;
+    if (last) pos = pos < 7 ? 4 : 9; // finish on the nearest Do
+    else if (step > 0 && rng() < 0.15) continue; // a rest now and then
+    m[pos][step] = true;
+    const moves = [-2, -1, -1, 1, 1, 2];
+    pos = Math.min(MELODY_NOTES.length - 1, Math.max(0, pos + moves[Math.floor(rng() * moves.length)]));
+  }
+  return m;
+}
+
+export function decodeMelody(rows: unknown): Melody | null {
+  if (!Array.isArray(rows) || rows.length !== MELODY_NOTES.length) return null;
+  if (!rows.every(r => typeof r === 'string' && /^[01]{16}$/.test(r))) return null;
+  return (rows as string[]).map(row);
+}
+
 // ── Saved beats ────────────────────────────────────────────────────────────────
 
-export interface SavedBeat { id: string; name: string; bpm: number; rows: string[] }
+/** `melody` is optional: beats saved before the melody grid have none. */
+export interface SavedBeat { id: string; name: string; bpm: number; rows: string[]; melody?: string[] }
 
 const NAME_EMOJI = ['🚀', '🌈', '🐉', '🍕', '🦄', '⚡', '🐙', '🌋', '🎈', '🍩'];
 const NAME_WORDS = ['Rocket', 'Rainbow', 'Dragon', 'Pizza', 'Unicorn', 'Thunder', 'Octopus', 'Volcano', 'Balloon', 'Donut'];
@@ -114,7 +179,13 @@ export function parseSaved(raw: string | null): SavedBeat[] {
     return list.filter((b): b is SavedBeat =>
       !!b && typeof b === 'object' && typeof b.id === 'string' && typeof b.name === 'string'
       && typeof b.bpm === 'number' && decodeGrid(b.rows) !== null,
-    ).slice(0, MAX_SAVED);
+    ).slice(0, MAX_SAVED).map(b => {
+      // A broken tune doesn't lose the beat: keep the drums, drop the tune.
+      if (b.melody === undefined || decodeMelody(b.melody)) return b;
+      const { melody: _broken, ...rest } = b;
+      void _broken;
+      return rest;
+    });
   } catch {
     return [];
   }

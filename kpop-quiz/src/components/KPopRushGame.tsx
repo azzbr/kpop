@@ -22,8 +22,15 @@ const JUMP_V = -14.4;
 const AIR_JUMP_V = -12.2;
 const PLAYER_X = 96;
 
-const CHARACTERS = ['🐻', '🐰', '🐱', '🦊', '🐯', '🐼', '🐨', '🐸'];
-const BUDDIES = ['🐥', '🐧', '🐣', '🐹', '🐶', '🦄', '🐷', '🐢'];
+// New runners go at the end, so a saved pick never changes.
+const CHARACTERS = ['🐻', '🐰', '🐱', '🦊', '🐯', '🐼', '🐨', '🐸', '🦖', '🦕'];
+const BUDDIES = ['🐥', '🐧', '🐣', '🐹', '🐶', '🦄', '🐷', '🐢', '🥚', '🦎'];
+
+/** Two worlds, same game and same best score: the city, or Dino Valley (volcanoes, ferns, rocks, bees, eggs). */
+type World = 'city' | 'valley';
+const WORLD_KEY = 'rush_world';
+const BUSHES: Record<World, string[]> = { city: ['🌳', '🌴', '🌲', '🪴', '🎋'], valley: ['🌿', '🌴', '🍄', '🌺', '🌿'] };
+const readWorld = (): World => { try { return localStorage.getItem(WORLD_KEY) === 'valley' ? 'valley' : 'city'; } catch { return 'city'; } };
 
 type PowerKind = 'star' | 'magnet' | 'double' | 'shield' | 'wings';
 const POWER_INFO: Record<PowerKind, { emoji: string; label: string; color: string }> = {
@@ -85,6 +92,7 @@ interface GameData {
   groundX: number;
   running: boolean;
   charIdx: number;
+  world: World;
 }
 
 const PHASES = [
@@ -103,7 +111,7 @@ function mixC(a: number[], b: number[], t: number) {
   return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
 }
 
-interface Engine { update: () => void; draw: () => void; start: () => void; jump: () => void; duckFor: (ticks: number) => void; duckHold: (on: boolean) => void }
+interface Engine { update: () => void; draw: () => void; start: () => void; jump: () => void; duckFor: (ticks: number) => void; duckHold: (on: boolean) => void; preview: () => void }
 
 export default function KPopRushGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -117,6 +125,9 @@ export default function KPopRushGame() {
   const [charIdx, setCharIdx] = useState(0);
   const charIdxRef = useRef(0);
   charIdxRef.current = charIdx;
+  const [world, setWorld] = useState<World>(readWorld);
+  const worldRef = useRef<World>(world);
+  worldRef.current = world;
   const [over, setOver] = useState({ score: 0, coins: 0, combo: 0 });
   const bestRef = useRef(0);
   bestRef.current = useGameStore(s => s.highScores.kpop_rush ?? 0);
@@ -143,7 +154,7 @@ export default function KPopRushGame() {
       }
       const bushes: Bush[] = [];
       for (let x = 0; x < W + 100; x += rnd(140, 260)) {
-        bushes.push({ x, emoji: ['🌳', '🌴', '🌲', '🪴', '🎋'][rndInt(0, 4)] });
+        bushes.push({ x, emoji: BUSHES[worldRef.current][rndInt(0, 4)] });
       }
       return {
         player: { y: GROUND_Y - 46, vy: 0, ducking: false, jumps: 0, runFrame: 0 },
@@ -157,7 +168,7 @@ export default function KPopRushGame() {
         duckTimer: 0, duckHeld: false, bestCombo: 0,
         shield: false,
         timeOfDay: 0, weather: 'clear', weatherTimer: 700,
-        shake: 0, groundX: 0, running: false, charIdx,
+        shake: 0, groundX: 0, running: false, charIdx, world: worldRef.current,
       };
     }
 
@@ -481,15 +492,41 @@ export default function KPopRushGame() {
         ctx.fill();
       }
 
-      // mountains (far parallax)
+      // mountains (far parallax) — volcanoes with a glowing top and smoke in Dino Valley
+      const valley = g.world === 'valley';
       g.mountains.forEach(m => {
-        ctx.fillStyle = `rgba(${120 - sk.dark * 80},${140 - sk.dark * 90},${170 - sk.dark * 80},0.7)`;
+        if (!valley) {
+          ctx.fillStyle = `rgba(${120 - sk.dark * 80},${140 - sk.dark * 90},${170 - sk.dark * 80},0.7)`;
+          ctx.beginPath();
+          ctx.moveTo(m.x, GROUND_Y);
+          ctx.lineTo(m.x + m.w / 2, GROUND_Y - m.h);
+          ctx.lineTo(m.x + m.w, GROUND_Y);
+          ctx.closePath();
+          ctx.fill();
+          return;
+        }
+        const top = m.w * 0.18;
+        const cx = m.x + m.w / 2;
+        ctx.fillStyle = `rgba(${118 - sk.dark * 70},${86 - sk.dark * 50},${74 - sk.dark * 40},0.85)`;
         ctx.beginPath();
         ctx.moveTo(m.x, GROUND_Y);
-        ctx.lineTo(m.x + m.w / 2, GROUND_Y - m.h);
+        ctx.lineTo(cx - top / 2, GROUND_Y - m.h);
+        ctx.lineTo(cx + top / 2, GROUND_Y - m.h);
         ctx.lineTo(m.x + m.w, GROUND_Y);
         ctx.closePath();
         ctx.fill();
+        ctx.fillStyle = `rgba(255,${130 + sk.dark * 40},50,${0.6 + sk.dark * 0.35})`;
+        ctx.beginPath();
+        ctx.ellipse(cx, GROUND_Y - m.h, top / 2, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        for (let k = 0; k < 3; k++) {
+          const t = ((g.frame * 0.5 + k * 40) % 120) / 120;
+          const grey = 205 - sk.dark * 110;
+          ctx.fillStyle = `rgba(${grey},${grey},${grey + 8},${0.45 * (1 - t)})`;
+          ctx.beginPath();
+          ctx.arc(cx + Math.sin(t * 3 + k) * 8, GROUND_Y - m.h - 10 - t * 60, 8 + t * 14, 0, Math.PI * 2);
+          ctx.fill();
+        }
       });
 
       // clouds
@@ -503,8 +540,21 @@ export default function KPopRushGame() {
         ctx.fill();
       });
 
-      // city buildings (mid parallax)
-      g.buildings.forEach(b => {
+      // city buildings (mid parallax) — giant ferny trees in Dino Valley
+      if (valley) g.buildings.forEach(b => {
+        const shade = 1 - sk.dark * 0.6;
+        const cx = b.x + b.w / 2;
+        const topY = GROUND_Y - b.h * 0.75;
+        ctx.fillStyle = `hsl(28, 35%, ${30 * shade + 6}%)`;
+        ctx.fillRect(cx - 5, topY, 10, b.h * 0.75);
+        ctx.fillStyle = `hsl(${100 + (b.hue % 40)}, 45%, ${34 * shade + 6}%)`;
+        ctx.beginPath();
+        ctx.arc(cx, topY, b.w * 0.55, 0, Math.PI * 2);
+        ctx.arc(cx - b.w * 0.4, topY + b.h * 0.1, b.w * 0.4, 0, Math.PI * 2);
+        ctx.arc(cx + b.w * 0.4, topY + b.h * 0.1, b.w * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      else g.buildings.forEach(b => {
         const shade = 1 - sk.dark * 0.55;
         ctx.fillStyle = `hsl(${b.hue}, 30%, ${42 * shade + 8}%)`;
         ctx.fillRect(b.x, GROUND_Y - b.h, b.w, b.h);
@@ -518,13 +568,14 @@ export default function KPopRushGame() {
         }
       });
 
-      // ground
-      ctx.fillStyle = sk.dark > 0.5 ? '#2a2a3e' : '#6ab04c';
+      // ground (earthy jungle path in Dino Valley)
+      const night = sk.dark > 0.5;
+      ctx.fillStyle = valley ? (night ? '#3b2f2a' : '#a07845') : (night ? '#2a2a3e' : '#6ab04c');
       ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
-      ctx.fillStyle = sk.dark > 0.5 ? '#1f1f30' : '#5a9e3f';
+      ctx.fillStyle = valley ? (night ? '#2c3a22' : '#6b9a3a') : (night ? '#1f1f30' : '#5a9e3f');
       ctx.fillRect(0, GROUND_Y, W, 8);
       // ground dashes
-      ctx.fillStyle = sk.dark > 0.5 ? '#3a3a52' : '#7cc55c';
+      ctx.fillStyle = valley ? (night ? '#4a3c33' : '#b98c55') : (night ? '#3a3a52' : '#7cc55c');
       for (let x = g.groundX; x < W; x += 40) {
         ctx.fillRect(x, GROUND_Y + 16, 20, 5);
       }
@@ -542,7 +593,7 @@ export default function KPopRushGame() {
         if (c.collected) return;
         const spin = Math.abs(Math.sin(g.frame * 0.12 + c.x * 0.04));
         ctx.font = `${20 + spin * 8}px serif`;
-        ctx.fillText('🪙', c.x + (1 - spin) * 6, c.y + 22);
+        ctx.fillText(valley ? '🥚' : '🪙', c.x + (1 - spin) * 6, c.y + 22);
       });
 
       // powerups
@@ -566,15 +617,15 @@ export default function KPopRushGame() {
       g.obstacles.forEach(o => {
         if (o.smashed) return;
         if (o.kind === 'bird') {
-          const flap = Math.sin(g.frame * 0.4) > 0 ? '🐦' : '🕊️';
+          const flap = valley ? '🐝' : Math.sin(g.frame * 0.4) > 0 ? '🐦' : '🕊️';
           ctx.font = '40px serif';
-          ctx.fillText(flap, o.x, o.y + 32);
+          ctx.fillText(flap, o.x, o.y + 32 + (valley ? Math.sin(g.frame * 0.3) * 3 : 0));
         } else if (o.kind === 'bigcactus') {
           ctx.font = '52px serif';
-          ctx.fillText('🌵', o.x, o.y + 48);
+          ctx.fillText(valley ? '🪵' : '🌵', o.x, o.y + 48);
         } else {
           ctx.font = '44px serif';
-          ctx.fillText('🌵', o.x, o.y + 42);
+          ctx.fillText(valley ? '🪨' : '🌵', o.x, o.y + 42);
         }
       });
 
@@ -706,11 +757,22 @@ export default function KPopRushGame() {
       }
     }
 
-    engineRef.current = { update, draw, start, jump, duckFor, duckHold };
+    // Start card: show the picked world straight away.
+    function preview() {
+      gameRef.current = freshGame(charIdxRef.current);
+      draw();
+    }
+
+    engineRef.current = { update, draw, start, jump, duckFor, duckHold, preview };
     gameRef.current = freshGame(charIdxRef.current);
   }, [size]);
 
   const running = status === 'playing';
+  useEffect(() => {
+    try { localStorage.setItem(WORLD_KEY, world); } catch { /* private mode */ }
+    if (!running) engineRef.current?.preview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [world]);
   useGameLoop({
     tickHz: 60,
     running,
@@ -774,8 +836,16 @@ export default function KPopRushGame() {
       onResume={() => setStatus('playing')}
       readyContent={
         <div>
+          <div className="grid grid-cols-2 gap-2 mb-3" role="group" aria-label="World">
+            {([['city', '🏙️ City'], ['valley', '🦖 Dino Valley']] as [World, string][]).map(([id, label]) => (
+              <button key={id} onClick={() => { playClick(); setWorld(id); }} aria-pressed={world === id}
+                className={`min-h-[52px] rounded-2xl font-fredoka text-lg border-2 ${world === id ? 'bg-yellow-300 text-stone-900 border-yellow-200' : 'bg-white/15 border-white/20'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
           <p className="font-fredoka text-xl mb-2">Pick your runner!</p>
-          <div className="grid grid-cols-4 gap-2 justify-items-center mb-2">
+          <div className="grid grid-cols-5 gap-2 justify-items-center mb-2">
             {CHARACTERS.map((c, i) => (
               <button
                 key={c}
@@ -793,9 +863,9 @@ export default function KPopRushGame() {
             Runner {CHARACTERS[charIdx]} + buddy {BUDDIES[charIdx % BUDDIES.length]}
           </p>
           <ul className="text-left font-nunito text-base text-violet-100 space-y-1 mb-2">
-            <li>⬆️ <b>JUMP</b> over 🌵 — tap the screen or swipe up</li>
-            <li>⬇️ <b>DUCK</b> under 🐦 — hold DUCK or swipe down</li>
-            <li>🪙 Grab coins in a row for a combo!</li>
+            <li>⬆️ <b>JUMP</b> over {world === 'valley' ? '🪨 and 🪵' : '🌵'} — tap the screen or swipe up</li>
+            <li>⬇️ <b>DUCK</b> under {world === 'valley' ? '🐝' : '🐦'} — hold DUCK or swipe down</li>
+            <li>{world === 'valley' ? '🥚 Grab eggs' : '🪙 Grab coins'} in a row for a combo!</li>
           </ul>
           <div className="grid grid-cols-5 gap-1">
             {(Object.keys(POWER_INFO) as PowerKind[]).map(k => (

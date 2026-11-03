@@ -52,7 +52,7 @@ test('best scores from an older save light up mastery stars and the star total',
   const clash = section(page, '🕹️ Arcade').locator('div', { has: page.locator('h3', { hasText: /^Paper Clash$/ }) }).last();
   await expect(clash.getByLabel('1 of 3 stars')).toBeVisible();
   await expect(clash).toContainText('Best: 60');
-  await expect(page.getByTestId('today-strip')).toContainText('4 / 63 stars');
+  await expect(page.getByTestId('today-strip')).toContainText('4 / 75 stars');
   // The save is upgraded to v6 with the new fields.
   await expect.poll(async () => (await readSave(page))?.version).toBe(6);
 });

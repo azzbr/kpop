@@ -70,6 +70,10 @@ const SCREENS: Partial<Record<GameState, LazyExoticComponent<ComponentType>>> = 
   quest_map: lazy(() => import('./components/QuestMap')),
   parent_corner: lazy(() => import('./components/ParentCorner')),
   heads_up: lazy(() => import('./components/games/HeadsUp')),
+  picture_puzzle: lazy(() => import('./components/games/PicturePuzzle')),
+  bridges: lazy(() => import('./components/games/Bridges')),
+  light_up: lazy(() => import('./components/games/LightUp')),
+  untangle: lazy(() => import('./components/games/Untangle')),
 };
 
 const Loading = () => (

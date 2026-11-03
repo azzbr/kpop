@@ -10,10 +10,10 @@ const EPOCH_MONDAY = Date.UTC(2024, 0, 1) / DAY_MS;
 
 /** Interleaved arcade / puzzle / quiz, so neighbouring weeks feel different. */
 export const WEEKLY_ROTATION: GameState[] = [
-  'snake_arena', 'game_2048', 'quiz_arena', 'ninja_slice', 'block_blast', 'emoji_guess',
-  'paper_clash', 'word_scramble', 'real_or_fake', 'kpop_rush', 'sparkle_match', 'guess_intro',
-  'rocket_launch', 'mini_sudoku', 'tower_defense', 'pattern_memory', 'battle_arena', 'crossword_mini',
-  'memory_speed', 'zip_game', 'word_ladder',
+  'snake_arena', 'game_2048', 'quiz_arena', 'ninja_slice', 'block_blast', 'emoji_guess', 'picture_puzzle',
+  'paper_clash', 'word_scramble', 'real_or_fake', 'kpop_rush', 'sparkle_match', 'guess_intro', 'bridges',
+  'rocket_launch', 'mini_sudoku', 'tower_defense', 'pattern_memory', 'battle_arena', 'light_up', 'crossword_mini',
+  'memory_speed', 'zip_game', 'word_ladder', 'untangle',
 ].filter(id => id in MASTERY) as GameState[];
 
 function dayNumber(dateKey: string): number {
@@ -36,7 +36,15 @@ export function weekStart(dateKey: string): string {
   return keyOf(EPOCH_MONDAY + weekIndex(dateKey) * 7);
 }
 
+/**
+ * The rotation counts from the week of 26 Oct 2026 (Snake Arena), so adding games to the list on
+ * 3 Nov 2026 didn't change that week's game (2048). When adding more games mid-week, move this
+ * start so the current week keeps its game (weeklyGame.test.ts pins it).
+ */
+const ROTATION_START = '2026-10-26';
+
 export function gameOfTheWeek(dateKey: string): GameState {
   const n = WEEKLY_ROTATION.length;
-  return WEEKLY_ROTATION[((weekIndex(dateKey) % n) + n) % n];
+  const k = weekIndex(dateKey) - weekIndex(ROTATION_START);
+  return WEEKLY_ROTATION[((k % n) + n) % n];
 }

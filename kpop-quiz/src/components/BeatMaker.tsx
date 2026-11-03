@@ -9,10 +9,11 @@ import {
   INSTRUMENTS, STEPS, PRESETS, MIN_BPM, MAX_BPM, BPM_STEP, MAX_SAVED, SAVE_KEY,
   emptyGrid, cloneGrid, toggleCell, randomGrid, clampBpm, stepSeconds, synthFreq,
   encodeGrid, decodeGrid, parseSaved, addBeat, removeBeat, beatName, isEmpty,
+  MELODY_NOTES, PRESET_TUNES, emptyMelody, toggleMelody, tuneToMelody, randomMelody, decodeMelody,
 } from './beatMakerLogic';
-import type { Grid, Instrument, SavedBeat } from './beatMakerLogic';
+import type { Grid, Instrument, Melody, SavedBeat } from './beatMakerLogic';
 
-// Beat Maker: a 6-instrument, 16-step drum machine. A toy — no score or XP.
+// Beat Maker: a 6-instrument, 16-step drum machine plus a 10-note melody grid. A toy — no score or XP.
 // Sound: its own Web Audio graph (all voices → one master gain set to the parent's sound-effect
 // volume), scheduled ~100 ms ahead on the AudioContext clock so the beat never drifts.
 
@@ -67,6 +68,12 @@ class DrumKit {
     osc.stop(t + dur + 0.02);
   }
 
+  /** One melody note: a soft bell-like tone. */
+  note(freq: number, t: number) {
+    this.tone(t, 'triangle', freq, freq, 0.22, 0.32);
+    this.tone(t, 'sine', freq * 2, freq * 2, 0.05, 0.18);
+  }
+
   play(inst: Instrument, t: number, step: number) {
     switch (inst) {
       case 'kick': this.tone(t, 'sine', 150, 40, 0.9, 0.3); break;
@@ -115,6 +122,7 @@ export default function BeatMaker() {
   const sfxVolume = useGameStore(s => s.parent.sfxVolume);
   const cols = useColumns();
   const [grid, setGrid] = useState<Grid>(() => cloneGrid(PRESETS['Pop Beat']));
+  const [melody, setMelody] = useState<Melody>(() => tuneToMelody(PRESET_TUNES['Pop Beat']));
   const [bpm, setBpm] = useState(110);
   const [playing, setPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState(-1);
@@ -125,6 +133,7 @@ export default function BeatMaker() {
 
   const kitRef = useRef<DrumKit | null>(null);
   const gridRef = useRef(grid);
+  const melodyRef = useRef(melody);
   const bpmRef = useRef(bpm);
   const nextTimeRef = useRef(0);
   const nextStepRef = useRef(0);
@@ -133,6 +142,7 @@ export default function BeatMaker() {
   const rafRef = useRef<number | null>(null);
   const toastTimer = useRef<number | null>(null);
   useEffect(() => { gridRef.current = grid; }, [grid]);
+  useEffect(() => { melodyRef.current = melody; }, [melody]);
   useEffect(() => { bpmRef.current = bpm; }, [bpm]);
   useEffect(() => { kitRef.current?.setVolume(sfxVolume); }, [sfxVolume]);
 
@@ -172,6 +182,7 @@ export default function BeatMaker() {
         const step = nextStepRef.current;
         const t = nextTimeRef.current;
         gridRef.current.forEach((r, i) => { if (r[step]) kit.play(INSTRUMENTS[i].id, t, step); });
+        melodyRef.current.forEach((r, i) => { if (r[step]) kit.note(MELODY_NOTES[i].freq, t); });
         queueRef.current.push({ step, time: t });
         nextTimeRef.current += stepSeconds(bpmRef.current);
         nextStepRef.current = (step + 1) % STEPS;
@@ -220,16 +231,32 @@ export default function BeatMaker() {
     }
   };
 
+  const tapNote = (note: number, step: number) => {
+    const turningOn = !melody[note][step];
+    setMelody(m => toggleMelody(m, note, step));
+    if (turningOn) {
+      const kit = ensureKit();
+      if (kit && !playing) kit.note(MELODY_NOTES[note].freq, kit.ctx.currentTime + 0.01);
+      else if (!kit) playClick();
+    }
+  };
+
   const changeBpm = (d: number) => { playClick(); setBpm(b => clampBpm(b + d)); };
-  const loadGrid = (g: Grid, newBpm?: number) => { playClick(); setGrid(cloneGrid(g)); if (newBpm) setBpm(clampBpm(newBpm)); };
+  const loadGrid = (g: Grid, newBpm?: number, tune?: Melody) => {
+    playClick();
+    setGrid(cloneGrid(g));
+    if (tune) setMelody(tune.map(r => [...r]));
+    if (newBpm) setBpm(clampBpm(newBpm));
+  };
 
   const save = () => {
-    if (isEmpty(grid)) { playClick(); flash('Tap some squares first! 🎵'); return; }
+    if (isEmpty(grid) && isEmpty(melody)) { playClick(); flash('Tap some squares first! 🎵'); return; }
     const beat: SavedBeat = {
       id: `${Date.now()}`,
       name: beatName(saved.map(b => b.name), createRng(Date.now() % 1e9)),
       bpm,
       rows: encodeGrid(grid),
+      ...(isEmpty(melody) ? {} : { melody: encodeGrid(melody) }),
     };
     const next = addBeat(saved, beat);
     if (!next) { playClick(); flash(`You have ${MAX_SAVED} beats — delete one first`); return; }
@@ -242,7 +269,7 @@ export default function BeatMaker() {
 
   const load = (b: SavedBeat) => {
     const g = decodeGrid(b.rows);
-    if (g) { loadGrid(g, b.bpm); flash(`Loaded ${b.name}`); }
+    if (g) { loadGrid(g, b.bpm, decodeMelody(b.melody) ?? emptyMelody()); flash(`Loaded ${b.name}`); }
   };
 
   const del = (id: string) => {
@@ -281,10 +308,10 @@ export default function BeatMaker() {
 
         <div className="flex flex-wrap gap-2">
           {Object.keys(PRESETS).map(name => (
-            <button key={name} onClick={() => loadGrid(PRESETS[name])} className={chip}>{name}</button>
+            <button key={name} onClick={() => loadGrid(PRESETS[name], undefined, tuneToMelody(PRESET_TUNES[name] ?? []))} className={chip}>{name}</button>
           ))}
           <button onClick={() => loadGrid(randomGrid(createRng(Date.now() % 1e9)))} className={chip}>🎲 Random</button>
-          <button onClick={() => loadGrid(emptyGrid())} className={chip}>🗑️ Clear</button>
+          <button onClick={() => loadGrid(emptyGrid(), undefined, emptyMelody())} className={chip}>🗑️ Clear</button>
         </div>
       </div>
 
@@ -316,6 +343,41 @@ export default function BeatMaker() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Melody grid */}
+      <div className="rounded-3xl bg-white/10 p-3 mb-3 select-none" style={{ touchAction: 'manipulation', WebkitTouchCallout: 'none' }}>
+        <div className="flex flex-wrap items-center gap-2 mb-2">
+          <h2 className="font-fredoka text-2xl flex-1">🎹 Melody</h2>
+          <button onClick={() => { playClick(); setMelody(randomMelody(createRng(Date.now() % 1e9))); }} className={chip}>🎲 New tune</button>
+          <button onClick={() => { playClick(); setMelody(emptyMelody()); }} className={chip}>🧽 Clear tune</button>
+        </div>
+        <div className="space-y-1.5" role="group" aria-label="Melody">
+          {MELODY_NOTES.map((n, ni) => (
+            <div key={n.id} className="flex items-center gap-2">
+              <div className="w-16 sm:w-20 shrink-0 text-center font-fredoka text-base leading-tight">
+                {n.label}{n.high ? <span className="text-violet-300 text-sm"> ↑</span> : null}
+              </div>
+              <div className="flex-1 grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+                {Array.from({ length: STEPS }, (_, si) => {
+                  const on = melody[ni][si];
+                  const now = playing && currentStep === si;
+                  return (
+                    <button key={si}
+                      onClick={() => tapNote(ni, si)}
+                      aria-label={`${n.label}${n.high ? ' high' : ''} step ${si + 1}${on ? ' on' : ''}`}
+                      aria-pressed={on}
+                      className={`min-h-[44px] min-w-[44px] rounded-full border-2 transition-[transform,filter] duration-75
+                        ${on ? n.on : si % 4 === 0 ? 'bg-white/15 border-white/20' : 'bg-white/[0.06] border-white/10'}
+                        ${now ? (on ? 'brightness-150 scale-110' : 'ring-2 ring-yellow-300') : ''}`}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="font-nunito text-base text-violet-200 mt-2">Tap the dots to make a tune — high notes at the top, low ones at the bottom.</p>
       </div>
 
       <AnimatePresence>

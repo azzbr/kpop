@@ -16,6 +16,7 @@ const NAMES: Record<string, string> = {
   emoji_guess: '🕵️ Emoji Guess', would_you_rather: '🤷 Would You Rather', pattern_memory: '🧠 Pattern Memory',
   sparkle_match: '💎 Gem Match', tower_defense: '🏰 Tower Defense', heads_up: '🙆 Heads Up', imposter: '🤫 Imposter', truth_or_dare: '🎭 Truth or Dare',
   battle_arena_losses: '⚔️ Battle Arena',
+  picture_puzzle: '🖼️ Picture Puzzles', bridges: '🌉 Bridges', light_up: '💡 Light Up', untangle: '🕸️ Untangle',
 };
 const BREAKS = [0, 20, 30, 45, 60];
 

@@ -142,6 +142,18 @@ export const GAME_BADGES: GameBadge[] = [
   plays('zip_first', 'zip_game', 'Zip Starter', '🪡', 1, 'Finish a Zip puzzle'),
   best('zip_250', 'zip_game', 'Path Finder', '🔗', 250, 'Score 250 in Zip'),
   best('zip_600', 'zip_game', 'Zip Zoomer', '🧵', 600, 'Score 600 in Zip'),
+  plays('pic_first', 'picture_puzzle', 'Pixel Painter', '🎨', 1, 'Finish a Picture Puzzle'),
+  best('pic_450', 'picture_puzzle', 'Picture Pro', '🖌️', 450, 'Score 450 in Picture Puzzles'),
+  plays('pic_10', 'picture_puzzle', 'Gallery Owner', '🖼️', 10, 'Finish 10 Picture Puzzles'),
+  plays('br_first', 'bridges', 'Bridge Builder', '🌉', 1, 'Finish a Bridges puzzle'),
+  best('br_450', 'bridges', 'Master Engineer', '🏗️', 450, 'Score 450 in Bridges'),
+  plays('br_10', 'bridges', 'Island Hopper', '🏝️', 10, 'Finish 10 Bridges puzzles'),
+  plays('lu_first', 'light_up', 'Lamp Lighter', '💡', 1, 'Finish a Light Up puzzle'),
+  best('lu_450', 'light_up', 'Bright Spark', '🌟', 450, 'Score 450 in Light Up'),
+  plays('lu_10', 'light_up', 'Lighthouse Keeper', '🗼', 10, 'Finish 10 Light Up puzzles'),
+  plays('un_first', 'untangle', 'Knot Undoer', '🪢', 1, 'Finish an Untangle puzzle'),
+  best('un_450', 'untangle', 'Tidy Tangler', '🧶', 450, 'Score 450 in Untangle'),
+  plays('un_10', 'untangle', 'Web Wizard', '🕸️', 10, 'Finish 10 Untangle puzzles'),
 
   // 🔢 Mini Sudoku — level points for time
   plays('su_first', 'mini_sudoku', 'Grid Solver', '🔢', 1, 'Solve a Mini Sudoku'),
