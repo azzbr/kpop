@@ -68,8 +68,13 @@ test.describe('Winter Wonderland', () => {
     await card.getByRole('button', { name: /Yay/ }).click();
     expect(await coins(page)).toBe(before + 20);
 
-    await page.reload();
-    await enterName(page, 'Mia');
+    // Saved: the receipts are in the save, and the calendar still shows them after leaving and
+    // coming back. (No reload here: WebKit's faked clock stops after a reload, which freezes the
+    // screen transition. Reloading a save is covered by progress.spec.ts and others.)
+    const saved = (await readSave(page))?.state.events as Record<string, string[]>;
+    expect(saved['advent-2026']).toEqual(expect.arrayContaining(['door-5', 'door-2']));
+    await page.locator('[data-back]').first().click();
+    await expect(grid(page)).toBeVisible();
     await openCalendar(page);
     await expect(door(page, 5)).toHaveAttribute('data-state', 'opened');
     await expect(door(page, 2)).toHaveAttribute('data-state', 'opened');
