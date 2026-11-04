@@ -14,7 +14,8 @@ jobs:
     # Pinned: ubuntu-latest became 26.04, where Playwright 1.56.1 can't install WebKit.
     # Move to a newer image together with a Playwright upgrade.
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # The full run (150 e2e tests on WebKit iPad, Chromium iPad and desktop) takes about 30 minutes.
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: kpop-quiz
