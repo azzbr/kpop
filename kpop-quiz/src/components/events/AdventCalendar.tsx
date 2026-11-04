@@ -199,7 +199,9 @@ function Surprise({ door, done, onGo }: { door: AdventDoor; done: boolean; onGo:
       {s.kind === 'item' && (
         <div className="font-nunito text-lg">
           <p>🎁 {s.text}</p>
-          <p className="text-4xl mt-1" aria-hidden>{WINTER_LOCKER_ITEMS.find(i => i.id === s.itemId)?.emoji}</p>
+          {WINTER_LOCKER_ITEMS.find(i => i.id === s.itemId)?.emoji !== door.emoji && (
+            <p className="text-4xl mt-1" aria-hidden>{WINTER_LOCKER_ITEMS.find(i => i.id === s.itemId)?.emoji}</p>
+          )}
           <button type="button" onClick={() => onGo('locker')} className="mt-2 min-h-[48px] rounded-full bg-purple-600 px-4 font-fredoka">🎒 Open the Locker</button>
         </div>
       )}

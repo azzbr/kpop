@@ -43,7 +43,7 @@ export const ADVENT_DOORS: AdventDoor[] = [
   door(21, '🌅', { kind: 'fact', text: 'Around 21 December is the shortest day of the year in the northern half of the world. After it, the days slowly get longer again!' }),
   door(22, '⭐', { kind: 'challenge', gameId: 'robo_quest', screen: 'robo_quest', target: 300, text: 'Get ⭐⭐⭐ on a Robo Quest level!' }),
   door(23, '🤔', { kind: 'joke', q: 'What falls all winter but never gets hurt?', a: 'Snow! 🌨️' }),
-  door(24, '🌟', { kind: 'item', itemId: WINTER_STAR_TITLE_ID, text: 'The golden door! You are now a Winter Star — a title for your Player Card. 🌟' }),
+  door(24, '🌟', { kind: 'item', itemId: WINTER_STAR_TITLE_ID, text: 'You are now a Winter Star — a title for your Player Card!' }),
 ];
 
 /** The calendar's door layout (like a real Advent calendar, the numbers are mixed up). */
