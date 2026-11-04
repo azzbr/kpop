@@ -32,7 +32,7 @@ test('level 1 by tapping blocks: run, dock, stars and rewards; the next level un
 
   for (let i = 0; i < 3; i++) await tapBlock(page, /forward/);
   await expect(counter(page)).toHaveText('🧩 3 · ⭐⭐⭐ with 3');
-  expect(await page.evaluate(() => window.__robo!.program())).toEqual([{ t: 'forward' }, { t: 'forward' }, { t: 'forward' }]);
+  await expect.poll(() => page.evaluate(() => window.__robo!.program())).toEqual([{ t: 'forward' }, { t: 'forward' }, { t: 'forward' }]);
 
   await page.getByRole('button', { name: '▶ Run' }).click();
   await expect(page.getByTestId('round-stars')).toBeVisible({ timeout: 15_000 });
@@ -66,7 +66,7 @@ test('kind feedback: a bump stops at the wall until an edit; an empty loop says 
   await page.getByRole('button', { name: '▶ Run' }).click();
   await expect(message(page)).toContainText('Put some blocks inside the loop');
   await tapBlock(page, /forward/);
-  expect(await page.evaluate(() => window.__robo!.program())).toEqual([{ t: 'repeat', n: 2, body: [{ t: 'forward' }] }]);
+  await expect.poll(() => page.evaluate(() => window.__robo!.program())).toEqual([{ t: 'repeat', n: 2, body: [{ t: 'forward' }] }]);
   await expect(counter(page)).toHaveText('🧩 2 · ⭐⭐⭐ with 2');
 });
 
