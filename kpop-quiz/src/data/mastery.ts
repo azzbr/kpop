@@ -55,6 +55,9 @@ export const MASTERY: Record<string, Mastery> = {
   chess_bot: { stars: [100, 250, 450], max: 450, screen: 'chess_academy', weekly: false },
   // Stack Lab heights in cm, from scripts/stackLabSim.ts: a wild round ≈ 40, a good one ≈ 80–150, a careful one 130+.
   stack_lab: { stars: [40, 100, 200] },
+  // Robo Quest: world × 100 per star for each solved level — 1★ any level, 2★ ⭐⭐⭐ in the Factory
+  // (or ⭐⭐ in Space), 3★ a perfect Space level.
+  robo_quest: { stars: [100, 600, 900], max: 900 },
 };
 
 export const MASTERY_IDS = Object.keys(MASTERY);

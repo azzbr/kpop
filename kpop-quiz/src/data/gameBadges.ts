@@ -165,6 +165,9 @@ export const GAME_BADGES: GameBadge[] = [
   plays('sl_first', 'stack_lab', 'Crane Cadet', '🏗️', 1, 'Build your first tower in Stack Lab'),
   best('sl_100', 'stack_lab', 'Metre Maker', '📏', 100, 'Build a tower 100 cm tall in Stack Lab'),
   best('sl_200', 'stack_lab', 'Sky Builder', '🌤️', 200, 'Build a tower 200 cm tall in Stack Lab'),
+  plays('rq_first', 'robo_quest', 'Hello, Robo', '🤖', 1, 'Solve your first Robo Quest level'),
+  best('rq_600', 'robo_quest', 'Loop Legend', '🔁', 600, 'Solve a Factory level with ⭐⭐⭐ in Robo Quest'),
+  best('rq_900', 'robo_quest', 'Robot Genius', '🧠', 900, 'Solve a Space level with ⭐⭐⭐ in Robo Quest'),
 
   // 🔢 Mini Sudoku — level points for time
   plays('su_first', 'mini_sudoku', 'Grid Solver', '🔢', 1, 'Solve a Mini Sudoku'),

@@ -12,7 +12,7 @@ export const WEEKLY_ROTATION: string[] = [
   'snake_arena', 'game_2048', 'quiz_arena', 'ninja_slice', 'block_blast', 'emoji_guess', 'picture_puzzle',
   'paper_clash', 'word_scramble', 'real_or_fake', 'kpop_rush', 'sparkle_match', 'guess_intro', 'bridges',
   'rocket_launch', 'mini_sudoku', 'tower_defense', 'pattern_memory', 'battle_arena', 'light_up', 'crossword_mini',
-  'memory_speed', 'zip_game', 'word_ladder', 'untangle', 'chess_puzzles', 'stack_lab',
+  'memory_speed', 'zip_game', 'word_ladder', 'untangle', 'chess_puzzles', 'stack_lab', 'robo_quest',
 ].filter(id => id in MASTERY);
 
 function dayNumber(dateKey: string): number {

@@ -97,3 +97,16 @@ describe('detectPlatform', () => {
     expect(detectPlatform('Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130', 0)).toBe('desktop');
   });
 });
+
+describe('game content keys travel with the save code', () => {
+  it('Robo Quest stars and saved programs (robo_stars, robo_code) are included; __ keys are not', () => {
+    const s = new MemoryStorage();
+    s.setItem('robo_stars', '{"g01":3,"f11":2}');
+    s.setItem('robo_code', '{"g01":[{"t":"forward"},{"t":"forward"}]}');
+    s.setItem('__e2e_init', '1');
+    const k = collectKeys(s);
+    expect(k.robo_stars).toBe('{"g01":3,"f11":2}');
+    expect(k.robo_code).toBe('{"g01":[{"t":"forward"},{"t":"forward"}]}');
+    expect(k.__e2e_init).toBeUndefined();
+  });
+});

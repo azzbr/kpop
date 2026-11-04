@@ -15,8 +15,8 @@ function allSource(dir: string): string {
 describe('mastery stars data', () => {
   const src = allSource(join(__dirname, '..'));
 
-  it('has 28 solo-game scores with rising thresholds that fit inside the maximum', () => {
-    expect(MASTERY_IDS).toHaveLength(28);
+  it('has 29 solo-game scores with rising thresholds that fit inside the maximum', () => {
+    expect(MASTERY_IDS).toHaveLength(29);
     for (const id of MASTERY_IDS) {
       const { stars: [a, b, c], max } = MASTERY[id]!;
       expect(a, id).toBeGreaterThan(0);
@@ -62,8 +62,8 @@ describe('mastery helpers', () => {
   });
 
   it('totals stars over every game', () => {
-    expect(totalStars({})).toEqual({ have: 0, of: 84 });
-    expect(totalStars({ paper_clash: 150, game_2048: 2500, word_guess: 1 })).toEqual({ have: 5, of: 84 });
+    expect(totalStars({})).toEqual({ have: 0, of: 87 });
+    expect(totalStars({ paper_clash: 150, game_2048: 2500, word_guess: 1 })).toEqual({ have: 5, of: 87 });
   });
 
   it('draws the star row', () => {

@@ -57,6 +57,7 @@ const TILES: Tile[] = [
   { id: 'light_up', title: 'Light Up', description: 'Place lamps to light every square — no lamp may see another.', icon: '💡', color: 'from-yellow-400 to-orange-600', category: 'puzzle', isNew: true },
   { id: 'untangle', title: 'Untangle', description: 'Drag the dots until no lines cross.', icon: '🕸️', color: 'from-violet-500 to-fuchsia-600', category: 'puzzle', isNew: true },
   { id: 'chess_academy', scoreKey: 'chess_puzzles', title: 'Chess Academy', description: 'Learn every piece, solve puzzles and beat friendly bots!', icon: '♟️', color: 'from-slate-500 to-indigo-700', category: 'puzzle', isNew: true },
+  { id: 'robo_quest', title: 'Robo Quest', description: 'Snap code blocks together to guide the robot home!', icon: '🤖', color: 'from-cyan-500 to-blue-700', category: 'puzzle', isNew: true },
   { id: 'word_ladder', title: 'Word Ladder', description: 'Change one letter at a time to climb to the goal word.', icon: '🪜', color: 'from-blue-500 to-sky-600', category: 'puzzle' },
   { id: 'crossword_mini', title: 'Crossword Mini', description: 'Mini crosswords — tap a square and type with the big keys.', icon: '📰', color: 'from-indigo-500 to-violet-600', category: 'puzzle' },
   { id: 'word_scramble', title: 'Word Scramble', description: 'Unscramble 10 jumbled words. Be fast for streak bonuses!', icon: '🔤', color: 'from-amber-500 to-yellow-500', category: 'puzzle' },

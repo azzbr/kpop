@@ -43,6 +43,8 @@ interface GameShellProps {
   againLabel?: string;
   /** Label of the over card's leave button (default "Pick another game"). */
   leaveLabel?: string;
+  /** Extra content on the over card, above its buttons (e.g. Robo Quest's "Try for ⭐⭐⭐"). */
+  overExtra?: ReactNode;
   onStart: () => void;
   onPause: () => void;
   onResume: () => void;
@@ -204,6 +206,7 @@ export default function GameShell(props: GameShellProps) {
                     {result && <p className="font-fredoka text-lg text-fuchsia-300 mb-1">+{result.xp} XP · +{result.coins} 🪙</p>}
                     {result?.weekly && <p className="font-fredoka text-base text-sky-300 mb-1">🌟 2× Game of the week!</p>}
                     <div className="mb-3" />
+                    {props.overExtra}
                     <button onClick={() => { playClick(); props.onStart(); }}
                       className="w-full min-h-[56px] rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-400 font-fredoka text-2xl mb-3">
                       {props.againLabel ?? '🔁 Play again'}

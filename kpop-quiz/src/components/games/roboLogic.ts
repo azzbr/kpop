@@ -100,7 +100,13 @@ export interface Run {
 }
 
 class Stop extends Error {
-  constructor(public result: RunResult, public emptyId?: string) { super(result); }
+  result: RunResult;
+  emptyId?: string;
+  constructor(result: RunResult, emptyId?: string) {
+    super(result);
+    this.result = result;
+    this.emptyId = emptyId;
+  }
 }
 
 /** Runs the program on the board and records every step (moves, turns, sensor checks). */

@@ -19,6 +19,7 @@ const NAMES: Record<string, string> = {
   picture_puzzle: '🖼️ Picture Puzzles', bridges: '🌉 Bridges', light_up: '💡 Light Up', untangle: '🕸️ Untangle',
   chess_puzzles: '♟️ Chess puzzles', chess_bot: '🤖 Chess vs bots', chess_learn: '🎓 Chess lessons', chess_duo: '👫 Chess for two',
   stack_lab: '🏗️ Stack Lab',
+  robo_quest: '🤖 Robo Quest',
 };
 const BREAKS = [0, 20, 30, 45, 60];
 
@@ -174,6 +175,7 @@ export default function ParentCorner() {
                 <li>Chess rules: <b>chess.js</b> by Jeff Hlywa (BSD licence).</li>
                 <li>Chess puzzles: the <b>Lichess</b> puzzle database (public domain, CC0).</li>
                 <li>Stack Lab physics: <b>matter-js</b> by Liam Brummitt (MIT licence).</li>
+                <li>Robo Quest code blocks: <b>Blockly</b> by Google and the Raspberry Pi Foundation (Apache licence 2.0).</li>
                 <li>Fonts: <b>Fredoka One</b> and <b>Nunito</b> (SIL Open Font Licence).</li>
               </ul>
               <p className="font-nunito text-sm text-violet-300 mt-2">The full licence texts come with the app in <b>licenses.txt</b>. Everything else — games, pictures, levels and pieces — was made for Fun Quest.</p>
