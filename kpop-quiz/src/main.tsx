@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './fonts.css'
 import './index.css'
 import './events/halloween.css'
+import './events/winter.css'
 import App from './App.tsx'
 import { initAppInstall, markUpdateReady } from './utils/appInstall'
 

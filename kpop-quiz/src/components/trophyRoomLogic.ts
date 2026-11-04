@@ -25,6 +25,7 @@ export const GAME_NAMES: Record<string, { icon: string; name: string }> = {
   chess_learn: { icon: '🎓', name: 'Chess lessons' },
   chess_duo: { icon: '👫', name: 'Chess for two' },
   stack_lab: { icon: '🏗️', name: 'Stack Lab' },
+  snow_catch: { icon: '❄️', name: 'Snow Catch' },
   robo_quest: { icon: '🤖', name: 'Robo Quest' },
   word_ladder: { icon: '🪜', name: 'Word Ladder' },
   crossword_mini: { icon: '📰', name: 'Crossword Mini' },

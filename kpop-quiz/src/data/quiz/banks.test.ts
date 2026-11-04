@@ -9,6 +9,8 @@ const TARGETS: Record<string, number> = {
   sport: 40,
   truefalse: 45,
   order: 25,
+  halloween: 30,
+  winter: 30,
 };
 
 describe('quiz banks', () => {

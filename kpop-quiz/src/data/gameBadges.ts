@@ -168,6 +168,9 @@ export const GAME_BADGES: GameBadge[] = [
   plays('rq_first', 'robo_quest', 'Hello, Robo', '🤖', 1, 'Solve your first Robo Quest level'),
   best('rq_600', 'robo_quest', 'Loop Legend', '🔁', 600, 'Solve a Factory level with ⭐⭐⭐ in Robo Quest'),
   best('rq_900', 'robo_quest', 'Robot Genius', '🧠', 900, 'Solve a Space level with ⭐⭐⭐ in Robo Quest'),
+  plays('snow_first', 'snow_catch', 'Snow Scooper', '🧺', 1, 'Play a round of Snow Catch'),
+  best('snow_30', 'snow_catch', 'Flake Finder', '❄️', 30, 'Score 30 in Snow Catch'),
+  best('snow_60', 'snow_catch', 'Blizzard Boss', '🌨️', 60, 'Score 60 in Snow Catch'),
 
   // 🔢 Mini Sudoku — level points for time
   plays('su_first', 'mini_sudoku', 'Grid Solver', '🔢', 1, 'Solve a Mini Sudoku'),

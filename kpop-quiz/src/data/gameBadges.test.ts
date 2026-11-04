@@ -10,7 +10,7 @@ const KNOWN_GAMES = [
   'battle_arena', 'pattern_memory', 'sparkle_match', 'tower_defense', 'heads_up', 'imposter', 'truth_or_dare',
   'crossword_mini', 'zip_game', 'mini_sudoku', 'word_ladder', 'word_scramble', 'memory_speed', 'guess_intro',
   'trivia_battle', 'reaction_duel', 'tug_of_war', 'talent_show', 'friends_arena',
-  'picture_puzzle', 'bridges', 'light_up', 'untangle', 'chess_puzzles', 'chess_bot', 'chess_learn', 'stack_lab', 'robo_quest',
+  'picture_puzzle', 'bridges', 'light_up', 'untangle', 'chess_puzzles', 'chess_bot', 'chess_learn', 'stack_lab', 'robo_quest', 'snow_catch',
 ];
 
 /** A plausible good-but-not-amazing score per game, in finishRound units. */
@@ -20,7 +20,7 @@ const PLAUSIBLE: Record<string, number> = {
   rocket_launch: 200, battle_arena: 300, pattern_memory: 6, sparkle_match: 300, tower_defense: 400, heads_up: 7, imposter: 2,
   crossword_mini: 700, zip_game: 200, mini_sudoku: 300, word_ladder: 80, word_scramble: 900, memory_speed: 260,
   guess_intro: 3, trivia_battle: 6, reaction_duel: 6, tug_of_war: 200, talent_show: 20, friends_arena: 60, truth_or_dare: 15,
-  picture_puzzle: 200, bridges: 200, light_up: 200, untangle: 200, chess_puzzles: 300, chess_bot: 0, chess_learn: 300, stack_lab: 150, robo_quest: 600,
+  picture_puzzle: 200, bridges: 200, light_up: 200, untangle: 200, chess_puzzles: 300, chess_bot: 0, chess_learn: 300, stack_lab: 150, robo_quest: 600, snow_catch: 40,
 };
 
 const check = (gameId: string, score: number, extra: Partial<BadgeCheck> = {}): BadgeCheck => ({

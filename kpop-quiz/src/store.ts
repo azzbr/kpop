@@ -7,13 +7,14 @@ import { GAME_BADGES } from './data/gameBadges';
 import { starsFor } from './data/mastery';
 import { gameOfTheWeek } from './utils/weeklyGame';
 import { pushRecent, toggleIn } from './components/home/homeLogic';
+import { ADVENT_KEY, adventOpen, checkAdventChallenges } from './events/advent';
 
 export type GameState =
   | 'welcome' | 'game_mode'
   | 'team_maker' | 'secret_menu' | 'doodle_pad' | 'sticker_board' | 'pixel_studio' | 'theme_lab' | 'my_stats' | 'agent_hq' | 'kpop_rush'
   | 'word_scramble' | 'idol_personality_quiz' | 'beat_maker'
   | 'huntrx_splash' | 'truth_or_dare' | 'trivia_battle' | 'talent_show' | 'zip_game' | 'mini_sudoku'
-  | 'picture_puzzle' | 'bridges' | 'light_up' | 'untangle' | 'chess_academy' | 'stack_lab' | 'robo_quest'
+  | 'picture_puzzle' | 'bridges' | 'light_up' | 'untangle' | 'chess_academy' | 'stack_lab' | 'robo_quest' | 'advent_calendar' | 'snow_catch'
   | 'crossword_mini' | 'word_ladder' | 'memory_speed' | 'reaction_duel'
   | 'achievement_showcase' | 'pattern_memory' | 'ninja_slice' | 'battle_arena' | 'rocket_launch'
   | 'style_studio' | 'sparkle_match' | 'idol_diary' | 'jarvis_hq' | 'guess_intro' | 'idol_profile'
@@ -75,6 +76,8 @@ export interface RoundResult {
   /** Mastery stars (data/mastery.ts) before and after this round; each new star pays STAR_COINS. */
   starsBefore?: number;
   starsAfter?: number;
+  /** Advent calendar challenges this round completed (events/advent.ts): bonus coins, already added. */
+  adventBonus?: number;
 }
 
 /** Coins for each new mastery star. */
@@ -566,6 +569,16 @@ export const useGameStore = create<GameStore>()(
           bonusXp = DAILY_REWARD.xp;
           set({ dailyDoneDate: today });
         }
+        // Advent calendar challenges (Winter Wonderland): each pays once, on top of the round.
+        let adventBonus = 0;
+        if (adventOpen(today)) {
+          adventBonus = checkAdventChallenges(gameId, score, today, {
+            collected: () => get().events[ADVENT_KEY] ?? [],
+            collect: (k, id) => get().collectEventItem(k, id),
+            addCoins: () => {},
+            unlock: () => {},
+          }).coins;
+        }
         // Rounds per game (all time + today's log), then per-game badges.
         const rounds = { ...get().rounds, [gameId]: (get().rounds[gameId] ?? 0) + 1 };
         const log = { ...get().playLog };
@@ -576,12 +589,12 @@ export const useGameStore = create<GameStore>()(
         const newBadges = GAME_BADGES.filter(b => !have.has(b.id) && b.test(check)).map(b => b.id);
         set({
           xp: get().xp + xp + bonusXp,
-          userCurrency: get().userCurrency + coins + newBadges.length * 10,
+          userCurrency: get().userCurrency + coins + newBadges.length * 10 + adventBonus,
           rounds,
           playLog: log,
           gameBadges: newBadges.length ? [...get().gameBadges, ...newBadges] : get().gameBadges,
         });
-        return { isBest, best, xp: xp + bonusXp, coins: coins + newBadges.length * 10, dailyDone, newBadges, weekly, starsBefore, starsAfter };
+        return { isBest, best, xp: xp + bonusXp, coins: coins + newBadges.length * 10, dailyDone, newBadges, weekly, starsBefore, starsAfter, ...(adventBonus ? { adventBonus } : {}) };
       },
 
       recordPlay: () => {

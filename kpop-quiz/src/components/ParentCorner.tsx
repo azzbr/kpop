@@ -19,6 +19,7 @@ const NAMES: Record<string, string> = {
   picture_puzzle: '🖼️ Picture Puzzles', bridges: '🌉 Bridges', light_up: '💡 Light Up', untangle: '🕸️ Untangle',
   chess_puzzles: '♟️ Chess puzzles', chess_bot: '🤖 Chess vs bots', chess_learn: '🎓 Chess lessons', chess_duo: '👫 Chess for two',
   stack_lab: '🏗️ Stack Lab',
+  snow_catch: '❄️ Snow Catch',
   robo_quest: '🤖 Robo Quest',
 };
 const BREAKS = [0, 20, 30, 45, 60];

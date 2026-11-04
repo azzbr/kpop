@@ -5,6 +5,8 @@ import { useGameStore } from '../../store';
 import { localDateKey } from '../../utils/dates';
 import { playClick } from '../../utils/sounds';
 import { activeEvent, eventLockerItems, foundCount, nextReward, rewardId, DAILY_CAP } from '../../events/events';
+import { ADVENT_KEY, readyDoors } from '../../events/advent';
+import type { GameState } from '../../store';
 import { setArenaSource } from '../games/quizArenaSource';
 
 const EMPTY: string[] = [];
@@ -13,6 +15,7 @@ export default function EventBanner() {
   const date = localDateKey();
   const event = activeEvent(date);
   const collected = useGameStore(s => (event ? s.events[event.key] : undefined)) ?? EMPTY;
+  const advent = useGameStore(s => s.events[ADVENT_KEY]) ?? EMPTY;
   const setGameState = useGameStore(s => s.setGameState);
   const [open, setOpen] = useState(false);
 
@@ -22,9 +25,15 @@ export default function EventBanner() {
   const pct = Math.round((found / event.totalItems) * 100);
   const quizId = event.quizBankId;
   const lockerItems = eventLockerItems(date, EMPTY).filter(i => event.lockerItemIds.includes(i.id));
+  const pal = event.palette ?? { card: 'border-orange-300/70 from-purple-900/90 via-indigo-900/90 to-orange-900/80', bar: 'from-orange-400 to-yellow-300', text: 'text-orange-100' };
+  const ready = readyDoors(date, advent);
+  const extraLabel = (screen: string, label: string) => {
+    if (screen !== 'advent_calendar' || ready.length === 0) return label;
+    return ready.length === 1 ? `${label} · Door ${ready[0]} is ready!` : `${label} · ${ready.length} doors ready!`;
+  };
 
   return (
-    <div className="mx-auto mb-4 w-full max-w-3xl rounded-3xl border-2 border-orange-300/70 bg-gradient-to-r from-purple-900/90 via-indigo-900/90 to-orange-900/80 text-white shadow-xl">
+    <div className={`mx-auto mb-4 w-full max-w-3xl rounded-3xl border-2 bg-gradient-to-r ${pal.card} text-white shadow-xl`} data-testid="event-banner">
       <button
         type="button"
         onClick={() => { playClick(); setOpen(o => !o); }}
@@ -35,7 +44,7 @@ export default function EventBanner() {
           <span className="text-4xl" aria-hidden>{event.emoji}</span>
           <div className="min-w-0 flex-1">
             <div className="font-fredoka text-xl leading-tight">{event.name}</div>
-            <div className="text-base text-orange-100">
+            <div className={`text-base ${pal.text}`}>
               {found}/{event.totalItems} found
               {next ? ` · next reward at ${next.at}` : ' · all rewards won! 🏆'}
             </div>
@@ -44,7 +53,7 @@ export default function EventBanner() {
         </div>
         <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-white/15">
           <motion.div
-            className="h-full rounded-full bg-gradient-to-r from-orange-400 to-yellow-300"
+            className={`h-full rounded-full bg-gradient-to-r ${pal.bar}`}
             initial={false}
             animate={{ width: `${pct}%` }}
             transition={{ duration: 0.4 }}
@@ -65,6 +74,18 @@ export default function EventBanner() {
         </div>
       </button>
 
+      {event.extras && event.extras.length > 0 && (
+        <div className="flex flex-wrap gap-2 px-4 pb-3">
+          {event.extras.map(x => (
+            <button key={x.screen} type="button"
+              onClick={() => { playClick(); setGameState(x.screen as GameState); }}
+              className={`min-h-[52px] flex-1 min-w-[150px] rounded-full ${x.colour} px-4 font-fredoka text-lg shadow-lg active:scale-95 ${x.screen === 'advent_calendar' && ready.length ? 'ring-4 ring-yellow-300/80 event-glow' : ''}`}>
+              {extraLabel(x.screen, x.label)}
+            </button>
+          ))}
+        </div>
+      )}
+
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
@@ -83,9 +104,7 @@ export default function EventBanner() {
                 📅 Different screens hide one every day, and you can find up to {DAILY_CAP} a day. Come back
                 tomorrow for more!
               </p>
-              {event.id === 'halloween' && (
-                <p>🌙 The arcade has a spooky-cute night sky with friendly bats while the hunt is on.</p>
-              )}
+              {event.themeNote && <p>{event.themeNote}</p>}
               {quizId && (
                 <button
                   type="button"

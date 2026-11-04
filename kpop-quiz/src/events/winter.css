@@ -1,0 +1,105 @@
+/* ❄️ Winter Wonderland look. Active while <html data-event="winter"> (useEventTheme), 1 Dec – 6 Jan. */
+
+/* Deep-blue winter night: soft moon, still stars and snowflakes, a frosty glow on the horizon. */
+/* Only on the default theme: a theme picked in the Theme Lab wins over the event background. */
+[data-event="winter"]:is([data-theme="default"], :not([data-theme])) .arcade-bg {
+  background:
+    /* moon */
+    radial-gradient(circle at 87% 9%, rgba(241, 245, 255, 0.95) 0 24px, rgba(191, 219, 254, 0.28) 25px, transparent 80px),
+    /* still snowflakes */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='300' viewBox='0 0 420 300'%3E%3Cg stroke='%23e0f2fe' stroke-opacity='0.22' stroke-width='2' stroke-linecap='round' fill='none'%3E%3Cpath d='M60 50v24M48 56l24 12M48 68l24-12'/%3E%3Cpath d='M300 90v18M291 94.5l18 9M291 103.5l18-9'/%3E%3Cpath d='M190 210v20M180 215l20 10M180 225l20-10'/%3E%3Cpath d='M380 240v14M373 243.5l14 7M373 250.5l14-7'/%3E%3C/g%3E%3C/svg%3E"),
+    /* stars */
+    radial-gradient(1.5px 1.5px at 14% 16%, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(1.5px 1.5px at 38% 7%, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(1px 1px at 58% 20%, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(1.5px 1.5px at 73% 13%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 24% 36%, rgba(255, 255, 255, 0.5), transparent),
+    /* frosty horizon */
+    radial-gradient(ellipse at 50% 118%, rgba(224, 242, 254, 0.5) 0%, transparent 55%),
+    linear-gradient(170deg, #0b1437 0%, #1e3a8a 55%, #155e75 100%);
+  background-repeat: no-repeat, repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+}
+
+/* Light-theme screens: a gentle icy wash. */
+[data-event="winter"] .bg-kid-pattern {
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(125, 211, 252, 0.16) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(224, 242, 254, 0.3) 0%, transparent 50%);
+}
+
+/* Slow falling snow on menu screens only — never on a game board (GameShell is .game-surface).
+   Two layers of tiles that slide down by exactly one tile, so the loop is seamless. They are fixed
+   to the screen, can't be tapped, and only use transform (cheap on an iPad). */
+[data-event="winter"] .arcade-bg:not(.game-surface)::before,
+[data-event="winter"] .arcade-bg:not(.game-surface)::after {
+  content: '';
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+[data-event="winter"] .arcade-bg:not(.game-surface)::before {
+  top: -320px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cg fill='white'%3E%3Ccircle cx='30' cy='40' r='3' opacity='.7'/%3E%3Ccircle cx='140' cy='20' r='2.5' opacity='.5'/%3E%3Ccircle cx='250' cy='70' r='3.5' opacity='.6'/%3E%3Ccircle cx='90' cy='150' r='2.5' opacity='.55'/%3E%3Ccircle cx='210' cy='190' r='3' opacity='.65'/%3E%3Ccircle cx='300' cy='250' r='2.5' opacity='.5'/%3E%3Ccircle cx='50' cy='270' r='3.5' opacity='.6'/%3E%3Ccircle cx='170' cy='290' r='2' opacity='.45'/%3E%3C/g%3E%3C/svg%3E");
+  animation: winter-fall-320 22s linear infinite;
+}
+[data-event="winter"] .arcade-bg:not(.game-surface)::after {
+  top: -200px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cg fill='white'%3E%3Ccircle cx='20' cy='30' r='1.5' opacity='.5'/%3E%3Ccircle cx='120' cy='60' r='1.2' opacity='.45'/%3E%3Ccircle cx='70' cy='120' r='1.5' opacity='.4'/%3E%3Ccircle cx='170' cy='160' r='1.2' opacity='.5'/%3E%3C/g%3E%3C/svg%3E");
+  animation: winter-fall-200 15s linear infinite;
+}
+@keyframes winter-fall-320 { from { transform: translateY(0); } to { transform: translateY(320px); } }
+@keyframes winter-fall-200 { from { transform: translateY(0); } to { transform: translate(20px, 200px); } }
+
+/* ⭐ Snow day (the golden Advent door 24 was opened today): heavier, sparkly snow on the menus. */
+[data-event="winter"][data-snowday] .arcade-bg:not(.game-surface)::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cg fill='white'%3E%3Ccircle cx='30' cy='40' r='4' opacity='.85'/%3E%3Ccircle cx='140' cy='20' r='3' opacity='.7'/%3E%3Ccircle cx='250' cy='70' r='4.5' opacity='.8'/%3E%3Ccircle cx='90' cy='150' r='3' opacity='.75'/%3E%3Ccircle cx='210' cy='190' r='4' opacity='.85'/%3E%3Ccircle cx='300' cy='250' r='3' opacity='.7'/%3E%3Ccircle cx='50' cy='270' r='4.5' opacity='.8'/%3E%3Ccircle cx='170' cy='290' r='3' opacity='.7'/%3E%3Ccircle cx='280' cy='130' r='3.5' opacity='.75'/%3E%3Ccircle cx='110' cy='230' r='3' opacity='.7'/%3E%3Ccircle cx='200' cy='100' r='2.5' opacity='.65'/%3E%3Ccircle cx='10' cy='190' r='3' opacity='.7'/%3E%3C/g%3E%3C/svg%3E");
+  animation-duration: 12s;
+}
+[data-event="winter"][data-snowday] .arcade-bg:not(.game-surface)::after {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cg fill='%23fef9c3'%3E%3Cpath d='M30 20l2 6 6 2-6 2-2 6-2-6-6-2 6-2z' opacity='.9'/%3E%3Cpath d='M150 80l1.5 4.5 4.5 1.5-4.5 1.5-1.5 4.5-1.5-4.5-4.5-1.5 4.5-1.5z' opacity='.8'/%3E%3Cpath d='M80 150l2 6 6 2-6 2-2 6-2-6-6-2 6-2z' opacity='.85'/%3E%3C/g%3E%3Cg fill='white'%3E%3Ccircle cx='110' cy='30' r='2' opacity='.7'/%3E%3Ccircle cx='180' cy='150' r='2' opacity='.6'/%3E%3Ccircle cx='40' cy='100' r='1.8' opacity='.7'/%3E%3C/g%3E%3C/svg%3E");
+  animation-duration: 8s;
+}
+
+/* 🌟 The golden Advent door (24): gold, with a soft shimmer sweeping across. */
+.advent-golden {
+  background-image: linear-gradient(135deg, #b45309 0%, #f59e0b 30%, #fde047 50%, #f59e0b 70%, #b45309 100%) !important;
+  color: #451a03 !important;
+  border: 3px solid #fde68a;
+  box-shadow: 0 0 18px rgba(253, 224, 71, 0.65);
+  overflow: hidden;
+}
+.advent-golden::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.65) 50%, transparent 70%);
+  transform: translateX(-120%);
+  animation: advent-shimmer 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes advent-shimmer {
+  0%, 35% { transform: translateX(-120%); }
+  75%, 100% { transform: translateX(120%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-event="winter"] .arcade-bg:not(.game-surface)::before,
+  [data-event="winter"] .arcade-bg:not(.game-surface)::after,
+  .advent-golden::after {
+    animation: none;
+  }
+}
+
+/* A soft glow for "ready" things (today's Advent door, the banner's calendar button). It uses a
+   filter, so it doesn't fight Tailwind rings or Framer Motion transforms, and text stays crisp. */
+@keyframes event-glow {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.2) drop-shadow(0 0 10px rgba(253, 224, 71, 0.75)); }
+}
+.event-glow { animation: event-glow 1.8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .event-glow { animation: none; }
+}

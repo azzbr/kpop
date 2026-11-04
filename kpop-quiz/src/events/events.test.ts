@@ -2,13 +2,15 @@ import { describe, it, expect } from 'vitest';
 import {
   SEASON_EVENTS, HUNT_SCREENS, SPOTS_PER_DAY, DAILY_CAP,
   activeEvent, huntScreensFor, huntItemFor, spotFor, itemId, rewardId,
-  foundCount, nextReward, pendingRewards, claimRewards, eventLockerItems, isRewardOnly,
+  foundCount, nextReward, pendingRewards, claimRewards, eventLockerItems, isRewardOnly, rewardOnlyHint,
 } from './events';
 import type { SeasonEvent } from './events';
 import { localDateKey } from '../utils/dates';
 import { halloween as halloweenBank } from '../data/quiz/halloween';
 import { HALLOWEEN_LOCKER_ITEMS, PUMPKIN_HUNTER_TITLE_ID } from '../data/halloweenLocker';
 import { LOCKER_ITEMS } from '../data/lockerItems';
+import { WINTER_LOCKER_ITEMS, WINTER_REWARD_ONLY, SNOWFLAKE_TITLE_ID } from '../data/winterLocker';
+import { winter as winterBank } from '../data/quiz/winter';
 
 const NO_URL = '';
 const hw = SEASON_EVENTS.find(e => e.id === 'halloween')!;
@@ -318,5 +320,50 @@ describe('Halloween quiz bank', () => {
     const tfs = bank.questions.filter(q => q.type === 'truefalse');
     expect(tfs.some(q => q.correct === 0)).toBe(true);
     expect(tfs.some(q => q.correct === 1)).toBe(true);
+  });
+});
+
+describe('Winter Wonderland', () => {
+  it('wi26_ items: unique, not in the main catalogue, never free', () => {
+    const main = new Set([...LOCKER_ITEMS, ...HALLOWEEN_LOCKER_ITEMS].map(i => i.id));
+    const ids = WINTER_LOCKER_ITEMS.map(i => i.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const i of WINTER_LOCKER_ITEMS) {
+      expect(i.id.startsWith('wi26_'), i.id).toBe(true);
+      expect(main.has(i.id), i.id).toBe(false);
+      expect(i.price, i.id).toBeGreaterThan(0);
+    }
+  });
+
+  it('the hunt finale unlocks the Snowflake Catcher title; earned-only items have no Buy button', () => {
+    expect(winter.rewards.at(-1)).toMatchObject({ at: 25, unlocks: SNOWFLAKE_TITLE_ID });
+    for (const id of Object.keys(WINTER_REWARD_ONLY)) {
+      expect(isRewardOnly(id), id).toBe(true);
+      expect(WINTER_LOCKER_ITEMS.some(i => i.id === id), id).toBe(true);
+    }
+    expect(isRewardOnly('wi26_av_snowpal')).toBe(false);
+  });
+
+  it('rewardOnlyHint explains how to win each earned-only item, for both events', () => {
+    expect(rewardOnlyHint(PUMPKIN_HUNTER_TITLE_ID).short).toBe('🎃 Find all 31');
+    expect(rewardOnlyHint(SNOWFLAKE_TITLE_ID).short).toBe('❄️ Find all 25');
+    expect(rewardOnlyHint('wi26_ti_star').long).toMatch(/door 24/);
+    expect(rewardOnlyHint('nope').short).toBeTruthy();
+  });
+
+  it('winter Locker items show during the event, and afterwards only if owned', () => {
+    const live = eventLockerItems('2026-12-10', [], NO_URL).map(i => i.id);
+    expect(live).toEqual(WINTER_LOCKER_ITEMS.map(i => i.id));
+    expect(eventLockerItems('2027-02-01', [], NO_URL)).toEqual([]);
+    expect(eventLockerItems('2027-02-01', ['wi26_av_polar'], NO_URL).map(i => i.id)).toEqual(['wi26_av_polar']);
+  });
+
+  it('has a quiz, a theme, a banner look and the Advent calendar + Snow Catch buttons', () => {
+    expect(winter.quizBankId).toBe(winterBank.id);
+    expect(winterBank.questions.length).toBeGreaterThanOrEqual(30);
+    expect(winter.themeClass).toBe('winter');
+    expect(winter.palette && winter.themeNote).toBeTruthy();
+    expect(winter.extras?.map(e => e.screen)).toEqual(['advent_calendar', 'snow_catch']);
+    expect(hw.palette && hw.themeNote).toBeTruthy(); // Halloween keeps its look
   });
 });

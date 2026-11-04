@@ -7,6 +7,7 @@ import { sportGames } from './sportGames';
 import { trueOrFalse } from './trueOrFalse';
 import { orderIt } from './orderIt';
 import { halloween } from './halloween';
+import { winter } from './winter';
 
 export const QUIZ_BANKS: QuizBank[] = [
   generalKnowledge,
@@ -17,6 +18,7 @@ export const QUIZ_BANKS: QuizBank[] = [
   trueOrFalse,
   orderIt,
   halloween,
+  winter,
 ];
 
 export function getBank(id: string): QuizBank | undefined {

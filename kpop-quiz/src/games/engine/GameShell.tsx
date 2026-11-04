@@ -205,6 +205,7 @@ export default function GameShell(props: GameShellProps) {
                     {result && gameId in MASTERY && <StarsRow gameId={gameId} score={score} result={result} formatScore={formatScore} />}
                     {result && <p className="font-fredoka text-lg text-fuchsia-300 mb-1">+{result.xp} XP · +{result.coins} 🪙</p>}
                     {result?.weekly && <p className="font-fredoka text-base text-sky-300 mb-1">🌟 2× Game of the week!</p>}
+                    {result?.adventBonus ? <p className="font-fredoka text-base text-emerald-300 mb-1" data-testid="advent-bonus">🎄 Advent challenge complete! +{result.adventBonus} 🪙</p> : null}
                     <div className="mb-3" />
                     {props.overExtra}
                     <button onClick={() => { playClick(); props.onStart(); }}

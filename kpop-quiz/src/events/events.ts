@@ -2,6 +2,7 @@
 // No React here — PumpkinHunt.tsx / EventBanner.tsx use these, events.test.ts tests them.
 import type { LockerItem } from '../data/lockerItems';
 import { HALLOWEEN_LOCKER_ITEMS, HALLOWEEN_REWARD_ONLY_IDS, PUMPKIN_HUNTER_TITLE_ID } from '../data/halloweenLocker';
+import { WINTER_LOCKER_ITEMS, WINTER_REWARD_ONLY, SNOWFLAKE_TITLE_ID } from '../data/winterLocker';
 
 export interface EventReward {
   /** Items found needed. */
@@ -33,8 +34,14 @@ export interface SeasonEvent {
   quizBankId?: string;
   /** Button label for that quiz, e.g. 'Halloween Quiz'. */
   quizTitle?: string;
-  /** Value written to <html data-event="…"> while active (see halloween.css). */
+  /** Value written to <html data-event="…"> while active (see halloween.css, winter.css). */
   themeClass?: string;
+  /** Banner look: Tailwind classes for the card and for the progress bar. */
+  palette?: { card: string; bar: string; text: string };
+  /** One line about the event's look, shown in the banner. */
+  themeNote?: string;
+  /** Extra things to open from the banner while the event is on (e.g. the Advent calendar). */
+  extras?: { screen: string; label: string; colour: string }[];
 }
 
 export const SEASON_EVENTS: SeasonEvent[] = [
@@ -59,6 +66,8 @@ export const SEASON_EVENTS: SeasonEvent[] = [
     quizBankId: 'halloween',
     quizTitle: 'Halloween Quiz',
     themeClass: 'halloween',
+    palette: { card: 'border-orange-300/70 from-purple-900/90 via-indigo-900/90 to-orange-900/80', bar: 'from-orange-400 to-yellow-300', text: 'text-orange-100' },
+    themeNote: '🌙 The arcade has a spooky-cute night sky with friendly bats while the hunt is on.',
   },
   {
     key: 'winter-2026',
@@ -74,10 +83,18 @@ export const SEASON_EVENTS: SeasonEvent[] = [
     rewards: [
       { at: 5, coins: 25, label: '25 coins' },
       { at: 15, coins: 75, label: '75 coins' },
-      { at: 25, coins: 150, label: '150 coins' },
+      { at: 25, coins: 150, label: '150 coins + “Snowflake Catcher” title', unlocks: SNOWFLAKE_TITLE_ID },
     ],
-    lockerItemIds: [],
+    lockerItemIds: WINTER_LOCKER_ITEMS.map(i => i.id),
+    quizBankId: 'winter',
+    quizTitle: 'Winter Quiz',
     themeClass: 'winter',
+    palette: { card: 'border-sky-200/70 from-sky-900/90 via-indigo-900/90 to-cyan-900/80', bar: 'from-sky-300 to-white', text: 'text-sky-100' },
+    themeNote: '❄️ Snow falls softly over the arcade menus all season long.',
+    extras: [
+      { screen: 'advent_calendar', label: '🎄 Advent calendar', colour: 'bg-emerald-600' },
+      { screen: 'snow_catch', label: '❄️ Snow Catch', colour: 'bg-sky-600' },
+    ],
   },
 ];
 
@@ -210,8 +227,12 @@ export function claimRewards(event: SeasonEvent, deps: RewardDeps): EventReward[
 
 // ─── Locker ──────────────────────────────────────────────────────────────────
 
-const ALL_EVENT_ITEMS: LockerItem[] = [...HALLOWEEN_LOCKER_ITEMS];
-const REWARD_ONLY: ReadonlySet<string> = new Set([...HALLOWEEN_REWARD_ONLY_IDS]);
+const ALL_EVENT_ITEMS: LockerItem[] = [...HALLOWEEN_LOCKER_ITEMS, ...WINTER_LOCKER_ITEMS];
+const REWARD_ONLY: ReadonlySet<string> = new Set([...HALLOWEEN_REWARD_ONLY_IDS, ...Object.keys(WINTER_REWARD_ONLY)]);
+const REWARD_HINTS: Record<string, [string, string]> = {
+  [PUMPKIN_HUNTER_TITLE_ID]: ['🎃 Find all 31', 'Find all 31 pumpkins 🎃 to earn this one!'],
+  ...WINTER_REWARD_ONLY,
+};
 
 /** Limited Locker items to show: those of the active event, plus any she already owns. */
 export function eventLockerItems(dateKey: string, inventory: string[], search?: string): LockerItem[] {
@@ -222,3 +243,9 @@ export function eventLockerItems(dateKey: string, inventory: string[], search?: 
 
 /** True for items that can only be earned in an event (no Buy button). */
 export const isRewardOnly = (id: string) => REWARD_ONLY.has(id);
+
+/** How an earned-only item is won: a short label for its Locker button and a sentence for the toast. */
+export function rewardOnlyHint(id: string): { short: string; long: string } {
+  const [short, long] = REWARD_HINTS[id] ?? ['🏆 Event prize', 'This one is a prize from a seasonal event!'];
+  return { short, long };
+}

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
 import { LOCKER_ITEMS, ownsItem } from '../data/lockerItems';
-import { eventLockerItems, isRewardOnly } from '../events/events';
+import { eventLockerItems, isRewardOnly, rewardOnlyHint } from '../events/events';
 import { localDateKey } from '../utils/dates';
 import type { LockerItem, LockerKind } from '../data/lockerItems';
 import { playClick, playWrong, playUnlock } from '../utils/sounds';
@@ -33,7 +33,7 @@ export default function Locker() {
       if (slot) { playClick(); equip({ [slot]: item.value }); say(`Equipped ${item.emoji} ${item.name}!`); }
       return;
     }
-    if (isRewardOnly(item.id)) { playWrong(); say('Find all 31 pumpkins 🎃 to earn this one!'); return; }
+    if (isRewardOnly(item.id)) { playWrong(); say(rewardOnlyHint(item.id).long); return; }
     if (userCurrency < item.price) { playWrong(); say(`You need ${item.price - userCurrency} more coins — play some games! 🪙`); return; }
     if (buyItem(item.id, item.price)) {
       playUnlock();
@@ -97,15 +97,16 @@ export default function Locker() {
                     : <span className={`text-4xl ${item.kind === 'title' ? 'text-3xl' : ''}`}>{item.emoji}</span>}
                   <span className="font-fredoka text-base text-center leading-tight">{item.name}</span>
                   {item.id.startsWith('hw26_') && <span className="text-xs font-nunito rounded-full bg-orange-500/80 px-2">Limited 🎃</span>}
+                  {item.id.startsWith('wi26_') && <span className="text-xs font-nunito rounded-full bg-sky-500/80 px-2">Limited ❄️</span>}
                   <span className={`font-nunito text-sm ${on ? 'text-yellow-300' : owned ? 'text-green-300' : userCurrency >= item.price ? 'text-white' : 'text-white/50'}`}>
-                    {on ? '✔ Equipped' : owned ? (SLOT[item.kind] ? 'Tap to wear' : '✔ Owned') : isRewardOnly(item.id) ? '🎃 Find all 31' : `🪙 ${item.price}`}
+                    {on ? '✔ Equipped' : owned ? (SLOT[item.kind] ? 'Tap to wear' : '✔ Owned') : isRewardOnly(item.id) ? rewardOnlyHint(item.id).short : `🪙 ${item.price}`}
                   </span>
                 </motion.button>
               );
             })}
           </div>
         )}
-        {tab === 'sticker' && <p className="font-nunito text-violet-200 mt-3">Stickers appear in the Living Mural (secret menu → Hidden places).</p>}
+        {tab === 'sticker' && <p className="font-nunito text-violet-200 mt-3">Stickers appear in the Doodle Pad and the Sticker Board.</p>}
       </div>
 
       <AnimatePresence>
