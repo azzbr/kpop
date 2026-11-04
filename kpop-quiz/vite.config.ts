@@ -2,7 +2,7 @@
 import { defineConfig } from 'vite'
 import type { Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 
 /**
@@ -15,7 +15,9 @@ function serviceWorker(): Plugin {
     apply: 'build',
     generateBundle(_options, bundle) {
       // Fonts too, so they are stored at install and after every update (the app works offline).
-      const files = Object.keys(bundle).filter(f => /\.(js|css|woff2)$/.test(f)).map(f => `/${f}`).sort();
+      // Plus Blockly's few media files (Robo Quest), which it would otherwise fetch from blockly.com.
+      const blocklyMedia = readdirSync(new URL('./public/blockly-media', import.meta.url)).map(f => `/blockly-media/${f}`);
+      const files = [...Object.keys(bundle).filter(f => /\.(js|css|woff2)$/.test(f)).map(f => `/${f}`), ...blocklyMedia].sort();
       const version = createHash('sha1').update(files.join('|')).digest('hex').slice(0, 10);
       const source = readFileSync(new URL('./sw/sw.js', import.meta.url), 'utf8')
         .replaceAll('__VERSION__', version)
