@@ -43,6 +43,7 @@ const TILES: Tile[] = [
   { id: 'ninja_slice', title: 'Ninja Slice', description: 'Swipe to slice fruit. Dodge the bombs!', icon: '🥷', color: 'from-red-500 to-orange-500', category: 'arcade' },
   { id: 'rocket_launch', title: 'Rocket Launch', description: 'Pull back, let go, and hit 5 stars!', icon: '🚀', color: 'from-sky-500 to-indigo-600', category: 'arcade' },
   { id: 'tower_defense', title: 'Tower Defense', description: 'Answer questions to earn coins, build towers, stop the snails!', icon: '🏰', color: 'from-emerald-500 to-sky-600', category: 'arcade', isNew: true },
+  { id: 'stack_lab', title: 'Stack Lab', description: 'Drop wobbly pieces from the crane — build the tallest tower!', icon: '🏗️', color: 'from-amber-500 to-orange-600', category: 'arcade', isNew: true },
   { id: 'battle_arena', title: 'Battle Arena', description: 'Pick a hero and out-bonk a crafty bot!', icon: '⚔️', color: 'from-slate-500 to-blue-700', category: 'arcade' },
 
   // Puzzles

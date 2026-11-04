@@ -162,6 +162,9 @@ export const GAME_BADGES: GameBadge[] = [
   best('chb_hoot', 'chess_bot', 'Wise Owl', '🦉', 450, 'Beat Professor Hoot at chess'),
   plays('chl_first', 'chess_learn', 'First Lesson', '🎓', 1, 'Finish a chess lesson level'),
   plays('chl_10', 'chess_learn', 'Chess Scholar', '📚', 10, 'Finish 10 chess lesson levels'),
+  plays('sl_first', 'stack_lab', 'Crane Cadet', '🏗️', 1, 'Build your first tower in Stack Lab'),
+  best('sl_100', 'stack_lab', 'Metre Maker', '📏', 100, 'Build a tower 100 cm tall in Stack Lab'),
+  best('sl_200', 'stack_lab', 'Sky Builder', '🌤️', 200, 'Build a tower 200 cm tall in Stack Lab'),
 
   // 🔢 Mini Sudoku — level points for time
   plays('su_first', 'mini_sudoku', 'Grid Solver', '🔢', 1, 'Solve a Mini Sudoku'),

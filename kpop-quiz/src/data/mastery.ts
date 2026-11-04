@@ -53,6 +53,8 @@ export const MASTERY: Record<string, Mastery> = {
   // against Biscuit / Fox / Professor Hoot (draws 30 / 60 / 90, never a "win" star).
   chess_puzzles: { stars: [300, 800, 1500], screen: 'chess_academy' },
   chess_bot: { stars: [100, 250, 450], max: 450, screen: 'chess_academy', weekly: false },
+  // Stack Lab heights in cm, from scripts/stackLabSim.ts: a wild round ≈ 40, a good one ≈ 80–150, a careful one 130+.
+  stack_lab: { stars: [40, 100, 200] },
 };
 
 export const MASTERY_IDS = Object.keys(MASTERY);
