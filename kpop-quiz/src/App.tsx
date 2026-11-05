@@ -9,6 +9,7 @@ import MusicPlayer from './components/MusicPlayer';
 import PlayTimeTracker from './components/PlayTimeTracker';
 import BadgeToast from './components/BadgeToast';
 import PumpkinHunt from './components/events/PumpkinHunt';
+import WinterSnow from './components/events/WinterSnow';
 import { useEventTheme } from './events/useEventTheme';
 import ScreenErrorBoundary from './components/ui/ScreenErrorBoundary';
 import { getInstallState } from './utils/appInstall';
@@ -139,6 +140,7 @@ function App() {
       <MusicPlayer />
       <PlayTimeTracker />
       <BadgeToast />
+      <WinterSnow />
       <PumpkinHunt screen={gameState} />
     </div>
   );

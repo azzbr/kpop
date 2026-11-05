@@ -15,7 +15,7 @@ jobs:
     # Move to a newer image together with a Playwright upgrade.
     runs-on: ubuntu-24.04
     # The full run (150 e2e tests on WebKit iPad, Chromium iPad and desktop) takes about 30 minutes.
-    timeout-minutes: 45
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: kpop-quiz

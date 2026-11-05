@@ -163,6 +163,13 @@ test.describe('Winter Wonderland', () => {
   test('10 November: the winter look is on early; the calendar counts down with every door locked', async ({ page }) => {
     await openOn(page, at(10, 10));
     await expect(page.locator('html')).toHaveAttribute('data-event', 'winter');
+    // Snow falls over the menus inside a screen-sized box: the page never gets wider or taller.
+    await expect(page.getByTestId('winter-snow')).toHaveCount(1);
+    const fits = await page.evaluate(() => {
+      const box = document.querySelector('.winter-snow')!.getBoundingClientRect();
+      return box.width <= innerWidth && box.height <= innerHeight && document.documentElement.scrollWidth <= innerWidth;
+    });
+    expect(fits).toBe(true);
     const banner = page.getByTestId('event-banner');
     await expect(banner.getByRole('button', { name: /Snow Catch/ })).toBeVisible();
     await banner.getByRole('button', { name: 'Advent calendar · from 1 Dec' }).click();
@@ -173,6 +180,12 @@ test.describe('Winter Wonderland', () => {
     await expect(page.getByRole('status')).toContainText('Door 1 opens on 1 December');
     await expect(page.getByRole('dialog', { name: 'Advent surprise' })).toHaveCount(0);
     expect(await coins(page)).toBe(before);
+
+    // Games stay calm: no snow layer while a game is on screen.
+    await page.locator('[data-back]').first().click();
+    await page.getByTestId('event-banner').getByRole('button', { name: /Snow Catch/ }).click();
+    await expect(page.getByRole('button', { name: /Let it snow/ })).toBeVisible();
+    await expect(page.getByTestId('winter-snow')).toHaveCount(0);
   });
 
   test('before the event (4 November) there is no winter theme or calendar', async ({ page }) => {
