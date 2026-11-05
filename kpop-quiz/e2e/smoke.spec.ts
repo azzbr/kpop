@@ -37,6 +37,10 @@ test.describe.configure({ mode: 'parallel' });
 for (const category of CATEGORIES) {
   test(`${category}: every tile opens cleanly and Back returns to the grid`, async ({ page }) => {
     test.setTimeout(180_000);
+    // Decorative event animations (the winter snow) off for this long tile-by-tile sweep: CI's
+    // WebKit has no GPU, so a full-screen animation slows every frame and tiles never look
+    // "stable" while scrolling. The app's CSS honours reduced motion (events/winter.css).
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     const errors = watchErrors(page);
     // Teacher tiles only show in teacher mode (Teacher setup + PIN), so play as the teacher.
     await openApp(page, '/', { seed: await teacherSeed() });
