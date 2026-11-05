@@ -186,6 +186,12 @@ test.describe('Winter Wonderland', () => {
     await page.getByTestId('event-banner').getByRole('button', { name: /Snow Catch/ }).click();
     await expect(page.getByRole('button', { name: /Let it snow/ })).toBeVisible();
     await expect(page.getByTestId('winter-snow')).toHaveCount(0);
+
+    // Devices that ask for reduced motion get no snow layer at all.
+    await page.locator('[data-back]').first().click();
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await expect(grid(page)).toBeVisible();
+    await expect(page.getByTestId('winter-snow')).toHaveCount(0);
   });
 
   test('before the event (4 November) there is no winter theme or calendar', async ({ page }) => {
