@@ -74,7 +74,8 @@ export const SEASON_EVENTS: SeasonEvent[] = [
     id: 'winter',
     name: 'Winter Wonderland',
     emoji: '❄️',
-    start: '2026-12-01',
+    // Started early at the family's request (5 Nov); the Advent doors still open 1–24 Dec.
+    start: '2026-11-05',
     end: '2027-01-06',
     itemEmoji: '❄️',
     itemName: 'snowflake',

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   ADVENT_KEY, ADVENT_END, doorState, doorDate, doorId, challengeId, readyDoors, missedDoors, openDoors,
-  liveChallenges, checkAdventChallenges, isSnowDay, adventOpen,
+  liveChallenges, checkAdventChallenges, isSnowDay, adventOpen, daysUntil, ADVENT_START,
 } from './advent';
 import type { AdventDeps } from './advent';
 import { ADVENT_DOORS, DOOR_ORDER, DOOR_COINS, GOLDEN_DOOR_COINS, CHALLENGE_COINS } from '../data/adventDoors';
@@ -51,6 +51,16 @@ describe('Advent door states', () => {
     expect(adventOpen('2026-12-01')).toBe(true);
     expect(adventOpen(ADVENT_END)).toBe(true);
     expect(adventOpen('2027-01-07')).toBe(false);
+  });
+
+  it('counts the days to door 1 (for the countdown before December)', () => {
+    expect(daysUntil('2026-11-05', ADVENT_START)).toBe(26);
+    expect(daysUntil('2026-11-30', ADVENT_START)).toBe(1);
+    expect(daysUntil(ADVENT_START, ADVENT_START)).toBe(0);
+    expect(daysUntil('2026-12-31', '2027-01-06')).toBe(6);
+    expect(daysUntil('2026-12-03', ADVENT_START)).toBe(-2);
+    // Before December every door is locked, even while the winter event is on.
+    for (let d = 1; d <= 24; d++) expect(doorState(d, '2026-11-10', [])).toBe('locked');
   });
 
   it('ready and missed doors', () => {

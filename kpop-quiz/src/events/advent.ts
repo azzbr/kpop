@@ -18,6 +18,12 @@ export const challengeId = (day: number) => `challenge-${day}`;
 export const snowDayId = (dateKey: string) => `snowday-${dateKey}`;
 export const doorFor = (day: number): AdventDoor | undefined => ADVENT_DOORS.find(d => d.day === day);
 
+/** Whole days from local date `from` to `to` (YYYY-MM-DD); 0 on the day itself, negative after. */
+export function daysUntil(from: string, to: string): number {
+  const day = (k: string) => { const [y, m, d] = k.split('-').map(Number); return Date.UTC(y, m - 1, d) / 86_400_000; };
+  return Math.round(day(to) - day(from));
+}
+
 /** Is the calendar open on this local date? */
 export const adventOpen = (today: string) => today >= ADVENT_START && today <= ADVENT_END;
 

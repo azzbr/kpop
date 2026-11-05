@@ -5,7 +5,7 @@ import { useGameStore } from '../../store';
 import { localDateKey } from '../../utils/dates';
 import { playClick } from '../../utils/sounds';
 import { activeEvent, eventLockerItems, foundCount, nextReward, rewardId, DAILY_CAP } from '../../events/events';
-import { ADVENT_KEY, readyDoors } from '../../events/advent';
+import { ADVENT_KEY, ADVENT_START, readyDoors } from '../../events/advent';
 import type { GameState } from '../../store';
 import { setArenaSource } from '../games/quizArenaSource';
 
@@ -28,7 +28,9 @@ export default function EventBanner() {
   const pal = event.palette ?? { card: 'border-orange-300/70 from-purple-900/90 via-indigo-900/90 to-orange-900/80', bar: 'from-orange-400 to-yellow-300', text: 'text-orange-100' };
   const ready = readyDoors(date, advent);
   const extraLabel = (screen: string, label: string) => {
-    if (screen !== 'advent_calendar' || ready.length === 0) return label;
+    if (screen !== 'advent_calendar') return label;
+    if (date < ADVENT_START) return `${label} · from 1 Dec`;
+    if (ready.length === 0) return label;
     return ready.length === 1 ? `${label} · Door ${ready[0]} is ready!` : `${label} · ${ready.length} doors ready!`;
   };
 

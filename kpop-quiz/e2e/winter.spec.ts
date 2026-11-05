@@ -160,8 +160,23 @@ test.describe('Winter Wonderland', () => {
     await expect(buddy).toContainText('Limited ❄️');
   });
 
-  test('outside the event (20 November) there is no winter theme or calendar', async ({ page }) => {
-    await openOn(page, at(20, 10));
+  test('10 November: the winter look is on early; the calendar counts down with every door locked', async ({ page }) => {
+    await openOn(page, at(10, 10));
+    await expect(page.locator('html')).toHaveAttribute('data-event', 'winter');
+    const banner = page.getByTestId('event-banner');
+    await expect(banner.getByRole('button', { name: /Snow Catch/ })).toBeVisible();
+    await banner.getByRole('button', { name: 'Advent calendar · from 1 Dec' }).click();
+    await expect(page.getByTestId('advent-status')).toHaveText('🎄 Door 1 opens in 21 days');
+    await expect(page.locator('[data-door][data-state="locked"]')).toHaveCount(24);
+    const before = await coins(page);
+    await door(page, 1).click();
+    await expect(page.getByRole('status')).toContainText('Door 1 opens on 1 December');
+    await expect(page.getByRole('dialog', { name: 'Advent surprise' })).toHaveCount(0);
+    expect(await coins(page)).toBe(before);
+  });
+
+  test('before the event (4 November) there is no winter theme or calendar', async ({ page }) => {
+    await openOn(page, at(4, 10));
     await expect(page.locator('html')).not.toHaveAttribute('data-event', /.*/);
     await expect(page.getByTestId('event-banner')).toHaveCount(0);
   });

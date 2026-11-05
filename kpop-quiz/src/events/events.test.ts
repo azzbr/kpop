@@ -60,7 +60,10 @@ describe('activeEvent', () => {
   });
 
   it('winter event spans the new year', () => {
-    expect(activeEvent('2026-11-30', NO_URL)).toBeNull();
+    // Started early (5 Nov) at the family's request; the Advent doors still open in December.
+    expect(activeEvent('2026-11-04', NO_URL)).toBeNull();
+    expect(activeEvent('2026-11-05', NO_URL)?.key).toBe(winter.key);
+    expect(activeEvent('2026-11-30', NO_URL)?.key).toBe(winter.key);
     expect(activeEvent('2026-12-01', NO_URL)?.key).toBe(winter.key);
     expect(activeEvent('2026-12-31', NO_URL)?.key).toBe(winter.key);
     expect(activeEvent('2027-01-01', NO_URL)?.key).toBe(winter.key);
@@ -245,8 +248,8 @@ describe('Halloween Locker items', () => {
 
   it('show during the event, and afterwards only if owned', () => {
     expect(eventLockerItems('2026-10-10', [], NO_URL).length).toBe(HALLOWEEN_LOCKER_ITEMS.length);
-    expect(eventLockerItems('2026-11-20', [], NO_URL)).toEqual([]);
-    expect(eventLockerItems('2026-11-20', ['hw26_av_ghost'], NO_URL).map(i => i.id)).toEqual(['hw26_av_ghost']);
+    expect(eventLockerItems('2026-11-04', [], NO_URL)).toEqual([]);
+    expect(eventLockerItems('2026-11-04', ['hw26_av_ghost'], NO_URL).map(i => i.id)).toEqual(['hw26_av_ghost']);
   });
 });
 

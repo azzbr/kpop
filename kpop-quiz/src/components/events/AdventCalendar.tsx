@@ -11,7 +11,7 @@ import { localDateKey } from '../../utils/dates';
 import { useSafeTimeout } from '../../utils/useSafeTimeout';
 import { playClick, playCoin, playNote, playWin } from '../../utils/sounds';
 import {
-  ADVENT_KEY, ADVENT_START, adventOpen, doorState, doorId, challengeId, missedDoors, readyDoors, openDoors,
+  ADVENT_KEY, ADVENT_START, ADVENT_END, daysUntil, doorState, doorId, challengeId, missedDoors, readyDoors, openDoors,
 } from '../../events/advent';
 import type { AdventDeps } from '../../events/advent';
 import { ADVENT_DOORS, DOOR_ORDER, CHALLENGE_COINS } from '../../data/adventDoors';
@@ -85,18 +85,29 @@ export default function AdventCalendar() {
   return (
     <ScreenFrame title="Advent Calendar" icon="🎄" width="max-w-4xl">
       {party > 0 && <ConfettiBurst key={party} count={card?.doors.some(d => d.day === 24) ? 140 : 70} durationMs={2600} />}
-      {!adventOpen(today) ? (
+      {today > ADVENT_END ? (
         <p className="font-nunito text-xl text-center text-violet-100 mt-6">
-          {notYet ? 'The Advent calendar opens on 1 December — one little door for every day until Christmas Eve! 🎄' : 'The Advent calendar has finished for this winter. See you next December! ❄️'}
+          The Advent calendar has finished for this winter. See you next December! ❄️
         </p>
       ) : (
         <>
           <div className="text-center mb-3">
-            <p className="font-fredoka text-xl" data-testid="advent-status">
-              {ready.length === 0 ? `🎉 All caught up! ${openedCount} / 24 doors opened`
-                : ready.length === 1 ? `🎁 Door ${ready[0]} is ready!` : `🎁 ${ready.length} doors to open`}
-            </p>
-            <p className="font-nunito text-base text-violet-200">Every door has coins 🪙 and a surprise. Missed a day? You can still open it until {END_TEXT}.</p>
+            {notYet ? (
+              <>
+                <p className="font-fredoka text-xl" data-testid="advent-status">
+                  {daysUntil(today, ADVENT_START) === 1 ? '🎄 Door 1 opens tomorrow!' : `🎄 Door 1 opens in ${daysUntil(today, ADVENT_START)} days`}
+                </p>
+                <p className="font-nunito text-base text-violet-200">One little door for every day from 1 December to Christmas Eve — each with coins 🪙 and a surprise!</p>
+              </>
+            ) : (
+              <>
+                <p className="font-fredoka text-xl" data-testid="advent-status">
+                  {ready.length === 0 ? `🎉 All caught up! ${openedCount} / 24 doors opened`
+                    : ready.length === 1 ? `🎁 Door ${ready[0]} is ready!` : `🎁 ${ready.length} doors to open`}
+                </p>
+                <p className="font-nunito text-base text-violet-200">Every door has coins 🪙 and a surprise. Missed a day? You can still open it until {END_TEXT}.</p>
+              </>
+            )}
           </div>
           {missed.length >= 2 && (
             <button type="button" onClick={() => open(missed)}
