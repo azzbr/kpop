@@ -1,0 +1,558 @@
+/* Flight Compass by the family (azzbr/flight-compass): its "chart room" stylesheet, with every rule
+   scoped under .fc-root so it never touches the rest of Fun Quest (generated from css/style.css;
+   keyframes renamed fc-*). Fun Quest additions are at the end. */
+/* Flight Compass — "chart room" theme: parchment, sea-green, sepia ink, ochre. */
+
+/* Oswald Bold (SIL Open Font License 1.1, see fonts/OFL-oswald.txt), bundled for offline use. */
+@font-face {
+  font-family: "Oswald";
+  font-weight: 700;
+  font-display: swap;
+  src: url("../../../assets/fonts/oswald-latin-700.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Oswald";
+  font-weight: 700;
+  font-display: swap;
+  src: url("../../../assets/fonts/oswald-latin-ext-700.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+.fc-root {
+  --display: "Oswald", "Arial Narrow", "Roboto Condensed", sans-serif-condensed, Impact, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, "Courier New", monospace;
+  --page: #e9dfc6;
+  --paper: #f8f2e3;
+  --paper-2: #f1e8d2;
+  --ink: #2b2118;
+  --ink-2: #4a3b2a;
+  --muted: #7a6a55;
+  --line: rgba(74, 59, 42, 0.22);
+  --accent: #e5a92b;      /* mustard: primary buttons, highlights */
+  --teal: #1f7a8c;
+  --vermilion: #d9482b;
+  --postcard-red: #c43c22;   /* Daily route card: deep enough for cream text */
+  --postal-blue: #2f5fa8;    /* Challenge button */
+  --cream: #fbf6ea;
+  --card: #fbf6ea;
+  --hard-shadow: 4px 5px 0 rgba(43, 33, 24, 0.88);
+  --aim: #c4362b;         /* compass red: the needle and your aim */
+  --accent-ink: #2b2118;
+  --truth: #2f7d4f;       /* green: the great circle */
+  --rhumb: #7b5ea7;       /* violet: the flat-map line */
+  --good: #2f7d4f;
+  --bad: #a8452c;
+  --radius: 14px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --serif: Georgia, "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
+  color-scheme: light;
+}
+
+.fc-root * { box-sizing: border-box; }
+.fc-root { height: 100%; margin: 0; }
+/* Grainy postcard paper: a fixed noise layer printed over everything (no image files). */
+.fc-root::after {
+  content: ""; position: absolute; inset: 0; z-index: 50; pointer-events: none;
+  opacity: 0.28; mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.3 0 0 0 0 0.24 0 0 0 0 0.17 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.fc-root {
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(255, 251, 240, 0.85) 0%, rgba(241, 230, 207, 0) 70%),
+    #efe3c8;
+  color: var(--ink);
+  font: 16px/1.45 var(--font);
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+}
+.fc-root button, .fc-root input, .fc-root select { font: inherit; color: inherit; }
+.fc-root a { color: var(--truth); }
+
+.fc-root .app {
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+}
+.fc-root .app.in-run .topbar { display: none; }
+/* Fixed rows, so hiding the top bar or the boarding card never shifts the map into the wrong row. */
+.fc-root .app > .topbar { grid-row: 1; }
+.fc-root .app > .run-header { grid-row: 2; }
+.fc-root .app > .stage { grid-row: 3; }
+.fc-root .app > .panel { grid-row: 4; }
+
+/* ---------- boarding card (top of the screen during a run) ---------- */
+.fc-root .run-header {
+  display: flex; align-items: stretch; justify-content: center; gap: 12px;
+  padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+  z-index: 3;
+}
+.fc-root .run-header[hidden] { display: none; }
+.fc-root .back-btn {
+  flex: 0 0 auto; align-self: center;
+  width: 54px; height: 54px; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer;
+  color: var(--ink); background: var(--paper);
+  border: 2.5px solid var(--ink);
+  box-shadow: 3px 4px 0 rgba(43, 33, 24, 0.85);
+}
+.fc-root .back-btn svg { width: 24px; height: 24px; }
+.fc-root .back-btn:active { transform: translate(2px, 2px); box-shadow: 1px 2px 0 rgba(43, 33, 24, 0.85); }
+.fc-root .tk {
+  position: relative; flex: 1; min-width: 0; max-width: 760px;
+  display: flex;
+  min-height: 108px;
+  margin-right: 4px; /* room for the offset shadow */
+}
+.fc-root .tk-shape { position: absolute; left: -2px; top: -2px; pointer-events: none; overflow: visible; }
+.fc-root .tk-shadow { fill: var(--ink); opacity: 0.85; }
+.fc-root .tk-paper { fill: #fbf6ea; }
+.fc-root .tk-edge { fill: none; stroke: var(--ink); stroke-width: 2.5; stroke-linejoin: round; }
+.fc-root .tk-tear { stroke: var(--muted); stroke-width: 2; stroke-dasharray: 0.1 6; stroke-linecap: round; }
+.fc-root .tk-bar rect { fill: var(--ink-2); }
+.fc-root .tk-bar-frame { fill: none; stroke: var(--ink-2); stroke-width: 1; }
+.fc-root .tk-main {
+  position: relative; flex: 1; min-width: 0;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 16px 16px 10px 20px;
+}
+.fc-root .tk-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.fc-root .tk-from { display: flex; align-items: center; gap: 6px; min-width: 0; font: 700 16px/1.2 var(--display); letter-spacing: 0.06em; text-transform: uppercase; }
+.fc-root .tk-from svg { flex: 0 0 18px; width: 18px; height: 18px; color: var(--aim); }
+.fc-root .tk-from span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fc-root .tk-leg { flex: 0 0 auto; font: 600 14px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.fc-root .tk-target-row { display: flex; align-items: baseline; gap: 12px; min-width: 0; margin: 2px 0 0; }
+.fc-root .tk-target {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font: 700 clamp(34px, 5.2vw, 50px)/1.05 var(--display); letter-spacing: 0.01em; text-transform: uppercase; color: var(--ink);
+}
+.fc-root .tk-ask { flex: 0 0 auto; font: italic 700 clamp(18px, 2.4vw, 24px) var(--serif); color: var(--aim); }
+.fc-root .tk-foot { margin-top: 1px; min-height: 18px; }
+.fc-root .tk-country { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fc-root .tk-streak { flex: 0 0 auto; font: 700 12px var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--good); }
+.fc-root .tk-stub {
+  position: relative; flex: 0 0 112px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  padding: 14px 8px 10px;
+}
+.fc-root .tk-points { font: 700 38px/1 var(--display); font-variant-numeric: tabular-nums; }
+.fc-root .tk-points-label { font: 600 11px var(--mono); letter-spacing: 0.24em; text-transform: uppercase; color: var(--muted); padding-left: 0.24em; }
+.fc-root .tk-lives { display: flex; gap: 5px; margin-top: 6px; }
+.fc-root .life { width: 17px; height: 17px; fill: none; stroke: var(--muted); stroke-width: 1.4; stroke-linejoin: round; }
+.fc-root .life.on { fill: var(--aim); stroke: var(--ink); }
+.fc-root .tk-points.bump, .fc-root .tk-streak.bump { display: inline-block; animation: fc-bump 520ms ease-out; }
+
+@media (max-width: 560px) {
+  /* The boarding card already shows the route; keep it for screen readers only. */
+  .fc-root .eyebrow-route { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .fc-root .run-header { gap: 8px; padding-left: 10px; padding-right: 10px; }
+  .fc-root .back-btn { width: 42px; height: 42px; border-width: 2px; }
+  .fc-root .tk { min-height: 96px; }
+  .fc-root .tk-main { padding: 14px 10px 8px 14px; }
+  .fc-root .tk-from { font-size: 14px; }
+  .fc-root .tk-leg { font-size: 11px; }
+  .fc-root .tk-target { font-size: clamp(26px, 8.5vw, 38px); }
+  .fc-root .tk-ask { font-size: 16px; }
+  .fc-root .tk-stub { flex-basis: 82px; padding: 12px 4px 8px; }
+  .fc-root .tk-points { font-size: 30px; }
+  .fc-root .tk-points-label { font-size: 9px; letter-spacing: 0.18em; }
+  .fc-root .life { width: 14px; height: 14px; }
+}
+
+/* ---------- top bar ---------- */
+.fc-root .topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(8px + env(safe-area-inset-top)) 16px 8px;
+  border-bottom: 1.5px solid var(--ink-2);
+  background: var(--paper);
+  z-index: 3;
+}
+.fc-root .brand {
+  display: flex; align-items: center; gap: 8px;
+  background: none; border: 0; padding: 4px 0; cursor: pointer;
+  font: 700 20px var(--serif); letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.fc-root .brand svg { width: 22px; height: 22px; color: var(--accent); flex: none; }
+.fc-root .hud[hidden] { display: none; }
+.fc-root .hud { flex: 1; display: flex; justify-content: center; gap: 18px; font-variant-numeric: tabular-nums; }
+.fc-root .hud-item { display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
+.fc-root .hud-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.fc-root .hud-item strong { font: 700 18px var(--serif); }
+.fc-root .top-actions { display: flex; gap: 6px; margin-left: auto; }
+.fc-root .hud:not([hidden]) + .top-actions { margin-left: 0; }
+
+.fc-root .icon-btn {
+  width: 38px; height: 38px; border-radius: 50%;
+  border: 1.5px solid var(--ink-2); background: var(--paper);
+  display: inline-grid; place-items: center; cursor: pointer; font-weight: 700; font-size: 18px;
+  box-shadow: 2px 2px 0 rgba(43, 33, 24, 0.25);
+}
+.fc-root .icon-btn svg { width: 20px; height: 20px; }
+.fc-root .icon-btn:hover { background: var(--paper-2); }
+
+/* ---------- stage ---------- */
+.fc-root .stage { position: relative; min-height: 0; touch-action: none; user-select: none; }
+.fc-root #globe { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.fc-root .stage.is-aiming { cursor: crosshair; }
+
+.fc-root .dial { position: absolute; inset: 0; pointer-events: none; transition: opacity 0.2s; }
+.fc-root .dial.is-hidden { opacity: 0; }
+.fc-root .dial-bezel { fill: none; stroke: rgba(248, 242, 227, 0.9); }
+.fc-root .dial-edge { fill: none; stroke: var(--ink-2); stroke-width: 1.5; }
+.fc-root .dial-edge.outer { stroke-width: 2.5; }
+.fc-root .tick { stroke: var(--ink-2); stroke-width: 1; }
+.fc-root .tick.major { stroke-width: 2; }
+.fc-root .dial text { fill: var(--ink-2); font: 600 10.5px var(--serif); text-anchor: middle; dominant-baseline: central; }
+.fc-root .dial text.cardinal { font: 700 15px var(--serif); fill: var(--ink); }
+.fc-root .dial text.cardinal.north { fill: var(--aim); }
+.fc-root .rose-line { stroke: rgba(74, 59, 42, 0.32); stroke-width: 0.8; }
+.fc-root .rose-line.major { stroke: rgba(74, 59, 42, 0.42); stroke-width: 1; }
+.fc-root .rose-line.minor { stroke: rgba(74, 59, 42, 0.22); }
+.fc-root .rose-ring { fill: none; stroke: rgba(74, 59, 42, 0.35); stroke-width: 1; stroke-dasharray: 1.5 4; }
+.fc-root .dial-needle { fill: var(--aim); stroke: var(--ink); stroke-width: 1.3; stroke-linejoin: round; }
+.fc-root .dial-tail { fill: #fbf6ea; stroke: var(--ink); stroke-width: 1.3; stroke-linejoin: round; }
+.fc-root .dial-hub { fill: var(--ink); }
+.fc-root .dial-hub-dot { fill: var(--accent); }
+.fc-root .dial-city-bg { fill: var(--ink); }
+.fc-root .dial text.dial-city-text { fill: #fbf6ea; font: 700 15px var(--serif); letter-spacing: 0.12em; text-anchor: middle; dominant-baseline: central; }
+
+.fc-root .dial-control {
+  position: absolute; left: 50%; top: 50%; width: 1px; height: 1px; transform: translate(-50%, -50%);
+  outline: none;
+}
+.fc-root .stage.keyboard .dial-control:focus-visible::after {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 30px; height: 30px;
+  transform: translate(-50%, -50%); border-radius: 50%; box-shadow: 0 0 0 3px var(--truth);
+}
+
+.fc-root .stage.home-mode .zoom { display: none; }
+.fc-root .zoom { position: absolute; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 2; }
+
+.fc-root .toast {
+  position: absolute; left: 50%; top: 16px; transform: translate(-50%, -8px);
+  max-width: min(92%, 520px); padding: 10px 14px; border-radius: 12px;
+  background: var(--ink); color: var(--paper);
+  font-size: 14px; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; z-index: 2;
+}
+.fc-root .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* Hint card: floats over the map so nothing below moves; flashes once when it appears. */
+.fc-root .hint-chip {
+  /* Phones: along the bottom of the map, so the compass's north stays in view. */
+  --chip-x: -50%;
+  position: absolute; left: 50%; bottom: 12px; z-index: 4;
+  transform: translateX(var(--chip-x));
+  width: max-content; max-width: min(92%, 520px);
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 10px 10px 12px;
+  background: var(--cream); color: var(--ink);
+  border: 2.5px solid var(--ink); border-radius: 16px;
+  box-shadow: var(--hard-shadow);
+}
+.fc-root .hint-chip[hidden] { display: none; }
+.fc-root .hint-badge {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 6px 8px; border-radius: 10px;
+  background: var(--accent); border: 2px solid var(--ink);
+  font: 700 12px var(--display); letter-spacing: 0.12em; text-transform: uppercase;
+}
+.fc-root .hint-badge svg { width: 22px; height: 22px; }
+.fc-root .hint-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.fc-root .hint-body span { display: block; font: 600 15px/1.35 var(--serif); }
+.fc-root .hint-cost { font: 600 11px var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--postcard-red); }
+.fc-root .hint-close {
+  flex: 0 0 auto; align-self: flex-start;
+  width: 28px; height: 28px; border-radius: 50%; border: 0; background: transparent;
+  font-size: 20px; line-height: 1; cursor: pointer; color: var(--muted);
+}
+.fc-root .hint-close:hover { background: rgba(74, 59, 42, 0.1); color: var(--ink); }
+.fc-root .hint-chip.flash { animation: fc-hint-flash 1100ms ease-out; }
+.fc-root .hint-chip.flash .hint-badge { animation: fc-hint-badge 1100ms ease-out; }
+/* Wider screens: the top-left corner, clear of the compass in the middle. */
+@media (min-width: 760px) {
+  .fc-root .hint-chip { --chip-x: 0; left: 16px; top: 16px; bottom: auto; max-width: min(340px, calc(50% - 230px)); min-width: 240px; }
+}
+@keyframes fc-hint-flash {
+  0% { background: #ffe08a; transform: translateX(var(--chip-x)) scale(1.07); box-shadow: 0 0 0 8px rgba(229, 169, 43, 0.55), var(--hard-shadow); }
+  25% { background: #fff1c2; transform: translateX(var(--chip-x)) scale(1); }
+  45% { background: #ffe08a; box-shadow: 0 0 0 4px rgba(229, 169, 43, 0.35), var(--hard-shadow); }
+  100% { background: var(--cream); transform: translateX(var(--chip-x)) scale(1); box-shadow: var(--hard-shadow); }
+}
+@keyframes fc-hint-badge {
+  0%, 45% { transform: rotate(-8deg) scale(1.12); }
+  25% { transform: rotate(6deg) scale(1.05); }
+  100% { transform: none; }
+}
+.fc-root.reduce-motion .hint-chip.flash, .fc-root.reduce-motion .hint-chip.flash .hint-badge { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .fc-root .hint-chip.flash, .fc-root .hint-chip.flash .hint-badge { animation: none; }
+}
+
+/* ---------- bottom panel ---------- */
+.fc-root .panel {
+  position: relative; z-index: 3;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+  background: var(--paper);
+  border-top: 1.5px solid var(--ink-2);
+  max-height: 55dvh; overflow-y: auto;
+  min-height: min(230px, 40dvh); /* keeps the globe from jumping in size between phases */
+}
+.fc-root .panel > * { max-width: 620px; margin-left: auto; margin-right: auto; }
+.fc-root .panel-aim, .fc-root .panel-flying { min-height: 0; }
+.fc-root .flying-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.fc-root .flying-row .mission { margin: 0; }
+.fc-root .eyebrow { margin: 0 auto 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.fc-root .mission { margin: 0 auto 8px; font-size: 17px; }
+.fc-root .mission strong { font-family: var(--serif); }
+.fc-root .target-name { color: var(--truth); }
+.fc-root .readout { display: flex; align-items: baseline; gap: 10px; font-variant-numeric: tabular-nums; margin-bottom: 6px; }
+.fc-root #headingValue { font: 700 36px var(--serif); color: var(--aim); letter-spacing: 0.02em; }
+.fc-root #headingWord { color: var(--muted); text-transform: capitalize; }
+.fc-root .hint-text { margin: 0 auto 8px; color: var(--ink-2); font-size: 14px; }
+.fc-root .hint-text:empty { display: none; }
+.fc-root .keys { font-size: 12px; color: var(--muted); margin: 10px auto 0; }
+.fc-root .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.fc-root .btn-lock { margin-left: auto; }
+
+.fc-root .btn {
+  display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: 10px 16px; border-radius: 12px; cursor: pointer;
+  border: 1.5px solid var(--ink-2); background: var(--paper);
+  font-weight: 700; text-align: left;
+  box-shadow: 3px 3px 0 rgba(43, 33, 24, 0.2);
+}
+.fc-root .btn small { font-weight: 500; color: var(--muted); font-size: 13px; }
+.fc-root .btn:hover:not(:disabled) { background: var(--paper-2); }
+.fc-root .btn:active:not(:disabled) { transform: translate(1px, 1px); box-shadow: 2px 2px 0 rgba(43, 33, 24, 0.2); }
+.fc-root .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.fc-root .btn-primary { background: var(--accent); color: var(--accent-ink); }
+.fc-root .btn-primary small { color: rgba(43, 33, 24, 0.75); }
+.fc-root .btn-primary:hover:not(:disabled) { background: #edb94a; }
+.fc-root .btn-small { flex-direction: row; align-items: center; padding: 8px 12px; font-size: 14px; }
+.fc-root .count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; border-radius: 10px; background: rgba(74, 59, 42, 0.12); font-size: 12px; margin-left: 6px; }
+.fc-root button:focus-visible, .fc-root input:focus-visible, .fc-root select:focus-visible { outline: 3px solid var(--truth); outline-offset: 2px; }
+
+/* home */
+.fc-root .title { margin: 0 auto; font: 700 32px var(--serif); letter-spacing: 0.01em; }
+.fc-root .tagline { margin: 2px auto 14px; color: var(--muted); font-family: var(--serif); font-style: italic; }
+.fc-root .menu { display: grid; gap: 10px; }
+.fc-root .menu > .btn, .fc-root .practice .btn { width: 100%; }
+.fc-root .practice { display: grid; gap: 8px; padding: 10px; border: 1.5px dashed var(--line); border-radius: var(--radius); }
+.fc-root .segmented { display: flex; gap: 4px; padding: 3px; background: var(--paper-2); border: 1px solid var(--line); border-radius: 10px; }
+.fc-root .segmented label { flex: 1; }
+.fc-root .segmented input { position: absolute; opacity: 0; pointer-events: none; }
+.fc-root .segmented span { display: block; text-align: center; padding: 6px 8px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; }
+.fc-root .segmented input:checked + span { background: var(--ink); color: var(--paper); }
+.fc-root .segmented input:focus-visible + span { outline: 3px solid var(--truth); }
+
+/* result */
+.fc-root .grade { margin: 0 auto; font: 700 30px var(--serif); }
+.fc-root .grade-bullseye .grade, .fc-root .grade-sharp .grade { color: var(--good); }
+.fc-root .grade-good .grade { color: var(--accent); }
+.fc-root .grade-near .grade { color: #a5701a; }
+.fc-root .grade-miss .grade { color: var(--bad); }
+.fc-root .breakdown { margin: 2px auto 8px; color: var(--muted); }
+.fc-root .breakdown strong { color: var(--ink); }
+.fc-root .note { margin: 0 auto 8px; color: var(--truth); font-size: 14px; font-weight: 600; }
+.fc-root .facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 8px auto; }
+.fc-root .facts div { background: var(--paper-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+.fc-root .facts dt { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.fc-root .facts dd { margin: 0; font: 700 18px var(--serif); font-variant-numeric: tabular-nums; }
+.fc-root .c-aim { color: var(--aim); }
+.fc-root .c-truth { color: var(--truth); }
+.fc-root .learn { font-size: 14px; color: var(--ink-2); margin: 8px auto; }
+.fc-root .legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; color: var(--muted); margin: 0 auto 10px; }
+.fc-root .key { display: inline-block; width: 22px; height: 0; border-top: 3px solid; vertical-align: middle; }
+.fc-root .k-truth { border-color: var(--truth); }
+.fc-root .k-aim { border-color: var(--aim); }
+.fc-root .k-rhumb { border-color: var(--rhumb); border-top-style: dashed; }
+
+.fc-root .style-note { margin: -2px 2px 0; font-size: 13px; color: var(--muted); font-style: italic; font-family: var(--serif); }
+
+
+/* rubber stamp (result screen) */
+.fc-root .result-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 4px; }
+.fc-root .result-head .breakdown { margin: 0; flex: 1; min-width: 180px; }
+.fc-root .stamp {
+  --ink-color: var(--good);
+  display: inline-flex; flex-direction: column; align-items: center;
+  padding: 6px 14px 7px;
+  color: var(--ink-color);
+  border: 3px solid currentColor;
+  outline: 1.5px solid currentColor; outline-offset: 3px;
+  border-radius: 6px;
+  transform: rotate(var(--tilt, -4deg));
+  mix-blend-mode: multiply;
+  /* worn-ink look: speckles knocked out of the stamp */
+  -webkit-mask-image: radial-gradient(circle at 20% 30%, transparent 0 1.5px, #000 2px), radial-gradient(circle at 70% 65%, transparent 0 1px, #000 1.6px);
+  -webkit-mask-size: 23px 19px, 17px 29px;
+  -webkit-mask-composite: source-in;
+  mask-image: radial-gradient(circle at 20% 30%, transparent 0 1.5px, #000 2px), radial-gradient(circle at 70% 65%, transparent 0 1px, #000 1.6px);
+  mask-size: 23px 19px, 17px 29px;
+  mask-composite: intersect;
+}
+.fc-root .stamp-title { font: 800 26px/1.05 var(--serif); letter-spacing: 0.08em; text-transform: uppercase; }
+.fc-root .stamp-sub { font: 700 11px var(--font); letter-spacing: 0.1em; text-transform: uppercase; }
+.fc-root .stamp-good { --ink-color: var(--accent); }
+.fc-root .stamp-near { --ink-color: #a5701a; }
+.fc-root .stamp-miss { --ink-color: var(--bad); }
+.fc-root .stamp.slam { animation: fc-stamp-slam 420ms cubic-bezier(0.2, 1.5, 0.45, 1) both; }
+@keyframes fc-stamp-slam {
+  0% { opacity: 0; transform: rotate(calc(var(--tilt) - 10deg)) scale(1.9); }
+  55% { opacity: 1; }
+  100% { opacity: 1; transform: rotate(var(--tilt)) scale(1); }
+}
+.fc-root .panel-result .grade { display: none; }
+
+/* streak: HUD bump, ribbon banner, paper flecks */
+.fc-root .hud-item.bump strong { display: inline-block; animation: fc-bump 500ms ease-out; color: var(--good); }
+@keyframes fc-bump { 0% { transform: scale(1); } 35% { transform: scale(1.6); } 100% { transform: scale(1); } }
+.fc-root .streak-banner {
+  position: absolute; left: 50%; top: 22%; z-index: 4;
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 26px 10px 20px;
+  background: var(--ink); color: var(--paper);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 50%, 100% 100%, 0 100%, 14px 50%);
+  transform: translateX(-50%);
+  animation: fc-banner-in 450ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  pointer-events: none;
+}
+.fc-root .streak-banner.leaving { animation: fc-banner-out 380ms ease-in both; }
+.fc-root .streak-count { font: 800 40px/1 var(--serif); color: var(--accent); }
+.fc-root .streak-text { display: flex; flex-direction: column; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; }
+.fc-root .streak-text strong { font: 700 18px var(--serif); letter-spacing: 0.02em; text-transform: none; }
+@keyframes fc-banner-in { from { opacity: 0; transform: translate(-50%, -30px) scale(0.6) rotate(-6deg); } to { opacity: 1; transform: translateX(-50%); } }
+@keyframes fc-banner-out { to { opacity: 0; transform: translate(-50%, 20px) scale(0.9); } }
+.fc-root .flecks { position: absolute; left: 50%; top: 28%; z-index: 4; pointer-events: none; }
+.fc-root .flecks i {
+  position: absolute; width: 7px; height: 11px; border-radius: 1px;
+  animation: fc-fleck 1.3s cubic-bezier(0.15, 0.7, 0.3, 1) both;
+}
+@keyframes fc-fleck {
+  from { opacity: 1; transform: translate(0, 0) rotate(0); }
+  to { opacity: 0; transform: translate(var(--dx), calc(var(--dy) + 140px)) rotate(var(--r)); }
+}
+
+/* ---------- home: direct choices on postcard cards ---------- */
+.fc-root .panel-home { background: transparent; border-top: 0; }
+.fc-root .home { display: grid; gap: 14px; max-width: 620px; margin: 0 auto; }
+.fc-root .card, .fc-root .big-btn {
+  position: relative;
+  border: 2.5px solid var(--ink); border-radius: 18px;
+  box-shadow: var(--hard-shadow);
+  cursor: pointer; color: var(--ink);
+}
+.fc-root .card:active, .fc-root .big-btn:active, .fc-root .tk-continue:active { transform: translate(2px, 3px); }
+.fc-root .card:active, .fc-root .big-btn:active { box-shadow: 2px 2px 0 rgba(43, 33, 24, 0.88); }
+.fc-root .card {
+  display: flex; align-items: center; gap: 14px; width: 100%;
+  padding: 16px 16px 12px; background: var(--card); text-align: left; overflow: hidden;
+}
+.fc-root .card::before { /* map scale bar along the top edge, like the boarding card */
+  content: ""; position: absolute; left: 18px; right: 18px; top: 4px; height: 4px;
+  background: repeating-linear-gradient(90deg, var(--ink-2) 0 16px, transparent 16px 32px);
+}
+.fc-root .badge {
+  flex: 0 0 54px; height: 54px; border-radius: 50%;
+  display: grid; place-items: center; color: #fbf6ea;
+  border: 2.5px solid var(--ink);
+}
+.fc-root .badge svg { width: 27px; height: 27px; }
+.fc-root .badge-teal { background: var(--teal); }
+.fc-root .card-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.fc-root .card-text strong { font: 700 21px/1.15 var(--display); text-transform: uppercase; letter-spacing: 0.02em; }
+.fc-root .card-text em { font: italic 16px/1.3 var(--serif); color: var(--ink-2); }
+.fc-root .card-go { flex: 0 0 auto; display: grid; place-items: center; }
+.fc-root .card-go svg { width: 24px; height: 24px; }
+/* Daily route: a red postcard card with cream lettering */
+.fc-root .card-daily { background: var(--postcard-red); color: var(--cream); }
+.fc-root .card-daily::before { background: repeating-linear-gradient(90deg, rgba(251, 246, 234, 0.75) 0 16px, transparent 16px 32px); }
+.fc-root .card-daily .badge { background: var(--cream); color: var(--postcard-red); }
+.fc-root .card-daily .card-text em { color: rgba(251, 246, 234, 0.92); }
+.fc-root .card-daily .card-go { color: var(--cream); }
+
+.fc-root .tk-continue {
+  width: 100%; max-width: none; margin: 0; padding: 0;
+  border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer;
+}
+.fc-root .tk-continue .tk-main { gap: 2px; }
+.fc-root .tk-continue .tk-ask { font-size: 21px; }
+.fc-root .tk-continue .tk-target { font-size: clamp(30px, 7vw, 42px); }
+.fc-root .tk-continue .tk-leg { font-size: 13px; letter-spacing: 0.2em; }
+.fc-root .tk-play svg { width: 34px; height: 34px; color: var(--teal); }
+
+.fc-root .big-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.fc-root .big-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 68px; padding: 8px 12px;
+  font: 700 clamp(19px, 4.6vw, 25px) var(--display); text-transform: uppercase; letter-spacing: 0.05em;
+}
+.fc-root .big-btn svg { flex: 0 0 26px; width: 26px; height: 26px; }
+.fc-root .big-new { background: var(--card); }
+.fc-root .big-challenge { background: var(--postal-blue); color: var(--cream); }
+.fc-root .record-line { margin: 0; text-align: center; font: 600 13px var(--mono); letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+
+/* summary */
+.fc-root .big-score { margin: 0 auto; font: 700 46px var(--serif); font-variant-numeric: tabular-nums; }
+.fc-root .big-score small { font: 600 15px var(--font); color: var(--muted); margin-left: 8px; }
+.fc-root .record { color: var(--good); font-weight: 800; margin: 0 auto 6px; }
+.fc-root .grid { font-size: 22px; letter-spacing: 2px; margin: 6px auto; word-break: break-all; }
+.fc-root .panel-summary .facts { grid-template-columns: repeat(3, 1fr); }
+
+/* ---------- dialogs ---------- */
+.fc-root dialog {
+  width: min(92vw, 520px); max-height: 85dvh; overflow: auto;
+  border: 1.5px solid var(--ink-2); border-radius: 18px; padding: 20px;
+  background: var(--paper); color: var(--ink);
+  box-shadow: 5px 5px 0 rgba(43, 33, 24, 0.25);
+}
+.fc-root dialog::backdrop { background: rgba(43, 33, 24, 0.35); }
+.fc-root dialog h2 { margin: 0 0 10px; font-family: var(--serif); }
+.fc-root .rules { padding-left: 20px; margin: 0 0 10px; }
+.fc-root .rules li { margin-bottom: 6px; }
+.fc-root .small { font-size: 13px; color: var(--muted); }
+.fc-root .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.fc-root .dialog-actions .btn { flex-direction: row; }
+.fc-root .switch { display: flex; align-items: center; gap: 10px; padding: 8px 0; cursor: pointer; }
+.fc-root .switch input { width: 20px; height: 20px; accent-color: var(--accent); }
+.fc-root .field { display: block; font-weight: 700; margin: 10px 0 6px; }
+.fc-root .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.fc-root .row .btn { flex-direction: row; }
+.fc-root .row input, .fc-root .row select {
+  padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--ink-2); background: #fffaf0;
+}
+.fc-root .row input { flex: 1; min-width: 140px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
+.fc-root .error { color: var(--bad); font-size: 14px; min-height: 1em; margin: 6px 0 0; }
+.fc-root hr { border: 0; border-top: 1.5px dashed var(--line); margin: 16px 0 6px; }
+.fc-root .new-code { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.fc-root .new-code code { font: 700 24px var(--serif); letter-spacing: 0.08em; color: var(--accent); }
+
+/* ---------- small screens ---------- */
+@media (max-width: 560px) {
+  .fc-root .hud { gap: 12px; }
+  .fc-root .hud-label { font-size: 10px; }
+  .fc-root .facts { grid-template-columns: repeat(2, 1fr); }
+  .fc-root .btn-lock { width: 100%; margin-left: 0; align-items: center; }
+  .fc-root .mission { font-size: 16px; }
+  .fc-root .panel { max-height: 60dvh; }
+}
+
+.fc-root.reduce-motion *, .fc-root.reduce-motion *::before, .fc-root.reduce-motion *::after { transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .fc-root *, .fc-root *::before, .fc-root *::after { transition: none !important; }
+}
+
+/* ---------- Fun Quest additions ---------- */
+/* The game fills its box inside GameShell instead of the whole browser window. */
+/* isolation: the game's own layers (panel, ribbons, paper grain) stay under GameShell's cards. */
+.fc-root { position: absolute; inset: 0; overflow: hidden; isolation: isolate; z-index: 0; }
+.fc-root .app { height: 100%; }
+/* Tailwind's reset makes every svg a block; the game's icons sit inline in buttons. */
+.fc-root svg { display: inline-block; vertical-align: middle; }
+.fc-root .tk-shape { display: block; }
+/* Touch targets: at least 44px on her iPad. */
+.fc-root .btn, .fc-root .icon-btn, .fc-root .back-btn { min-height: 44px; }
+.fc-root .icon-btn { min-width: 44px; }

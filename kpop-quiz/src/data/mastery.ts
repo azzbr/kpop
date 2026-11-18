@@ -58,6 +58,9 @@ export const MASTERY: Record<string, Mastery> = {
   // Robo Quest: world × 100 per star for each solved level — 1★ any level, 2★ ⭐⭐⭐ in the Factory
   // (or ⭐⭐ in Space), 3★ a perfect Space level.
   robo_quest: { stars: [100, 600, 900], max: 900 },
+  // Flight Compass (the family's game): points for a whole run. A 10-city daily route: a first try
+  // ≈ 300, a good one 700+, a sharp one 1,400+ (all Bullseyes ≈ 1,800). New flights run on until 3 misses.
+  flight_compass: { stars: [300, 700, 1400] },
 };
 
 export const MASTERY_IDS = Object.keys(MASTERY);

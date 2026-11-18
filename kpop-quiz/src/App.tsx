@@ -78,6 +78,7 @@ const SCREENS: Partial<Record<GameState, LazyExoticComponent<ComponentType>>> = 
   chess_academy: lazy(() => import('./components/games/ChessAcademy')),
   stack_lab: lazy(() => import('./components/games/StackLab')),
   robo_quest: lazy(() => import('./components/games/RoboQuest')),
+  flight_compass: lazy(() => import('./components/games/FlightCompass')),
   advent_calendar: lazy(() => import('./components/events/AdventCalendar')),
   snow_catch: lazy(() => import('./components/games/SnowCatch')),
 };

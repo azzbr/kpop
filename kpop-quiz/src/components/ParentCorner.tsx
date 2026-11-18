@@ -21,6 +21,7 @@ const NAMES: Record<string, string> = {
   stack_lab: '🏗️ Stack Lab',
   snow_catch: '❄️ Snow Catch',
   robo_quest: '🤖 Robo Quest',
+  flight_compass: '✈️ Flight Compass',
 };
 const BREAKS = [0, 20, 30, 45, 60];
 
@@ -177,7 +178,8 @@ export default function ParentCorner() {
                 <li>Chess puzzles: the <b>Lichess</b> puzzle database (public domain, CC0).</li>
                 <li>Stack Lab physics: <b>matter-js</b> by Liam Brummitt (MIT licence).</li>
                 <li>Robo Quest code blocks: <b>Blockly</b> by Google and the Raspberry Pi Foundation (Apache licence 2.0).</li>
-                <li>Fonts: <b>Fredoka One</b> and <b>Nunito</b> (SIL Open Font Licence).</li>
+                <li>Flight Compass: made by our family. Its globe uses <b>d3-geo</b>, <b>d3-array</b> and <b>topojson-client</b> by Mike Bostock (ISC licence), with map and city data from <b>Natural Earth</b> (public domain).</li>
+                <li>Fonts: <b>Fredoka One</b>, <b>Nunito</b> and <b>Oswald</b> (SIL Open Font Licence).</li>
               </ul>
               <p className="font-nunito text-sm text-violet-300 mt-2">The full licence texts come with the app in <b>licenses.txt</b>. Everything else — games, pictures, levels and pieces — was made for Fun Quest.</p>
             </section>
