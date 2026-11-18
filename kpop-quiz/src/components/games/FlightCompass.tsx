@@ -3,7 +3,7 @@
 // ES modules (rules, globe, dial, sounds, screens) with its own "chart room" stylesheet scoped
 // under .fc-root. This file is the Fun Quest frame around it: GameShell (Back, 🎵, pause, wake
 // lock), rewards when a run ends (finishRound once per run), and the Grown-ups sound settings.
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import GameShell from '../../games/engine/GameShell';
 import type { ShellStatus } from '../../games/engine/GameShell';
 import { useGameStore } from '../../store';
@@ -14,6 +14,32 @@ import type { FlightSummary } from './flightCompass/app.js';
 import MARKUP from './flightCompass/markup.js';
 
 const DEBUG = new URLSearchParams(window.location.search).has('debug');
+// ?fps shows a small frame meter (fps and slowest frame over the last 2 s, and the game's phase),
+// so the speed can be read on her iPad itself.
+const FPS_METER = new URLSearchParams(window.location.search).has('fps');
+
+function FrameMeter({ phase }: { phase: () => string }) {
+  const [text, setText] = useState('');
+  useEffect(() => {
+    const times: number[] = [];
+    let raf = 0;
+    const tick = (t: number) => { times.push(t); raf = requestAnimationFrame(tick); };
+    raf = requestAnimationFrame(tick);
+    const timer = window.setInterval(() => {
+      const now = performance.now();
+      while (times.length && times[0] < now - 2000) times.shift();
+      let slowest = 0;
+      for (let i = 1; i < times.length; i++) slowest = Math.max(slowest, times[i] - times[i - 1]);
+      const fps = times.length > 1 ? (1000 * (times.length - 1)) / (times[times.length - 1] - times[0]) : 0;
+      setText(`${Math.round(fps)} fps · slowest ${Math.round(slowest)} ms · ${phase()}`);
+    }, 500);
+    return () => { cancelAnimationFrame(raf); clearInterval(timer); };
+  }, [phase]);
+  return (
+    <div className="pointer-events-none absolute left-2 bottom-2 z-10 rounded-lg bg-black/70 px-2 py-1 font-mono text-sm text-white"
+      data-testid="fps-meter">{text}</div>
+  );
+}
 
 async function copyText(text: string): Promise<boolean> {
   try { await navigator.clipboard.writeText(text); return true; } catch { return false; }
@@ -51,6 +77,7 @@ export default function FlightCompass() {
   }, []);
 
   useEffect(() => { appRef.current?.feedback.setVolume(sfxVolume); }, [sfxVolume]);
+  const phaseOf = useCallback(() => (appRef.current?.debugApi().state().phase ?? ''), []);
 
   /** Back: from a run (or its results) to the game's own home; from its home to the grid. */
   const back = () => {
@@ -98,6 +125,7 @@ export default function FlightCompass() {
       onResume={() => setStatus('playing')}
     >
       <div ref={hostRef} className="fc-root" data-testid="flight-compass" />
+      {FPS_METER && <FrameMeter phase={phaseOf} />}
     </GameShell>
   );
 }

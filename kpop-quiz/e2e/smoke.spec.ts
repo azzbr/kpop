@@ -29,14 +29,15 @@ async function clickPastIntroOverlays(page: Page, target: Locator) {
 }
 
 // One test per grid category, so each gets its own time budget (WebKit is slow to open 47
-// screens in one go) and a failure names the category.
+// screens in one go) and a failure names the category. The budget grows with the number of
+// tiles: CI's WebKit (no GPU) needs ~8 s a tile, and Puzzles & Brain has ~20 (CI run 52).
 const CATEGORIES = ['Arcade', 'Puzzles & Brain', 'Quiz', 'Party', 'Create & Music', 'My Stuff', 'Classroom'];
 
 test.describe.configure({ mode: 'parallel' });
 
 for (const category of CATEGORIES) {
   test(`${category}: every tile opens cleanly and Back returns to the grid`, async ({ page }) => {
-    test.setTimeout(180_000);
+    test.setTimeout(120_000);   // getting to the grid; the real budget is set once the tiles are known
     // Decorative event animations (the winter snow) off for this long tile-by-tile sweep: CI's
     // WebKit has no GPU, so a full-screen animation slows every frame and tiles never look
     // "stable" while scrolling. The app's CSS honours reduced motion (events/winter.css).
@@ -50,6 +51,7 @@ for (const category of CATEGORIES) {
     const section = () => page.locator('section').filter({ has: page.locator('h2', { hasText: category }) }).first();
     const titles = (await section().locator('button h3').allTextContents()).map(t => t.trim());
     expect(titles.length, `${category} has tiles`).toBeGreaterThan(0);
+    test.setTimeout(60_000 + titles.length * 15_000);
 
     const wentElsewhere: string[] = [];
 

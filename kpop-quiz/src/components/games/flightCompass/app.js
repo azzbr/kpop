@@ -102,7 +102,16 @@ import world110 from './data/world110.json';
       const watch = (el, fn) => { const o = new ResizeObserver(fn); o.observe(el); this._observers.push(o); };
       watch($('#runHeader'), () => this.drawTicketShape());
       watch($('#panel'), () => this.drawTicketShape($('#continueBtn')));
-      this.loadDetailedLand();
+      // Fun Quest: speed — the detailed coastline is only needed for aiming, so it loads once the
+      // home screen is idle (or as soon as a route starts), not while the game is opening.
+      const load = () => this.loadDetailedLand();
+      if (window.requestIdleCallback) {
+        const id = window.requestIdleCallback(load, { timeout: 2500 });
+        this._cancelLandLoad = () => window.cancelIdleCallback(id);
+      } else {   // Safari
+        const id = setTimeout(load, 1500);
+        this._cancelLandLoad = () => clearTimeout(id);
+      }
       this.showHome();
     }
 
@@ -139,7 +148,8 @@ import world110 from './data/world110.json';
 
     loadDetailedLand() {
       // The 1:50m coastline is larger, so it loads after the game is already usable.
-      import('./data/land50.json').then(m => {
+      if (this._landLoad) return this._landLoad;
+      this._landLoad = import('./data/land50.json').then(m => {
         const d = m.default;
         if (!this.destroyed && d.land50) this.globe.useDetailedLand(d.land50, d.borders50);
       }).catch(() => { /* offline before it was stored: the 1:110m coastline still works */ });
@@ -160,6 +170,7 @@ import world110 from './data/world110.json';
       this.feedback.close();
       clearTimeout(this._toastTimer);
       clearTimeout(this._peekTimer);
+      if (this._cancelLandLoad) this._cancelLandLoad();
       for (const off of this._listeners) off();
       for (const o of this._observers) o.disconnect();
       for (const dialog of scope.querySelectorAll('dialog')) if (dialog.open) dialog.close();
@@ -555,6 +566,7 @@ import world110 from './data/world110.json';
     }
 
     start(config) {
+      this.loadDetailedLand();
       if (this.options.onRunStart) this.options.onRunStart();
       this.stopHomeFlight();
       this.feedback.unlock();
@@ -584,6 +596,7 @@ import world110 from './data/world110.json';
     }
 
     resume(saved) {
+      this.loadDetailedLand();
       if (this.options.onRunStart) this.options.onRunStart();
       this.stopHomeFlight();
       this.feedback.unlock();

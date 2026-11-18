@@ -144,7 +144,7 @@ import Core from './core.js';
       this._anim = null;
 
       // Fun Quest: speed — pieces with their bounding circles, and the hidden map canvas.
-      this._parts = new Map([[this.land110, polygonParts(this.land110)], [this.borders, lineParts(this.borders)]]);
+      this._parts = new Map();   // geometry -> pieces with bounding circles, worked out when first needed
       this._dataVersion = 0;
       this._baseCanvas = null;
       this._baseView = null;   // the view the hidden canvas holds
@@ -158,10 +158,22 @@ import Core from './core.js';
     useDetailedLand(topology, borders) {
       this.land50 = topojson.feature(topology, topology.objects.land);
       if (borders) this.borders50 = borders;
-      this._parts.set(this.land50, polygonParts(this.land50));
-      if (borders) this._parts.set(this.borders50, lineParts(this.borders50));
       this._dataVersion++;
       this.invalidate();
+      // Fun Quest: speed — the bounding circles of the detailed shapes are worked out in idle time
+      // (or by the first frame that needs them), so their arrival never stutters an animation.
+      const prepare = () => {
+        if (this._destroyed) return;
+        this._partsOf(this.land50, 'polygons');
+        if (this.borders50) this._partsOf(this.borders50, 'lines');
+      };
+      if (window.requestIdleCallback) {
+        const id = window.requestIdleCallback(prepare, { timeout: 3000 });
+        this._cancelPrepare = () => window.cancelIdleCallback(id);
+      } else {   // Safari
+        const id = setTimeout(prepare, 200);
+        this._cancelPrepare = () => clearTimeout(id);
+      }
     }
 
     /** One label point per country: the centroid of its largest piece (so France sits in Europe). */
@@ -376,15 +388,24 @@ import Core from './core.js';
 
     /** Pieces of `geo` (land or border lines) that can reach the screen; the whole thing when zoomed out. */
     _cull(geo, kind) {
-      const parts = this._parts.get(geo);
-      if (!parts || this.mode !== 'globe') return geo;
+      if (!geo || this.mode !== 'globe') return geo;
       const r = this.radius;
       const reach = Math.hypot(this.width, this.height) / 2 + SCREEN_MARGIN;
       if (reach >= r) return geo;                       // the whole globe (or most of it) is on screen
+      const parts = this._partsOf(geo, kind);
       const visible = Math.asin(reach / r);             // farthest angle from the centre that is on screen
       const c = toUnit([this.center.lon, this.center.lat]);
       const kept = parts.filter(p => p.cap.r >= Math.PI || angleBetween(c, p.cap.c) <= p.cap.r + visible).map(p => p.coords);
       return kind === 'lines' ? { type: 'MultiLineString', coordinates: kept } : { type: 'MultiPolygon', coordinates: kept };
+    }
+
+    _partsOf(geo, kind) {
+      let parts = this._parts.get(geo);
+      if (!parts) {
+        parts = kind === 'lines' ? lineParts(geo) : polygonParts(geo);
+        this._parts.set(geo, parts);
+      }
+      return parts;
     }
 
     /** Solid layers are clipped to the screen (plus a margin) on the globe; off for dashed lines. */
@@ -699,6 +720,8 @@ import Core from './core.js';
       this._frame = 0;
       this._observer.disconnect();
       if (this._baseCanvas) { this._baseCanvas.width = 0; this._baseCanvas.height = 0; this._baseCanvas = null; }
+      if (this._cancelPrepare) this._cancelPrepare();
+      this._destroyed = true;
     }
 
     stopAnimation() {

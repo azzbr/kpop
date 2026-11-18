@@ -91,6 +91,14 @@ test('on a Flight Compass challenge day the grid card opens the game and a good 
   await expect(card).toContainText('Done for today');
 });
 
+test('?fps shows a small frame meter for checking the speed on her iPad', async ({ page }) => {
+  await openFlight(page, '/?debug&nosw&fps');
+  await expect(page.getByTestId('fps-meter')).toContainText(/\d+ fps · slowest \d+ ms · home/);
+  await fc(page).locator('#newFlightBtn').click();
+  await aiming(page).toBe('aim');
+  await expect(page.getByTestId('fps-meter')).toContainText('· aim');
+});
+
 test('a miss costs a life and grades "Off course"', async ({ page }) => {
   await openFlight(page);
   await fc(page).locator('#newFlightBtn').click();
