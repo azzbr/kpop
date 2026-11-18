@@ -28,7 +28,12 @@ test('the fonts come with the app, are stored for offline use, and still load of
     for (const key of await caches.keys()) for (const req of await (await caches.open(key)).keys()) urls.push(new URL(req.url).pathname);
     return urls.filter(u => u.endsWith('.woff2'));
   });
-  expect(cachedFonts).toHaveLength(3);
+  // Fredoka One + Nunito (Latin, Latin-ext) for the whole app, Oswald Bold (Latin, Latin-ext) for Flight Compass.
+  const fontNames = cachedFonts.map(u => u.replace(/^\/assets\//, '').replace(/-[\w-]{8}\.woff2$/, '')).sort();
+  expect(fontNames).toEqual([
+    'fredoka-one-latin-400-normal', 'nunito-latin-ext-wght-normal', 'nunito-latin-wght-normal',
+    'oswald-latin-700', 'oswald-latin-ext-700',
+  ]);
 
   // No internet: a fresh tab still opens the app with the same fonts.
   await context.setOffline(true);

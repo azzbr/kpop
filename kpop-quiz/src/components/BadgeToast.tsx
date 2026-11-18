@@ -40,15 +40,18 @@ export default function BadgeToast() {
 
   return (
     <>
+      {/* A full-width row centres the toast: Framer Motion's own transform (y, scale) would wipe out
+          a CSS translate-x, which left the toast starting at mid-screen, squeezed to half a phone.
+          Taps go straight through it, so it never covers Back or Pause while it shows. */}
+      <div className="fixed inset-x-0 z-[200] flex justify-center px-3 pointer-events-none"
+        style={{ top: 'max(1rem, env(safe-area-inset-top))' }}>
       <AnimatePresence>
         {badge && (
           <motion.div key={badge.id}
             initial={{ y: -80, opacity: 0, scale: 0.9 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: -80, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 22 }}
             role="status" aria-live="polite"
-            onClick={() => setQueue(q => q.slice(1))}
-            className="fixed left-1/2 -translate-x-1/2 z-[200] max-w-[92vw] rounded-3xl bg-gradient-to-r from-indigo-950 to-fuchsia-900 border-4 border-yellow-300 text-white px-5 py-3 shadow-2xl flex items-center gap-3 cursor-pointer"
-            style={{ top: 'max(1rem, env(safe-area-inset-top))' }}>
+            className="max-w-[40rem] rounded-3xl bg-gradient-to-r from-indigo-950 to-fuchsia-900 border-4 border-yellow-300 text-white px-5 py-3 shadow-2xl flex items-center gap-3">
             <span className="text-4xl">{badge.icon}</span>
             <div className="min-w-0">
               <div className="font-fredoka text-xl leading-tight">🏅 New badge: {badge.icon} {badge.name} <span className="text-yellow-300">(+10 🪙)</span></div>
@@ -58,6 +61,7 @@ export default function BadgeToast() {
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
       {badge && <ConfettiBurst key={badge.id} count={40} durationMs={2500} />}
     </>
   );
