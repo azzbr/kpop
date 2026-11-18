@@ -14,8 +14,9 @@ jobs:
     # Pinned: ubuntu-latest became 26.04, where Playwright 1.56.1 can't install WebKit.
     # Move to a newer image together with a Playwright upgrade.
     runs-on: ubuntu-24.04
-    # The full run (150 e2e tests on WebKit iPad, Chromium iPad and desktop) takes about 30 minutes.
-    timeout-minutes: 60
+    # The full run (~210 e2e tests across WebKit iPad, Chromium iPad and desktop) takes about 35–40 minutes.
+    # 75 leaves room for a cache miss on a slow Ubuntu mirror (CI run 51: 31 min for the browsers' packages).
+    timeout-minutes: 75
     defaults:
       run:
         working-directory: kpop-quiz
@@ -30,8 +31,44 @@ jobs:
 
       - run: npm ci
 
+      # The browsers come from Playwright's server in seconds, but their ~180 Ubuntu system packages
+      # (125 MB) can crawl from the mirror. Both are cached; the key changes with the Playwright
+      # version and every month, so newer security packages are picked up.
+      - name: Cache key for the test browsers
+        id: pw
+        run: |
+          echo "version=$(npx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+          echo "month=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the test browsers and their system packages
+        id: pw-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/.cache/playwright-debs
+          key: playwright-ubuntu-24.04-${{ steps.pw.outputs.version }}-${{ steps.pw.outputs.month }}
+
       - name: Install Playwright browsers (WebKit = Safari's engine, plus Chromium)
-        run: npx playwright install --with-deps webkit chromium
+        run: |
+          # apt keeps the .deb files it downloads (so they can be cached); cached ones go back first,
+          # so apt only fetches packages that changed since. Browsers already present are skipped.
+          printf 'APT::Keep-Downloaded-Packages "true";\nBinary::apt-get::APT::Keep-Downloaded-Packages "true";\n' | sudo tee /etc/apt/apt.conf.d/99keep-debs >/dev/null
+          if compgen -G "$HOME/.cache/playwright-debs/*.deb" >/dev/null; then sudo cp "$HOME"/.cache/playwright-debs/*.deb /var/cache/apt/archives/; fi
+          npx playwright install --with-deps webkit chromium
+          mkdir -p "$HOME/.cache/playwright-debs"
+          cp /var/cache/apt/archives/*.deb "$HOME/.cache/playwright-debs/" 2>/dev/null || true
+          echo "Cached system packages: $(ls "$HOME/.cache/playwright-debs" | wc -l)"
+
+      # Saved straight after the install, so a failing test later doesn't lose the cache.
+      - name: Save the test browsers for next time
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/.cache/playwright-debs
+          key: ${{ steps.pw-cache.outputs.cache-primary-key }}
 
       - name: Unit tests (vitest)
         run: npm test
