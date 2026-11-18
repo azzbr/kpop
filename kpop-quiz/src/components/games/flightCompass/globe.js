@@ -38,6 +38,73 @@ import Core from './core.js';
   const easeInOutCubic = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
   const MAP_LAT_LIMIT = 78;
 
+  // ---------- Fun Quest: speed (the picture stays the same) ----------
+  // While aiming, the globe sits at zoom 7 and shows ~700 km, but every frame still projected
+  // and stroked the whole hemisphere (60,000 coast points, 19,000 border points). Three tricks:
+  //  1. pieces of land / border lines whose bounding circle on the sphere is off screen are skipped
+  //     (whole pieces only, so what is drawn is unchanged);
+  //  2. solid layers (sea, land, graticule, rim) are clipped to the screen plus a margin, so the
+  //     canvas gets screen-sized paths (dashed borders and routes are never clipped: their dash
+  //     pattern would shift);
+  //  3. while the view stands still (dragging the dial), the map is drawn once into a hidden
+  //     canvas and copied; only the aim line, markers and plane are drawn on top each frame.
+  const RAD = Math.PI / 180;
+  const SCREEN_MARGIN = 16;   // px beyond the canvas edge; wider than any stroke on the base map
+  const toUnit = ([lon, lat]) => {
+    const l = lon * RAD, p = lat * RAD, c = Math.cos(p);
+    return [c * Math.cos(l), c * Math.sin(l), Math.sin(p)];
+  };
+  const angleBetween = (a, b) => Math.acos(Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2])));
+
+  /** The circle on the sphere holding every point: {c: unit vector, r: radians}; r = π means "always draw". */
+  function capOf(points) {
+    const vs = points.map(toUnit);
+    let x = 0, y = 0, z = 0;
+    for (const v of vs) { x += v[0]; y += v[1]; z += v[2]; }
+    const n = Math.hypot(x, y, z);
+    if (n < 1e-9) return { c: [1, 0, 0], r: Math.PI };
+    const c = [x / n, y / n, z / n];
+    let r = 0;
+    for (const v of vs) r = Math.max(r, angleBetween(c, v));
+    // Past a hemisphere the shape is no longer inside its circle's hull: never skip it.
+    return { c, r: r > Math.PI / 2 ? Math.PI : r };
+  }
+
+  /** Polygons of any GeoJSON (in their original order), each with the circle around its outer ring. */
+  function polygonParts(geo) {
+    const out = [];
+    const add = g => {
+      if (!g) return;
+      if (g.type === 'FeatureCollection') g.features.forEach(add);
+      else if (g.type === 'Feature') add(g.geometry);
+      else if (g.type === 'GeometryCollection') g.geometries.forEach(add);
+      else if (g.type === 'Polygon') out.push(g.coordinates);
+      else if (g.type === 'MultiPolygon') out.push(...g.coordinates);
+    };
+    add(geo);
+    return out.map(coords => ({ coords, cap: capOf(coords[0]) }));
+  }
+
+  /** Lines of any GeoJSON (in their original order), each with its circle. */
+  function lineParts(geo) {
+    const out = [];
+    const add = g => {
+      if (!g) return;
+      if (g.type === 'FeatureCollection') g.features.forEach(add);
+      else if (g.type === 'Feature') add(g.geometry);
+      else if (g.type === 'GeometryCollection') g.geometries.forEach(add);
+      else if (g.type === 'LineString') out.push(g.coordinates);
+      else if (g.type === 'MultiLineString') out.push(...g.coordinates);
+    };
+    add(geo);
+    return out.map(coords => ({ coords, cap: capOf(coords) }));
+  }
+
+  // Canvas state the base map leaves behind, copied onto the screen when the map comes from the cache
+  // (the plane, for one, is stroked with whatever lineJoin the map left).
+  const CTX_STATE = ['fillStyle', 'strokeStyle', 'lineWidth', 'lineJoin', 'lineCap', 'miterLimit', 'font',
+    'textAlign', 'textBaseline', 'globalAlpha', 'lineDashOffset', 'letterSpacing'];
+
   class Globe {
     constructor(canvas, data) {
       this.canvas = canvas;
@@ -76,6 +143,13 @@ import Core from './core.js';
       this._frame = 0;
       this._anim = null;
 
+      // Fun Quest: speed — pieces with their bounding circles, and the hidden map canvas.
+      this._parts = new Map([[this.land110, polygonParts(this.land110)], [this.borders, lineParts(this.borders)]]);
+      this._dataVersion = 0;
+      this._baseCanvas = null;
+      this._baseView = null;   // the view the hidden canvas holds
+      this._lastView = null;   // the view of the previous frame
+
       this.resize();
       this._observer = new ResizeObserver(() => this.resize());
       this._observer.observe(canvas);
@@ -84,6 +158,9 @@ import Core from './core.js';
     useDetailedLand(topology, borders) {
       this.land50 = topojson.feature(topology, topology.objects.land);
       if (borders) this.borders50 = borders;
+      this._parts.set(this.land50, polygonParts(this.land50));
+      if (borders) this._parts.set(this.borders50, lineParts(this.borders50));
+      this._dataVersion++;
       this.invalidate();
     }
 
@@ -234,13 +311,87 @@ import Core from './core.js';
       ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
       ctx.clearRect(0, 0, this.width, this.height);
       this._configure();
-      if (this.mode === 'globe') this._drawGlobeBase();
-      else this._drawMapBase();
-      if (this.labels && this.mode === 'globe' && this.zoom >= 1.8) this._drawAreaLabels();
+      this._drawBaseCached();
       for (const line of this.lines) this._drawLine(line);
       if (this.aim && this.mode === 'globe') this._drawAim();
       for (const m of this.markers) this._drawMarker(m);
       if (this.plane) this._drawPlane();
+    }
+
+    /** The map under the lines: sea, land, borders, area labels. */
+    _drawBase() {
+      if (this.mode === 'globe') this._drawGlobeBase();
+      else this._drawMapBase();
+      if (this.labels && this.mode === 'globe' && this.zoom >= 1.8) this._drawAreaLabels();
+    }
+
+    // ---------- Fun Quest: speed ----------
+    /** Everything the base map depends on. Objects (labels, mapFit) are compared by identity. */
+    _view() {
+      const key = [this.mode, this.center.lat, this.center.lon, this.zoom, this.width, this.height, this.dpr,
+        this.mode === 'map' ? this.mapCenterLon : '', this._dataVersion].join('|');
+      return { key, labels: this.labels, mapFit: this.mapFit };
+    }
+
+    /**
+     * Draws the base map. A view that stays the same from one frame to the next is drawn once into
+     * a hidden canvas and copied after that; a moving view (flights, turns, the home spin) is drawn
+     * straight onto the screen as before, so it costs nothing extra.
+     */
+    _drawBaseCached() {
+      const view = this._view();
+      const same = v => !!v && v.key === view.key && v.labels === view.labels && v.mapFit === view.mapFit;
+      const canvas = this.canvas;
+      if (this._baseCanvas && same(this._baseView)) {
+        this._blitBase();
+      } else if (same(this._lastView)) {
+        if (!this._baseCanvas) this._baseCanvas = document.createElement('canvas');
+        const base = this._baseCanvas;
+        if (base.width !== canvas.width || base.height !== canvas.height) { base.width = canvas.width; base.height = canvas.height; }
+        const bctx = base.getContext('2d');
+        bctx.setTransform(1, 0, 0, 1, 0, 0);
+        bctx.clearRect(0, 0, base.width, base.height);
+        bctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+        const screen = this.ctx;
+        this.ctx = bctx;
+        this.path.context(bctx);
+        try { this._drawBase(); } finally { this.ctx = screen; this.path.context(screen); }
+        this._baseView = view;
+        this._blitBase();
+      } else {
+        this._drawBase();
+      }
+      this._lastView = view;
+    }
+
+    _blitBase() {
+      const { ctx } = this;
+      const bctx = this._baseCanvas.getContext('2d');
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(this._baseCanvas, 0, 0);
+      ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+      for (const k of CTX_STATE) if (k in bctx) ctx[k] = bctx[k];
+      ctx.setLineDash(bctx.getLineDash());
+    }
+
+    /** Pieces of `geo` (land or border lines) that can reach the screen; the whole thing when zoomed out. */
+    _cull(geo, kind) {
+      const parts = this._parts.get(geo);
+      if (!parts || this.mode !== 'globe') return geo;
+      const r = this.radius;
+      const reach = Math.hypot(this.width, this.height) / 2 + SCREEN_MARGIN;
+      if (reach >= r) return geo;                       // the whole globe (or most of it) is on screen
+      const visible = Math.asin(reach / r);             // farthest angle from the centre that is on screen
+      const c = toUnit([this.center.lon, this.center.lat]);
+      const kept = parts.filter(p => p.cap.r >= Math.PI || angleBetween(c, p.cap.c) <= p.cap.r + visible).map(p => p.coords);
+      return kind === 'lines' ? { type: 'MultiLineString', coordinates: kept } : { type: 'MultiPolygon', coordinates: kept };
+    }
+
+    /** Solid layers are clipped to the screen (plus a margin) on the globe; off for dashed lines. */
+    _screenClip(on) {
+      if (this.mode !== 'globe') return;
+      const m = SCREEN_MARGIN;
+      this.ortho.clipExtent(on ? [[-m, -m], [this.width + m, this.height + m]] : null);
     }
 
     _land() {
@@ -259,6 +410,7 @@ import Core from './core.js';
       ctx.ellipse(cx + r * 0.04, cy + r * 0.06, r, r, 0, 0, 2 * Math.PI);
       ctx.fill();
 
+      this._screenClip(true);   // Fun Quest: speed — off again below, before anything dashed
       const sea = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.35, r * 0.2, cx, cy, r);
       sea.addColorStop(0, COLORS.sea);
       sea.addColorStop(1, COLORS.seaDeep);
@@ -274,6 +426,7 @@ import Core from './core.js';
       ctx.beginPath();
       this.path({ type: 'Sphere' });
       ctx.stroke();
+      this._screenClip(false);
     }
 
     _drawMapBase() {
@@ -291,7 +444,7 @@ import Core from './core.js';
 
     _drawLandLayers(withBorders) {
       const { ctx } = this;
-      const land = this._land();
+      const land = this._cull(this._land(), 'polygons');   // Fun Quest: speed
 
       ctx.strokeStyle = COLORS.graticule;
       ctx.lineWidth = 1;
@@ -321,9 +474,11 @@ import Core from './core.js';
         ctx.strokeStyle = COLORS.border;
         ctx.lineWidth = detailed ? 1.1 : 0.9;
         ctx.setLineDash(detailed ? [5, 3, 1.2, 3] : [1.5, 3]);
+        this._screenClip(false);   // Fun Quest: speed — dashes would shift if the lines were cut
         ctx.beginPath();
-        this.path(detailed ? this.borders50 : this.borders);
+        this.path(this._cull(detailed ? this.borders50 : this.borders, 'lines'));
         ctx.stroke();
+        this._screenClip(true);
         ctx.restore();
       }
     }
@@ -543,6 +698,7 @@ import Core from './core.js';
       if (this._frame) cancelAnimationFrame(this._frame);
       this._frame = 0;
       this._observer.disconnect();
+      if (this._baseCanvas) { this._baseCanvas.width = 0; this._baseCanvas.height = 0; this._baseCanvas = null; }
     }
 
     stopAnimation() {
