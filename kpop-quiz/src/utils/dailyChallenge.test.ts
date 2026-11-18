@@ -20,6 +20,19 @@ describe('daily challenge', () => {
     expect(week.size).toBeGreaterThan(2);
   });
 
+  it('a challenge added later never changes the days before it joined', () => {
+    // The challenges each date had before Flight Compass joined on 19 Nov 2026.
+    expect(challengeFor('2026-11-18').gameId).toBe('crossword_mini');
+    const early = new Set<string>();
+    for (let d = 1; d <= 18; d++) early.add(challengeFor(`2026-11-${String(d).padStart(2, '0')}`).gameId);
+    expect(early.has('flight_compass')).toBe(false);
+    // From its start date it comes up now and then.
+    const late = new Set<string>();
+    for (let d = 0; d < 60; d++) late.add(challengeFor(new Date(Date.UTC(2026, 10, 19 + d)).toISOString().slice(0, 10)).gameId);
+    expect(late.has('flight_compass')).toBe(true);
+    for (const c of ALL_CHALLENGES) if (c.since) expect(c.since).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
   it('every challenge points at a game that really submits that score id', () => {
     for (const c of ALL_CHALLENGES) {
       const submits = src.includes(`gameId="${c.gameId}"`) || src.includes(`finishRound('${c.gameId}'`);

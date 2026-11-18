@@ -32,6 +32,19 @@ const aiming = (page: Page) => expect.poll(() => page.evaluate(() => {
   return s.phase === 'aim' && !!document.querySelector('.fc-root #lockBtn') ? 'aim' : s.phase;
 }), { timeout: 15_000 });
 
+/** Flies the ten daily cities on the true heading: ten Bullseyes. `onStart` runs once the first city is up. */
+async function flyDailyRoute(page: Page, onStart?: () => Promise<void>) {
+  await fc(page).locator('#dailyBtn').click();
+  await aiming(page).toBe('aim');
+  await onStart?.();
+  for (let leg = 0; leg < 10; leg++) {
+    await aiming(page).toBe('aim');
+    await page.evaluate(async () => { window.__flight!.aimTrue(); await window.__flight!.lock(); });
+    await expect(fc(page).locator('.stamp-bullseye')).toBeVisible();
+    await page.evaluate(() => window.__flight!.next());
+  }
+}
+
 test('daily route: ten cities flown by the true heading pay out with stars, XP and coins', async ({ page }) => {
   const errors = watchErrors(page);
   const outside: string[] = [];
@@ -40,16 +53,9 @@ test('daily route: ten cities flown by the true heading pay out with stars, XP a
     if (!['localhost', '127.0.0.1'].includes(u.hostname) && !u.protocol.startsWith('data') && !u.protocol.startsWith('blob')) outside.push(r.url());
   });
   await openFlight(page);
-  await fc(page).locator('#dailyBtn').click();
-  await aiming(page).toBe('aim');
-  expect(await page.evaluate(() => window.__flight!.state())).toMatchObject({ mode: 'daily', targets: 10, lives: 3 });
-
-  for (let leg = 0; leg < 10; leg++) {
-    await aiming(page).toBe('aim');
-    await page.evaluate(async () => { window.__flight!.aimTrue(); await window.__flight!.lock(); });
-    await expect(fc(page).locator('.stamp-bullseye')).toBeVisible();
-    await page.evaluate(() => window.__flight!.next());
-  }
+  await flyDailyRoute(page, async () => {
+    expect(await page.evaluate(() => window.__flight!.state())).toMatchObject({ mode: 'daily', targets: 10, lives: 3 });
+  });
 
   // Fun Quest's over card: the score, the results grid and the usual rewards line.
   await expect(page.getByText('10 of 10 cities on course')).toBeVisible();
@@ -63,6 +69,26 @@ test('daily route: ten cities flown by the true heading pay out with stars, XP a
   await expect(fc(page).locator('#dailyBtn')).toContainText('Flown today');
   expect(errors).toEqual([]);
   expect(outside).toEqual([]);
+});
+
+test('on a Flight Compass challenge day the grid card opens the game and a good route completes it', async ({ page }) => {
+  // 26 Nov 2026 is one of the days the daily challenge picks "Score 700 in Flight Compass".
+  await page.clock.install({ time: new Date(2026, 10, 26, 17, 0) });
+  await openApp(page, '/?debug&nosw');
+  await enterName(page, 'Mia');
+  const card = page.getByRole('button', { name: /Daily challenge/ });
+  await expect(card).toContainText('Score 700 in Flight Compass');
+  await card.click();
+  await expect(fc(page).locator('#dailyBtn')).toBeVisible();
+  await page.evaluate(() => window.__flight!.setReduceMotion(true));
+  await flyDailyRoute(page);
+  await expect(page.getByText('10 of 10 cities on course')).toBeVisible();
+  expect((await readSave(page))?.state.dailyDoneDate).toBe('2026-11-26');
+
+  await page.getByRole('button', { name: '🧭 Flight Compass home' }).click();
+  await page.locator('[data-back]').first().click();
+  await expect(grid(page)).toBeVisible();
+  await expect(card).toContainText('Done for today');
 });
 
 test('a miss costs a life and grades "Off course"', async ({ page }) => {

@@ -10,6 +10,11 @@ export interface DailyChallenge {
   label: string;
   /** finishRound score needed (same units the game submits). */
   target: number;
+  /**
+   * First local date this challenge can come up. Each date picks from the challenges live that day,
+   * so a new one (added with tomorrow's date) never changes today's or an earlier day's challenge.
+   */
+  since?: string;
 }
 
 // Targets are in each game's finishRound units (e.g. Paper Clash submits % × 10).
@@ -30,6 +35,7 @@ const CHALLENGES: DailyChallenge[] = [
   { gameId: 'word_ladder', screen: 'word_ladder', icon: '🪜', label: 'Climb a Word Ladder in the fewest steps', target: 100 },
   { gameId: 'crossword_mini', screen: 'crossword_mini', icon: '📰', label: 'Score 600 in Crossword Mini', target: 600 },
   { gameId: 'word_scramble', screen: 'word_scramble', icon: '🔤', label: 'Score 1,200 in Word Scramble', target: 1200 },
+  { gameId: 'flight_compass', screen: 'flight_compass', icon: '✈️', label: 'Score 700 in Flight Compass', target: 700, since: '2026-11-19' },
 ];
 
 export const DAILY_REWARD = { xp: 100, coins: 50 };
@@ -41,7 +47,8 @@ function hash(s: string) {
 }
 
 export function challengeFor(date = localDateKey()): DailyChallenge {
-  return CHALLENGES[hash(date) % CHALLENGES.length];
+  const live = CHALLENGES.filter(c => !c.since || c.since <= date);
+  return live[hash(date) % live.length];
 }
 
 export const ALL_CHALLENGES = CHALLENGES;
